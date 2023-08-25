@@ -21,18 +21,27 @@
     <ClCompile Include="src\simulation\simulation.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\particle system\particle_system.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\simulation\simulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\simulation\settings.h">
+    <ClInclude Include="src\settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\rand_dist.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\simulation\utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\spatial_hash_grid.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\particle system\particle_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

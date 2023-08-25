@@ -136,13 +136,16 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\particle system\particle_system.cpp" />
     <ClCompile Include="src\simulation\simulation.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\particle system\particle_system.h" />
     <ClInclude Include="src\rand_dist.h" />
-    <ClInclude Include="src\simulation\settings.h" />
+    <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\simulation\simulation.h" />
     <ClInclude Include="src\simulation\utils.h" />
+    <ClInclude Include="src\spatial_hash_grid.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

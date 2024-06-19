@@ -2,11 +2,18 @@
 
 #include <SFML/Graphics.hpp>
 #include "../settings.h"
-#include "../spatial_hash_grid.h"
-#include "../rand_dist.h"
+#include "../utils/spatial_hash_grid.h"
+#include "../utils/random.h"
 
 struct Particle
 {
+	inline static sf::Vector2f a_range{ 180.f, 180.f };
+	inline static sf::Vector2f b_range{ -1.f, 17.f };
+
+	float alpha = 180;
+	float beta = 17;
+	float delta = 0.1f;
+
 	unsigned id{};
 
 	sf::Vector2f position{};
@@ -16,8 +23,11 @@ struct Particle
 	uint8_t right;
 	uint8_t near_inner;
 
-	float sin_angle;
-	float cos_angle;
+
+	Particle()
+	{
+		
+	}
 };
 
 
@@ -31,23 +41,24 @@ class ParticleSystem : SystemSettings
 	void update_particle_positioning(Particle& ptk) const;
 	static sf::Color get_color(const Particle& particle);
 
+
 public:
-	ParticleSystem(const sf::Rect<float>& screen_size)
+	ParticleSystem(const sf::FloatRect& screen_size)
 	: spatial_hash_grid(screen_size, spatial_hash_dims),
-	  screen_bounds( 0.f, 0.f, static_cast<float>(screen_size.width), static_cast<float>(screen_size.height))
+	  screen_bounds(screen_size)
 	{
 		init_particles();
 	}
 
 	void update();
-	void draw_hash_grid(sf::RenderWindow& window);
-	void render_particles(sf::RenderWindow& window);
+	void draw_hash_grid(sf::RenderWindow& window) const;
+	void render_particles(sf::RenderWindow& window, const bool mode);
 	void debug_particles(sf::RenderWindow& window) const;
 
-private:
+public:
 	std::vector<Particle> particles{};
 	SpatialHashGrid spatial_hash_grid{};
 
-	sf::Rect<float> screen_bounds{};
+	sf::FloatRect screen_bounds{};
 	
 };

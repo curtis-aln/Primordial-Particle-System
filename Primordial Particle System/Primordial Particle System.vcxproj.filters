@@ -18,31 +18,40 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\simulation\simulation.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\particle system\particle_system.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\simulation\simulation.h">
+    <ClInclude Include="src\simulation.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\settings.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\rand_dist.h">
+    <ClInclude Include="src\utils\random.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\simulation\utils.h">
+    <ClInclude Include="src\utils\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\spatial_hash_grid.h">
+    <ClInclude Include="src\utils\spatial_hash_grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\particle system\particle_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\toroidal_space.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\smooth_frame_rates.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\utils\font.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="fonts\Calibri.ttf" />
   </ItemGroup>
 </Project>

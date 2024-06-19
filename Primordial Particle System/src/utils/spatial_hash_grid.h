@@ -1,13 +1,11 @@
 #pragma once
 
-
-#pragma once
-
 #include <SFML/Graphics.hpp>
 #include <vector>
 
 #include <cstdint>
 #include <iostream>
+
 /*
 	SpatialHashGrid
 
@@ -44,10 +42,10 @@ void grow_rect(sf::Rect<T>& rect, const T buffer)
 struct CollisionCell
 {
 	// cell_capacity is the absolute MAXIMUM amount of objects that will be in this cell
-	static constexpr uint8_t cell_capacity = 20;
-	static constexpr uint8_t max_cell_idx = cell_capacity - 1;
+	static constexpr uint16_t cell_capacity = 30;
+	static constexpr uint16_t max_cell_idx = cell_capacity - 1;
 
-	uint8_t objects_count = 0;
+	uint16_t objects_count = 0;
 	int32_t objects[cell_capacity] = {};
 
 	CollisionCell() = default;
@@ -67,9 +65,9 @@ struct CollisionCell
 
 struct c_Vec
 {
-	static constexpr uint8_t max = CollisionCell::cell_capacity * 9;
+	static constexpr uint16_t max = CollisionCell::cell_capacity * 9;
 	int32_t array[max] = {};
-	uint8_t size = 0;
+	uint16_t size = 0;
 
 	void add(const int32_t value)
 	{
@@ -91,7 +89,7 @@ class SpatialHashGrid
 {
 public:
 	// constructor and destructor
-	explicit SpatialHashGrid(const sf::Rect<float> screenSize = {}, const sf::Vector2u cellsXY = {})
+	explicit SpatialHashGrid(const sf::FloatRect screenSize = {}, const sf::Vector2u cellsXY = {})
 	{
 		init(screenSize, cellsXY);
 	}
@@ -131,6 +129,9 @@ public:
 				if (indexes.y == m_cellsXY.y) indexes.y = 0;
 				if (indexes.x == -1) indexes.x = m_cellsXY.x - 1;
 				if (indexes.y == -1) indexes.y = m_cellsXY.y - 1;
+
+
+
 		
 
 				const CollisionCell& cell = m_cells[idx2dTo1d(indexes)];
@@ -144,7 +145,7 @@ public:
 	}
 
 
-	void reSize(const sf::Rect<float> screenSize)
+	void reSize(const sf::FloatRect screenSize)
 	{
 		init(screenSize, m_cellsXY);
 	}
@@ -159,7 +160,7 @@ public:
 
 
 private:
-	void init(const sf::Rect<float> screenSize, const sf::Vector2u cellsXY)
+	void init(const sf::FloatRect screenSize, const sf::Vector2u cellsXY)
 	{
 		m_cellsXY = cellsXY;
 		m_screenSize = screenSize;
@@ -236,7 +237,8 @@ private:
 
 	// graphics
 	sf::Vector2f m_cellSize{};
-	sf::Rect<float> m_screenSize{};
+	sf::FloatRect m_screenSize{};
+
 
 public:
 	sf::VertexBuffer vertexBuffer{};

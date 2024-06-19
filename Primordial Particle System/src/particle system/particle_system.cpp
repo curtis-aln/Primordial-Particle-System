@@ -1,5 +1,6 @@
 #include "particle_system.h"
-#include "../simulation/utils.h"
+#include "../utils/utils.h"
+#include "../utils/toroidal_space.h"
 
 
 void ParticleSystem::init_particles()
@@ -8,14 +9,15 @@ void ParticleSystem::init_particles()
 	particles.resize(particle_count, Particle());
 
 	unsigned id = 0;
-	const float bx = 0.f;
-	const float by = 0.f;
-	const sf::Rect<float> bounds = { bx,by, screen_bounds.width - bx*2, screen_bounds.height - by*2 };
+	const sf::Vector2f buffer = { 200.f, 200.f };
+
+	const sf::Rect bounds = { buffer.x,buffer.y, screen_bounds.width - buffer.x*2, screen_bounds.height - buffer.y*2 };
+
 	for (Particle& particle : particles)
 	{
 		particle.id = id++;
-		particle.position = RandomDist::randPosInRect(bounds);
-		particle.angle_radians = RandomDist::randRange(0.f, 2 * pi);
+		particle.position = Random::rand_pos_in_rect(bounds);
+		particle.angle_radians = Random::rand_range(0.f, 2 * pi);
 	}
 
 }
@@ -49,8 +51,6 @@ void ParticleSystem::reset_particle(Particle& particle) const
 	particle.left = 0;
 	particle.right = 0;
 	particle.near_inner = 0;
-	particle.sin_angle = std::sin(particle.angle_radians);
-	particle.cos_angle = std::cos(particle.angle_radians);
 }
 
 
@@ -63,18 +63,21 @@ void ParticleSystem::update_particle_locals(Particle& particle)
 	{
 		Particle& other_particle = particles[near.array[i]];
 
-		const float dist_sq = wrappedDistSq(particle.position, other_particle.position, screen_bounds.width, screen_bounds.height);
+		const float dist_sq = toroidal_distance_sq(particle.position, other_particle.position, screen_bounds);
 		constexpr float rad_sq = visual_radius * visual_radius;
 
 		if (dist_sq > 0 && dist_sq < rad_sq)
 		{
-			const bool right = isOnRightHemisphere(particle.position, particle.angle_radians, other_particle.position, screen_bounds.width, screen_bounds.left);
+			const bool right = isOnRightHemisphere(particle.position, particle.angle_radians, other_particle.position, screen_bounds);
 
 			if (right) ++particle.right;
 			else       ++particle.left;
 
 			if (dist_sq < magenta_radius * magenta_radius)
+			{
 				++particle.near_inner;
+				//particle.angle_radians += (other_particle.angle_radians - particle.angle_radians) * particle.delta;
+			}
 		}
 	}
 }
@@ -83,7 +86,7 @@ void ParticleSystem::update_particle_positioning(Particle& ptk) const
 {
 	// delta_phi = alpha + beta × N × sign(R - L)
 	const unsigned sum = ptk.right + ptk.left;
-	const float delta = alpha + beta * sum * sign(ptk.right - ptk.left);
+	const float delta = ptk.alpha + ptk.beta * sum * sign(ptk.right - ptk.left);
 	ptk.angle_radians += delta * (pi / 180.f);
 
 	float deltaX = gamma * std::cos(ptk.angle_radians);
@@ -97,7 +100,7 @@ void ParticleSystem::update_particle_positioning(Particle& ptk) const
 
 
 
-void ParticleSystem::draw_hash_grid(sf::RenderWindow& window)
+void ParticleSystem::draw_hash_grid(sf::RenderWindow& window) const
 {
 	window.draw(spatial_hash_grid.vertexBuffer);
 }
@@ -121,15 +124,34 @@ sf::Color ParticleSystem::get_color(const Particle& particle)
 	return { 0, 0,0 };
 }
 
-void ParticleSystem::render_particles(sf::RenderWindow& window)
+void ParticleSystem::render_particles(sf::RenderWindow& window, const bool mode)
 {
 	sf::CircleShape renderer{};
 	renderer.setRadius(radius);
-	renderer.setFillColor({ 255, 255, 255 });
 
 	for (Particle& particle : particles)
 	{
-		renderer.setFillColor(get_color(particle));
+		sf::Color color;
+
+		if (!mode)
+		{
+			color = get_color(particle);
+		}
+		else
+		{
+			const sf::Vector2f a_r = Particle::a_range;
+			const sf::Vector2f b_r = Particle::b_range;
+
+			// clamping values to be between 0 and 1
+			const float a_clamp = (particle.alpha + abs(a_r.x)) / abs(a_r.y - a_r.x);
+			const float b_clamp = (particle.beta + abs(b_r.x)) / abs(b_r.y - b_r.x);
+
+			// normalising to 255 and turning into Uint*
+			const auto a = static_cast<sf::Uint8>(a_clamp * 255.f);
+			const auto b = static_cast<sf::Uint8>(b_clamp * 255.f);
+			color = { a, 200, b, 150 };
+		}
+		renderer.setFillColor(color);
 
 		renderer.setPosition(particle.position - sf::Vector2f{ radius, radius });
 		window.draw(renderer, sf::BlendAdd);

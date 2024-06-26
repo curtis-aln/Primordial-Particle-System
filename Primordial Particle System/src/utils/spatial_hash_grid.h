@@ -226,6 +226,9 @@ private:
 		vertexBuffer.update(vertices.data(), vertices.size(), 0);
 	}
 
+public:
+	sf::Vector2f get_cell_size() { return m_cellSize; }
+
 
 
 private:

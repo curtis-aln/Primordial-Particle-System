@@ -136,10 +136,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
-    <ClCompile Include="src\particle system\particle_system.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\particle system\particle_system.h" />
+    <ClInclude Include="src\particle_system.h" />
     <ClInclude Include="src\utils\font.h" />
     <ClInclude Include="src\utils\smooth_frame_rates.h" />
     <ClInclude Include="src\utils\random.h" />

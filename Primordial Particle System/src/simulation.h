@@ -1,7 +1,7 @@
 #pragma once
 #include "settings.h"
 #include "utils/spatial_hash_grid.h"
-#include "particle system/particle_system.h"
+#include "particle_system.h"
 #include "utils/smooth_frame_rates.h"
 #include "utils/font.h"
 
@@ -12,18 +12,8 @@ class Simulation : SystemSettings, SimulationSettings
 {
 	void render()
 	{
-		particle_system_.render_particles(window_, mode_);
-
-		if (debug_)
-		{
-			particle_system_.debug_particles(window_);
-		}
-
-		if (render_hash_grid_)
-		{
-			particle_system_.draw_hash_grid(window_);
-		}
-
+		window_.clear(screen_color);
+		particle_system_.render(window_, debug_, render_hash_grid_);
 		window_.display();
 	}
 
@@ -39,8 +29,12 @@ class Simulation : SystemSettings, SimulationSettings
 			paused_ = not paused_;
 			break;
 
-		case sf::Keyboard::R:
+		case sf::Keyboard::G:
 			render_hash_grid_ = not render_hash_grid_;
+			break;
+
+		case sf::Keyboard::R:
+			rendering_ = not rendering_;
 			break;
 
 		case sf::Keyboard::M:
@@ -81,6 +75,9 @@ class Simulation : SystemSettings, SimulationSettings
 		text_font.draw(start + sf::Vector2f{0, spacing * i++}, std::to_string(fps) + " fps");
 		text_font.draw(start + sf::Vector2f{0, spacing * i++}, "particles");
 		text_font.draw(start + sf::Vector2f{0, spacing * i++}, "iterations");
+
+
+		window_.setTitle(std::to_string(fps));
 	}
 
 public:
@@ -96,22 +93,22 @@ public:
 		{
 			poll_events();
 
-			window_.clear(screen_color);
-
 			if (!paused_)
 			{
 				particle_system_.update();
 			}
 
+			if (rendering_)
+			{
+				render();
+			}
 			update_caption();
-
-			render();
 		}
 	}
 
 
 private:
-	ParticleSystem particle_system_{ sim_bounds };
+	ParticlePopulation<particle_count> particle_system_{ sim_bounds };
 
 	sf::RenderWindow window_{};
 	sf::Clock clock_{};
@@ -125,4 +122,5 @@ private:
 	bool mode_ = false;
 	bool render_hash_grid_ = false;
 	bool debug_ = false;
+	bool rendering_ = true;
 };

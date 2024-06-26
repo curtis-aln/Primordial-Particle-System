@@ -18,9 +18,6 @@
     <ClCompile Include="src\main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\particle system\particle_system.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\simulation.h">
@@ -38,7 +35,7 @@
     <ClInclude Include="src\utils\spatial_hash_grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\particle system\particle_system.h">
+    <ClInclude Include="src\particle_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\utils\toroidal_space.h">

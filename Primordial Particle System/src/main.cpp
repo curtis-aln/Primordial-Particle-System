@@ -24,5 +24,11 @@ int main()
 	Simulation().run();
 }
 
-// baseline 53fps
-//
+// baseline          53fps
+// object of arrays  103fps
+// not rendering     166fps
+// running exe file  200fps
+
+
+// 20k particles
+// baseline          75fps

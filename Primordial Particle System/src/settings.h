@@ -16,7 +16,7 @@ struct SimulationSettings
 
 struct SystemSettings
 {
-	inline static constexpr float scale = 0.34f;
+	inline static constexpr float scale = 0.35f;
 
 	inline static constexpr unsigned particle_count = 8'000;
 
@@ -28,6 +28,8 @@ struct SystemSettings
 	inline static constexpr float radius = 12.f * scale;
 	inline static constexpr float visual_radius = radius * 5;
 
+	inline static constexpr float alpha = 180.f;
+	inline static constexpr float beta = 17.f;
 	inline static constexpr float gamma = radius * 0.67;
 
 

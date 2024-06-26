@@ -9,7 +9,7 @@ void ParticleSystem::init_particles()
 	particles.resize(particle_count, Particle());
 
 	unsigned id = 0;
-	const sf::Vector2f buffer = { 200.f, 200.f };
+	const sf::Vector2f buffer = { 0.f, 0.f };
 
 	const sf::Rect bounds = { buffer.x,buffer.y, screen_bounds.width - buffer.x*2, screen_bounds.height - buffer.y*2 };
 
@@ -30,7 +30,7 @@ void ParticleSystem::update()
 
 	for (Particle& particle : particles)
 	{
-		update_particle_locals(particle);
+		calculate_particle_neighbours(particle);
 		update_particle_positioning(particle);
 	}
 }
@@ -50,11 +50,10 @@ void ParticleSystem::reset_particle(Particle& particle) const
 {
 	particle.left = 0;
 	particle.right = 0;
-	particle.near_inner = 0;
 }
 
 
-void ParticleSystem::update_particle_locals(Particle& particle)
+void ParticleSystem::calculate_particle_neighbours(Particle& particle)
 {
 	reset_particle(particle);
 
@@ -72,12 +71,6 @@ void ParticleSystem::update_particle_locals(Particle& particle)
 
 			if (right) ++particle.right;
 			else       ++particle.left;
-
-			if (dist_sq < magenta_radius * magenta_radius)
-			{
-				++particle.near_inner;
-				//particle.angle_radians += (other_particle.angle_radians - particle.angle_radians) * particle.delta;
-			}
 		}
 	}
 }

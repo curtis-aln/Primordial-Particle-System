@@ -12,7 +12,7 @@ struct Particle
 
 	float alpha = 180;
 	float beta = 17;
-	float delta = 0.1f;
+	float gamma = 0.1f;
 
 	unsigned id{};
 
@@ -37,7 +37,7 @@ class ParticleSystem : SystemSettings
 	void init_particles();
 	void update_hash_grid();
 	void reset_particle(Particle& particle) const;
-	void update_particle_locals(Particle& particle);
+	void calculate_particle_neighbours(Particle& particle);
 	void update_particle_positioning(Particle& ptk) const;
 	static sf::Color get_color(const Particle& particle);
 

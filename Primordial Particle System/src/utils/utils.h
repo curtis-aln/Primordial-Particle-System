@@ -16,7 +16,6 @@ void clamp_angle(float& angle_radians)
 	while (angle_radians > 2*pi) angle_radians -= 2*pi;
 }
 
-
 inline bool isOnRightHemisphere(const sf::Vector2f& pos, float angle, const sf::Vector2f& other_pos, const sf::FloatRect& bounds)
 {
 	// Calculate the x and y coordinates of other_pos relative to pos
@@ -25,16 +24,24 @@ inline bool isOnRightHemisphere(const sf::Vector2f& pos, float angle, const sf::
 	// Calculate the angle between the positive x-axis and the vector to other_pos
 	float other_angle = std::atan2(relative.y, relative.x);
 
-	// Ensure the angle is between 0 and 2*pi
+	// Normalize angles to the range [0, 2*pi)
 	if (other_angle < 0) other_angle += 2 * pi;
-	if (other_angle > 2 * pi) other_angle -= 2 * pi;
 
-	// Check if other_pos lies on the right hemisphere
-	if (other_angle >= angle && other_angle <= (angle + pi)) {
-		return true;
+	// Normalize angle to [0, 2*pi)
+	angle = std::fmod(angle, 2 * pi);
+	if (angle < 0) angle += 2 * pi;
+
+	// Calculate the right hemisphere range
+	float right_start = angle;
+	float right_end = std::fmod(angle + pi, 2 * pi);
+
+	// Check if other_angle lies on the right hemisphere
+	if (right_start < right_end) {
+		return (other_angle >= right_start && other_angle <= right_end);
 	}
-
-	return false;
+	else {
+		return (other_angle >= right_start || other_angle <= right_end);
+	}
 }
 
 

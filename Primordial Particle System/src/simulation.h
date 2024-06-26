@@ -12,9 +12,12 @@ class Simulation : SystemSettings, SimulationSettings
 {
 	void render()
 	{
-
 		particle_system_.render_particles(window_, mode_);
-		//particle_system.debug_particles(window);
+
+		if (debug_)
+		{
+			particle_system_.debug_particles(window_);
+		}
 
 		if (render_hash_grid_)
 		{
@@ -42,6 +45,10 @@ class Simulation : SystemSettings, SimulationSettings
 
 		case sf::Keyboard::M:
 			mode_ = not mode_;
+			break;
+
+		case sf::Keyboard::D:
+			debug_ = not debug_;
 			break;
 		}
 	}
@@ -117,4 +124,5 @@ private:
 	bool running_ = true;
 	bool mode_ = false;
 	bool render_hash_grid_ = false;
+	bool debug_ = false;
 };

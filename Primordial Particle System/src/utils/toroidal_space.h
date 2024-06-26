@@ -1,34 +1,24 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
+
 template<typename Type>
-sf::Vector2<Type> toroidal_direction(const sf::Vector2<Type>& start, const sf::Vector2<Type>& end, const sf::Rect<Type>& bounds)
+inline sf::Vector2<Type> toroidal_direction(const sf::Vector2<Type>& start, const sf::Vector2<Type>& end, const sf::Rect<Type>& bounds)
 {
-	Type dist_x = abs(start.x - end.x);
-	Type dist_y = abs(start.y - end.y);
+    Type half_width = bounds.width * Type(0.5);
+    Type half_height = bounds.height * Type(0.5);
 
-	if (dist_x < bounds.width / 2)
-		dist_x = dist_x;
-	else
-		dist_x = dist_x - bounds.width;
+    Type dx = end.x - start.x;
+    Type dy = end.y - start.y;
 
-	if (start.x > end.x)
-		dist_x *= -1;
+    dx -= bounds.width * std::floor((dx + half_width) / bounds.width);
+    dy -= bounds.height * std::floor((dy + half_height) / bounds.height);
 
-
-	if (dist_y < bounds.height / 2)
-		dist_y = dist_y;
-	else
-		dist_y = dist_y - bounds.height;
-
-	if (start.y > end.y)
-		dist_y *= -1;
-
-	return  { dist_x, dist_y };
+    return { dx, dy };
 }
 
 template<typename Type>
-Type toroidal_distance_sq(const sf::Vector2f& position1, const sf::Vector2f& position2, const sf::Rect<Type>& bounds)
+inline Type toroidal_distance_sq(const sf::Vector2f& position1, const sf::Vector2f& position2, const sf::Rect<Type>& bounds)
 {
 	const sf::Vector2f dir = toroidal_direction(position1, position2, bounds);
 
@@ -36,31 +26,14 @@ Type toroidal_distance_sq(const sf::Vector2f& position1, const sf::Vector2f& pos
 }
 
 template<typename Type>
-Type toroidal_distance(const sf::Vector2<Type>& vector_1, const sf::Vector2<Type>& vector_2, const sf::Rect<Type>& bounds)
+inline Type toroidal_distance(const sf::Vector2<Type>& vector_1, const sf::Vector2<Type>& vector_2, const sf::Rect<Type>& bounds)
 {
 	return sqrt(toroidal_distance_sq(vector_1, vector_2, bounds));
 }
 
 template<typename Type>
-void border(sf::Vector2<Type>& position, const sf::Rect<Type>& bounds)
+inline void border(sf::Vector2<Type>& position, const sf::Rect<Type>& bounds)
 {
-	if (position.x < bounds.left)
-	{
-		position.x = bounds.width;
-	}
-
-	else if (position.x > bounds.left + bounds.width)
-	{
-		position.x = bounds.left;
-	}
-
-	if (position.y < bounds.top)
-	{
-		position.y = bounds.height;
-	}
-
-	else if (position.y > bounds.top + bounds.height)
-	{
-		position.y = bounds.top;
-	}
+	position.x = std::fmod(position.x - bounds.left + bounds.width, bounds.width) + bounds.left;
+	position.y = std::fmod(position.y - bounds.top + bounds.height, bounds.height) + bounds.top;
 }

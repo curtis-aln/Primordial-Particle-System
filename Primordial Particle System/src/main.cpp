@@ -1,26 +1,28 @@
 #include "simulation.h"
 
 // V2 Tasks
-// use resharper to format all the code
-// replace utils for more useful functions and update any outdated code
-// comment everywhere where nessesery
-// particles spaced uniformly
+// Format and Clean-up program preparing for the new code changes
+// Fix the constantly moving right bug
+// Screen Statistics & Title & Key inputs
 
+// Optimize for 20,000 particles at 144FPS
+// optimization: only preform toroidal calculations if the particle's spatial hash box index is on the borders
 
-// renovation TODO
-// 1. Add on-screen Title and live statistics
-// 2. add zooming
-// 3. fix higher density at border bug
-// 4. document keyboard inputs
-// 5. remove titlebar
-// 6. fix all code warnings and messages
-// 7. fix all linker warnings and messages
-// 8. update library files such as rand_dist to the most modern version
+// V2 main
+// Graph of amount of each particle
 
-// a. render particles using the GPU
-// b. move particles using the GPU
+/*
+Optimize memory access patterns by storing particle data in contiguous arrays rather than separate objects.
+Consider using fixed-point arithmetic instead of floating-point for faster calculations on some hardware.
+Implement time stepping with adaptive step sizes to balance accuracy and performance.
+Use circular buffers for efficient handling of the toroidal space wrapping.
+*/
+
 
 int main()
 {
 	Simulation().run();
 }
+
+// baseline 53fps
+//

@@ -7,6 +7,62 @@
 #include "utils/utils.h"
 
 
+#include <cmath>
+#include <random>
+
+#include <immintrin.h> // For AVX instructions
+#include <array>
+
+
+constexpr float pi_div_180 = pi / 180.f;
+
+class NeuralNetwork {
+private:
+	float weights1[3][2];
+	float weights2[3];
+	float bias1[3];
+	float bias2;
+	std::mt19937 gen;
+	std::uniform_real_distribution<> dis;
+
+	static inline float clamp(float x) {
+		return std::max(-1.0f, std::min(1.0f, x));
+	}
+
+public:
+	NeuralNetwork() : gen(std::random_device()()), dis(-1, 1) {
+		randomize();
+	}
+
+	void randomize() {
+		const float scale1 = std::sqrt(2.0f / 2);  // He initialization
+		const float scale2 = std::sqrt(2.0f / 3);
+
+		for (int i = 0; i < 3; ++i) {
+			for (int j = 0; j < 2; ++j) {
+				weights1[i][j] = scale1 * dis(gen);
+			}
+			weights2[i] = scale2 * dis(gen);
+			bias1[i] = scale1 * dis(gen);
+		}
+		bias2 = scale2 * dis(gen);
+	}
+
+	float feedForward(const float input1, const float input2) const {
+		float hidden[3];
+		for (int i = 0; i < 3; ++i) {
+			hidden[i] = clamp(weights1[i][0] * input1 + weights1[i][1] * input2 + bias1[i]);
+		}
+
+		float output = bias2;
+		for (int i = 0; i < 3; ++i) {
+			output += weights2[i] * hidden[i];
+		}
+		return clamp(output);
+	}
+};
+
+
 template<size_t population_size>
 class ParticlePopulation : SystemSettings
 {
@@ -19,16 +75,20 @@ class ParticlePopulation : SystemSettings
 	std::array<uint8_t, population_size> left;
 	std::array<uint8_t, population_size> right;
 
-	SpatialHashGrid hash_grid;
+	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
 	sf::Vector2f hash_cell_size;
 
 	// rendering and graphics
 	sf::CircleShape circle_drawer{};
 
 
+
 public:
-	ParticlePopulation(const sf::FloatRect& bounds)
-		: hash_grid(bounds, spatial_hash_dims), bounds_(bounds)
+	NeuralNetwork network{};
+
+
+public:
+	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds)
 	{
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
@@ -43,6 +103,10 @@ public:
 		circle_drawer.setRadius(radius);
 
 		hash_cell_size = hash_grid.get_cell_size();
+
+		std::cout << hash_cell_size.x << " " << visual_radius << "\n";
+
+
 	}
 
 
@@ -96,15 +160,6 @@ private:
 		}
 	}
 
-	bool should_use_toroidal_distance(const sf::Vector2f& position) const
-	{
-		return (
-			position.x < hash_cell_size.x ||
-			position.y < hash_cell_size.y ||
-			position.x > bounds_.width - hash_cell_size.x ||
-			position.y > bounds_.height - hash_cell_size.y);
-	}
-
 
 	void calculate_neighbours(const size_t index)
 	{
@@ -118,7 +173,7 @@ private:
 
 		for (size_t i = 0; i < near.size; i++)
 		{
-			bool should_use_torodial = should_use_toroidal_distance(position);
+			bool should_use_torodial = near.at_border;
 			sf::Vector2f& other_position = positions[near.array[i]];
 
 			sf::Vector2f dir{};
@@ -148,13 +203,23 @@ private:
 		}
 	}
 
+	float calculate_b(const int l, const int r)
+	{
+		return network.feedForward(l/15, r/15) * 180;
+		const float result = tanh(l * w1 + r * w2 + (l + r) * w3 + b);
+		return (result + 1) * 180.f;
+	}
+
 	void update_particle_positioning(const size_t index)
 	{
 		sf::Vector2f& position = positions[index];
 
 		// delta_phi = alpha + beta × N × sign(R - L)
 		const unsigned sum = right[index] + left[index]; // TODO do this all at once too
-		const float delta = alpha + beta * sum * sign(right[index] - left[index]);
+
+		//const float act_sum = sum <= activation ? sum : 0;
+		
+		const float delta = alpha + beta * sum * sign(right[index] - left[index]); // calculate_b(left[index], right[index]);
 		angles[index] += delta * (pi / 180.f);
 
 		float deltaX = gamma * std::cos(angles[index]);
@@ -162,7 +227,8 @@ private:
 
 		position += {deltaX, deltaY};
 
-		border(position, bounds_); // TODO AND this
+		position.x = std::fmod(position.x + bounds_.width, bounds_.width);
+		position.y = std::fmod(position.y + bounds_.height, bounds_.height);
 	}
 
 

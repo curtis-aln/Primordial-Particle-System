@@ -5,26 +5,23 @@
 
 #include <cstdint>
 #include <iostream>
+#include <array>
 
 /*
 	SpatialHashGrid
 
+NOTE:
+- have no more than 65,536 (2^16) objects
+
 	Improvements:
-	- make a check visual range function
-	- make a way to return the cells within visual range
-	- automatic resolution resizer
+	- Replace std::vector<CollisionCell> m_cells{} with a fixed-size array for betetr cashe locality.
+	- pre-compute cell neighbours
+	- pre-compute if cells are at the border
+	- pre-compute 2d indexes for cells
+	- object of arrays
+	- object counts might be -1 what it should be
+	- c_Vec size may be wrong
 
-	Notes:
-	FINAL GOAL: 50k particles at 144fps
-	03/10/2022 - 20k  at 22fps
-	26/10/2022 - 40k  at 32fps
-	03/03/2023 - 50k  at 25fps
-	16/03/2023 - 50k  at 12fps
-	25/03/2023 - 100k at 10fps
-
-	REMEMBER:
-	changing colors of the rects takes up about 20,000 microseconds
-	the reason why cells might not collide instantly might be due to using floats instead of doubles
 */
 
 
@@ -38,60 +35,95 @@ void grow_rect(sf::Rect<T>& rect, const T buffer)
 }
 
 
-// https://github.com/johnBuffer/VerletSFML-Multithread/blob/main/src/physics/collision_grid.hpp
-struct CollisionCell
+// cell_capacity is the absolute MAXIMUM amount of objects that will be in this cell
+static constexpr uint16_t cell_capacity = 16;
+static constexpr uint16_t max_cell_idx = cell_capacity - 1;
+
+
+template<size_t size>
+struct CollisionCells
 {
-	// cell_capacity is the absolute MAXIMUM amount of objects that will be in this cell
-	static constexpr uint16_t cell_capacity = 30;
-	static constexpr uint16_t max_cell_idx = cell_capacity - 1;
-
-	uint16_t objects_count = 0;
-	int32_t objects[cell_capacity] = {};
-
-	CollisionCell() = default;
-
-	void addAtom(const int32_t id)
-	{
-		objects[objects_count] = id;
-		objects_count += objects_count < max_cell_idx;
-	}
-
-	void clear()
-	{
-		objects_count = 0;
-	}
+	bool at_border[size] = {};
+	uint8_t object_counts[size] = {};
+	uint16_t objects[size][cell_capacity] = {};
+	uint16_t neighbour_indices[size][9] = {};
 };
 
 
 struct c_Vec
 {
-	static constexpr uint16_t max = CollisionCell::cell_capacity * 9;
-	int32_t array[max] = {};
-	uint16_t size = 0;
+	bool at_border = false;
 
-	void add(const int32_t value)
+	static constexpr uint8_t max = cell_capacity * 9;
+	int16_t array[max] = {};
+	uint8_t size = 0;
+
+	void add(const int16_t value)
 	{
 		if (size >= max)
 			return;
 
-		array[size] = value;
-		size++;
+		array[size++] = value;
 	}
 
-	[[nodiscard]] int32_t at(const unsigned index) const
+	inline [[nodiscard]] int16_t at(const unsigned index) const
 	{
 		return array[index];
 	}
 };
 
 
+template<size_t cells_x, size_t cells_y>
 class SpatialHashGrid
 {
 public:
 	// constructor and destructor
-	explicit SpatialHashGrid(const sf::FloatRect screenSize = {}, const sf::Vector2u cellsXY = {})
+	explicit SpatialHashGrid(const sf::FloatRect screenSize = {})
 	{
-		init(screenSize, cellsXY);
+		// calculating the neighbouring indices at creation so it won't have to be re-calculated every frame
+		for (int32_t x = 0; x < cells_x; ++x)
+		{
+			for (int32_t y = 0; y < cells_y; ++y)
+			{
+				const int16_t index = idx2d_to1d({ x, y });
+				size_t current_array_index = 0;
+
+				collision_cells_.at_border[index] = (x == 0 || y == 0 || x == cells_x - 1 || y == cells_y - 1);
+
+				for (int32_t nx = -1; nx <= 1; ++nx)
+				{
+					for (int32_t ny = -1; ny <= 1; ++ny)
+					{
+						int32_t n_idx_x = x + nx;
+						int32_t n_idx_y = y + ny;
+
+						// wrap function
+						n_idx_x = (n_idx_x + cells_x) % cells_x;
+						n_idx_y = (n_idx_y + cells_y) % cells_y;
+
+
+						const int16_t n_index = idx2d_to1d({ n_idx_x, n_idx_y});
+
+
+						collision_cells_.neighbour_indices[index][current_array_index++] = n_index;
+					}
+				}
+			}
+		}
+
+
+		m_screenSize = screenSize;
+
+		// this accounts for floating point innaccurate scenarios where we are adding an Object which is right on the border of
+		// the screen_bounds of the spatial hash grid.
+		grow_rect(m_screenSize, 0.001f);
+
+		m_cellSize = { m_screenSize.width / static_cast<float>(cells_x),
+						  m_screenSize.height / static_cast<float>(cells_y) };
+
+		map_conversion_units = { 1.f / m_cellSize.x, 1.f / m_cellSize.y };
+
+		initVertexBuffer();
 	}
 	~SpatialHashGrid() = default;
 
@@ -100,13 +132,19 @@ public:
 	void addObject(const sf::Vector2f& pos, const int32_t id)
 	{
 		// mapping its position to the hash grid
-		const sf::Vector2<int32_t> cIdx = posTo2dIdx(pos);
+		const sf::Vector2<int32_t> cIdx = pos_to2d_idx(pos);
 
-		if (!checkValidIndex(cIdx))
+		if (!check_valid_index(cIdx))
 			throw std::out_of_range("find() position argument out of range");
 
-		const int32_t idx = idx2dTo1d(cIdx);
-		m_cells[idx].addAtom(id);
+		const int32_t idx = idx2d_to1d(cIdx);
+
+		// adding the atom
+		uint8_t& object_count = collision_cells_.object_counts[idx];
+
+		collision_cells_.objects[idx][object_count] = id;
+		object_count += object_count < max_cell_idx;
+
 	}
 
 
@@ -114,110 +152,75 @@ public:
 	{
 		found.size = 0;
 
-		const sf::Vector2<int32_t> cIdx = posTo2dIdx(position);
+		const sf::Vector2<int32_t> cIdx = pos_to2d_idx(position);
+		const uint16_t cell_index = idx2d_to1d(cIdx);
 
-		if (!checkValidIndex(cIdx))
+		if (!check_valid_index(cIdx))
 			throw std::out_of_range("find() position argument out of range");
 
-		// getting the indexes needed
-		for (int x = cIdx.x - 1; x <= cIdx.x + 1; x++)
+		for (uint16_t neighbour_idx : collision_cells_.neighbour_indices[cell_index])
 		{
-			for (int y = cIdx.y - 1; y <= cIdx.y + 1; y++)
+			const uint16_t object_count = collision_cells_.object_counts[neighbour_idx];
+
+			for (uint8_t i = 0; i < object_count; ++i)
 			{
-				sf::Vector2i indexes = { x, y };
-				if (indexes.x == m_cellsXY.x) indexes.x = 0;
-				if (indexes.y == m_cellsXY.y) indexes.y = 0;
-				if (indexes.x == -1) indexes.x = m_cellsXY.x - 1;
-				if (indexes.y == -1) indexes.y = m_cellsXY.y - 1;
-
-
-
-		
-
-				const CollisionCell& cell = m_cells[idx2dTo1d(indexes)];
-
-				for (unsigned i{ 0 }; i < cell.objects_count; i++)
-					found.add(cell.objects[i]);
+				found.add(collision_cells_.objects[neighbour_idx][i]);
 			}
 		}
 
+		found.at_border = collision_cells_.at_border[cell_index];
 		return found;
 	}
 
 
-	void reSize(const sf::FloatRect screenSize)
+	inline void clear()
 	{
-		init(screenSize, m_cellsXY);
-	}
-
-
-	void clear()
-	{
-		for (CollisionCell& cell : m_cells) {
-			cell.objects_count = 0;
+		for (size_t i = 0; i < total_cells; ++i)
+		{
+			collision_cells_.object_counts[i] = 0;
 		}
 	}
 
 
 private:
-	void init(const sf::FloatRect screenSize, const sf::Vector2u cellsXY)
+	static inline [[nodiscard]] int32_t idx2d_to1d(const sf::Vector2<int32_t> idx)
 	{
-		m_cellsXY = cellsXY;
-		m_screenSize = screenSize;
-
-		// this accounts for floating point innaccurate scenarios where we are adding an Object which is right on the border of
-		// the screen_bounds of the spatial hash grid.
-		grow_rect(m_screenSize, 0.001f);
-
-		m_cells.resize(m_cellsXY.x * m_cellsXY.y);
-
-		m_cellSize = { m_screenSize.width / static_cast<float>(m_cellsXY.x),
-			              m_screenSize.height / static_cast<float>(m_cellsXY.y) };
-
-		map_conversion_units = { 1.f / m_cellSize.x, 1.f / m_cellSize.y };
-
-		initVertexBuffer();
+		return idx.x + idx.y * cells_x;
 	}
 
-
-
-	[[nodiscard]] int32_t idx2dTo1d(const sf::Vector2<int32_t> idx) const
-	{
-		return idx.x + idx.y * m_cellsXY.x;
-	}
-
-	[[nodiscard]] sf::Vector2<int32_t> posTo2dIdx(const sf::Vector2f position) const
+	inline [[nodiscard]] sf::Vector2<int32_t> pos_to2d_idx(const sf::Vector2f position) const
 	{
 		return {
 			static_cast<int32_t>(position.x * map_conversion_units.x),
 			static_cast<int32_t>(position.y * map_conversion_units.y) };
 	}
 
-	[[nodiscard]] bool checkValidIndex(const sf::Vector2i index) const
+
+	static inline [[nodiscard]] bool check_valid_index(const sf::Vector2i index)
 	{
-		return !(index.x < 0 || index.y < 0 || index.x >= m_cellsXY.x || index.y >= m_cellsXY.y);
+		return !(index.x < 0 || index.y < 0 || index.x >= cells_x || index.y >= cells_y);
 	}
 
 
 	void initVertexBuffer()
 	{
-		std::vector<sf::Vertex> vertices(static_cast<std::vector<sf::Vertex>::size_type>((m_cellsXY.x + m_cellsXY.y) * 2));
+		std::vector<sf::Vertex> vertices(static_cast<std::vector<sf::Vertex>::size_type>((cells_x + cells_y) * 2));
 
 		vertexBuffer = sf::VertexBuffer(sf::Lines, sf::VertexBuffer::Static);
 		vertexBuffer.create(vertices.size());
 
 		size_t counter = 0;
-		for (unsigned i = 0; i < m_cellsXY.x; i++)
+		for (size_t x = 0; x < cells_x; x++)
 		{
-			const float posX = static_cast<float>(i) * m_cellSize.x;
+			const float posX = static_cast<float>(x) * m_cellSize.x;
 			vertices[counter].position = { posX, 0 };
 			vertices[counter + 1].position = { m_screenSize.left + posX, m_screenSize.top + m_screenSize.height };
 			counter += 2;
 		}
 
-		for (unsigned i = 0; i < m_cellsXY.y; i++)
+		for (size_t y = 0; y < cells_y; y++)
 		{
-			const float posY = static_cast<float>(i) * m_cellSize.y;
+			const float posY = static_cast<float>(y) * m_cellSize.y;
 			vertices[counter].position = { 0, posY };
 			vertices[counter + 1].position = { m_screenSize.left + m_screenSize.width, m_screenSize.top + posY };
 			counter += 2;
@@ -227,13 +230,14 @@ private:
 	}
 
 public:
-	sf::Vector2f get_cell_size() { return m_cellSize; }
+	inline sf::Vector2f get_cell_size() { return m_cellSize; }
 
 
 
 private:
-	std::vector<CollisionCell> m_cells{};
-	sf::Vector2u m_cellsXY{};
+	inline static constexpr size_t total_cells = cells_x * cells_y;
+
+	CollisionCells<total_cells> collision_cells_{};
 
 	sf::Vector2f map_conversion_units{};
 	c_Vec found{};

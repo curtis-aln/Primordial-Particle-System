@@ -24,7 +24,7 @@ public:
     }
 
     // Function to set font size
-    void set_font_size(const unsigned font_size)
+    inline void set_font_size(const unsigned font_size)
     {
         m_text_.setCharacterSize(font_size);
     }

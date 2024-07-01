@@ -5,7 +5,7 @@
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float TWO_PI = 2.f * pi;
 
-int sign(const int x)
+inline int sign(const int x)
 {
 	return (x > 0) ? 1 : (x < 0) ? -1 : 0;
 }

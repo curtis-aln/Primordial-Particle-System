@@ -1,6 +1,8 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
+#include "utils/random.h"
+
 struct SimulationSettings
 {
 	inline static constexpr unsigned screen_width = 1800;
@@ -16,14 +18,12 @@ struct SimulationSettings
 
 struct SystemSettings
 {
-	inline static constexpr float scale = 0.35f;
+	inline static constexpr float scale = 0.18f;
 
-	inline static constexpr unsigned particle_count = 8'000;
+	inline static constexpr unsigned particle_count = 30'000;
 
-	inline static unsigned hash_dims_height = 10.f / scale;
-	inline static const sf::Vector2u spatial_hash_dims = {
-		static_cast<unsigned>(static_cast<float>(hash_dims_height) * SimulationSettings::aspect_ratio),
-		hash_dims_height};
+	inline static constexpr size_t hash_cells_y = 14.f / scale;
+	inline static constexpr size_t hash_cells_x = static_cast<unsigned>(static_cast<float>(hash_cells_y) * SimulationSettings::aspect_ratio);
 
 	inline static constexpr float radius = 12.f * scale;
 	inline static constexpr float visual_radius = radius * 5;
@@ -31,16 +31,22 @@ struct SystemSettings
 	inline static constexpr float alpha = 180.f;
 	inline static constexpr float beta = 17.f;
 	inline static constexpr float gamma = radius * 0.67;
+	//inline static constexpr unsigned activation = 28;
+
+	inline static float w1 = Random::rand11_float();
+	inline static float w2 = Random::rand11_float();
+	inline static float w3 = Random::rand11_float();
+	inline static float b = Random::rand11_float();
 
 
 	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
 	{
-		{0, {0, 255, 0, 125}},  // green
+		{0, {10, 255, 10, 125}},  // green
 		
 		{10, {139,69,19, 100}}, // brown
 		{15, {0, 0, 255, 100}},  // blue
 		{35, {255, 255, 0, 100}}, // yellow
-		{15, {255, 0, 255, 100}},// magenta
+		{45, {255, 0, 0, 100}},// red
 		
 	};
 };

@@ -14,10 +14,10 @@ struct Random
 	inline static std::uniform_int<> int11_dist{ -1, 1 };
 
 	// basic random functions 11 = range(-1, 1), 01 = range(0, 1)
-	static float rand11_float() { return float11_dist(rng); }
-	static float rand01_float() { return float01_dist(rng); }
-	static int   rand01_int() { return int01_dist(rng); }
-	static int   rand11_int() { return int11_dist(rng); }
+	inline static float rand11_float() { return float11_dist(rng); }
+	inline static float rand01_float() { return float01_dist(rng); }
+	inline static int   rand01_int() { return int01_dist(rng); }
+	inline static int   rand11_int() { return int11_dist(rng); }
 
 
 	// more complex random generation. specified ranges
@@ -39,7 +39,7 @@ struct Random
 	}
 
 	// random SFML::Vector<Type>
-	static sf::Color rand_color(const sf::Vector3<int> rgb_min = { 0, 0, 0 },
+	inline static sf::Color rand_color(const sf::Vector3<int> rgb_min = { 0, 0, 0 },
 		const sf::Vector3<int> rgb_max = { 255 ,255, 255 })
 	{
 		return {
@@ -50,13 +50,13 @@ struct Random
 	}
 
 	template<typename Type> // random SFML::Vector<Type>
-	static sf::Vector2<Type> rand_vector(const Type min, const Type max)
+	inline static sf::Vector2<Type> rand_vector(const Type min, const Type max)
 	{
 		return { rand_range(min, max), rand_range(min, max) };
 	}
 
 	template<typename Type> // random position within a rect
-	static sf::Vector2<Type> rand_pos_in_rect(const sf::Rect<Type>& rect)
+	inline static sf::Vector2<Type> rand_pos_in_rect(const sf::Rect<Type>& rect)
 	{
 		return { rand_range(rect.left, rect.left + rect.width),
 				 rand_range(rect.top, rect.top + rect.height) };

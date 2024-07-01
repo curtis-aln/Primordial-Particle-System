@@ -44,6 +44,11 @@ class Simulation : SystemSettings, SimulationSettings
 		case sf::Keyboard::D:
 			debug_ = not debug_;
 			break;
+
+		case sf::Keyboard::Num0:
+			particle_system_.network.randomize();
+			break;
+
 		}
 	}
 

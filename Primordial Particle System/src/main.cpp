@@ -12,8 +12,6 @@
 // Graph of amount of each particle
 
 /*
-Optimize memory access patterns by storing particle data in contiguous arrays rather than separate objects.
-Consider using fixed-point arithmetic instead of floating-point for faster calculations on some hardware.
 Implement time stepping with adaptive step sizes to balance accuracy and performance.
 Use circular buffers for efficient handling of the toroidal space wrapping.
 */
@@ -24,11 +22,8 @@ int main()
 	Simulation().run();
 }
 
-// baseline          53fps
-// object of arrays  103fps
-// not rendering     166fps
-// running exe file  200fps
-
-
-// 20k particles
-// baseline          75fps
+// baseline 30k             - 20fps
+// project settings changes - 29fps
+// not rendering            - 50fps
+// SHG optimization         - 65fps
+// pre-computing borders    - 70fps

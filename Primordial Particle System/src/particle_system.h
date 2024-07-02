@@ -15,6 +15,8 @@
 
 
 constexpr float pi_div_180 = pi / 180.f;
+constexpr size_t cos_sin_table_size = 360;
+
 
 class NeuralNetwork {
 private:
@@ -69,11 +71,15 @@ class ParticlePopulation : SystemSettings
 	// used to keep particles within bounds
 	sf::FloatRect bounds_{};
 
-	// each index represents a particle
-	std::array<sf::Vector2f, population_size> positions;
-	std::array<float, population_size> angles;
-	std::array<uint8_t, population_size> left;
-	std::array<uint8_t, population_size> right;
+	alignas(32) std::array<float, cos_sin_table_size> cos_table;
+	alignas(32) std::array<float, cos_sin_table_size> sin_table;
+
+	// Use Structure of Arrays for better cache utilization
+	alignas(32) std::array<float, population_size> positions_x;
+	alignas(32) std::array<float, population_size> positions_y;
+	alignas(32) std::array<float, population_size> angles;
+	alignas(32) std::array<uint8_t, population_size> left;
+	alignas(32) std::array<uint8_t, population_size> right;
 
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
 	sf::Vector2f hash_cell_size;
@@ -93,7 +99,9 @@ public:
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			positions[i] = Random::rand_pos_in_rect(bounds);
+			sf::Vector2f pos = Random::rand_pos_in_rect(bounds);
+			positions_x[i] = pos.x;
+			positions_y[i] = pos.y;
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
 			left[i] = 0;
 			right[i] = 0;
@@ -116,7 +124,7 @@ public:
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			hash_grid.addObject(positions[i], i);
+			hash_grid.addObject({ positions_x[i], positions_y[i]}, i);
 		}
 
 		// for each particle we calculate its neighbours
@@ -134,7 +142,7 @@ public:
 		{
 			circle_drawer.setFillColor(get_color(i));
 
-			circle_drawer.setPosition(positions[i] - sf::Vector2f{radius, radius});
+			circle_drawer.setPosition({ positions_x[i] - radius, positions_y[i] - radius });
 			window.draw(circle_drawer, sf::BlendAdd);
 
 			if (debug)
@@ -151,7 +159,7 @@ public:
 private:
 	sf::Color get_color(const size_t index)
 	{
-		for (size_t i = colors.size() - 2; i >= 0; --i)
+		for (size_t i = colors.size() - 1; i >= 0; --i)
 		{
 			if (left[index] + right[index] >= colors[i].first)
 			{
@@ -167,14 +175,15 @@ private:
 		left[index] = 0;
 		right[index] = 0;
 
-		const sf::Vector2f& position = positions[index];
+		const sf::Vector2f& position = { positions_x[index], positions_y[index] };
 		const c_Vec& near = hash_grid.find(position);
-		const float size = hash_grid.get_cell_size().x;
 
 		for (size_t i = 0; i < near.size; i++)
 		{
+			const int16_t other_index = near.array[i];
+
 			bool should_use_torodial = near.at_border;
-			sf::Vector2f& other_position = positions[near.array[i]];
+			sf::Vector2f other_position = {positions_x[other_index], positions_y[other_index]};
 
 			sf::Vector2f dir{};
 			float dist_sq = 0.f;
@@ -212,7 +221,8 @@ private:
 
 	void update_particle_positioning(const size_t index)
 	{
-		sf::Vector2f& position = positions[index];
+		float& pos_x = positions_x[index];
+		float& pos_y = positions_y[index];
 
 		// delta_phi = alpha + beta × N × sign(R - L)
 		const unsigned sum = right[index] + left[index]; // TODO do this all at once too
@@ -225,11 +235,14 @@ private:
 		float deltaX = gamma * std::cos(angles[index]);
 		float deltaY = gamma * std::sin(angles[index]);
 
-		position += {deltaX, deltaY};
+		pos_x += deltaX;
+		pos_y += deltaY;
 
-		position.x = std::fmod(position.x + bounds_.width, bounds_.width);
-		position.y = std::fmod(position.y + bounds_.height, bounds_.height);
+		pos_x = std::fmod(pos_x + bounds_.width, bounds_.width);
+		pos_y = std::fmod(pos_y + bounds_.height, bounds_.height);
 	}
+
+
 
 
 	void render_debug(sf::RenderWindow& window, const size_t index)
@@ -243,10 +256,10 @@ private:
 		{
 			if (i % 3 == 0) // one in three
 			{
-				p_visual_radius.setPosition(positions[index] - sf::Vector2f{visual_radius, visual_radius});
+				p_visual_radius.setPosition(sf::Vector2f{positions_x[index] - visual_radius, positions_y[index] - visual_radius});
 				window.draw(p_visual_radius);
 
-				window.draw(createLine(positions[index], angles[index], 15));
+				window.draw(createLine({ positions_x[index], positions_y[index] }, angles[index], 15));
 			}
 			
 		}

@@ -36,7 +36,7 @@ void grow_rect(sf::Rect<T>& rect, const T buffer)
 
 
 // cell_capacity is the absolute MAXIMUM amount of objects that will be in this cell
-static constexpr uint16_t cell_capacity = 16;
+static constexpr uint16_t cell_capacity = 85;
 static constexpr uint16_t max_cell_idx = cell_capacity - 1;
 
 
@@ -145,6 +145,7 @@ public:
 		collision_cells_.objects[idx][object_count] = id;
 		object_count += object_count < max_cell_idx;
 
+
 	}
 
 
@@ -249,4 +250,6 @@ private:
 
 public:
 	sf::VertexBuffer vertexBuffer{};
+
+	int largest = 0;
 };

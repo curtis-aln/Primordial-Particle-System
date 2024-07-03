@@ -11,7 +11,7 @@ inline int sign(const int x)
 }
 
 
-inline bool isOnRightHemisphere(const sf::Vector2f& direction, float angle, const sf::FloatRect& bounds, bool should_use_torodial)
+inline bool isOnRightHemisphere(const sf::Vector2f& direction, float angle)
 {
 
 	// Calculate the angle between the positive x-axis and the vector to other_pos
@@ -27,11 +27,7 @@ inline bool isOnRightHemisphere(const sf::Vector2f& direction, float angle, cons
 	const float right_end = std::fmod(angle + pi, TWO_PI);
 
 	// Check if other_angle lies on the right hemisphere
-	if (right_start < right_end) {
-		return (other_angle >= right_start && other_angle <= right_end);
-	}
-
-	return (other_angle >= right_start || other_angle <= right_end);
+	return (right_start < right_end) ? (other_angle >= right_start && other_angle <= right_end) : (other_angle >= right_start || other_angle <= right_end);
 }
 
 

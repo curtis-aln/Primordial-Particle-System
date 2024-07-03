@@ -1,4 +1,4 @@
-#pragma once
+ï»¿#pragma once
 
 #include <SFML/Graphics.hpp>
 #include "settings.h"
@@ -16,53 +16,9 @@
 
 constexpr float pi_div_180 = pi / 180.f;
 constexpr size_t cos_sin_table_size = 360;
-
-
-class NeuralNetwork {
-private:
-	float weights1[3][2];
-	float weights2[3];
-	float bias1[3];
-	float bias2;
-	std::mt19937 gen;
-	std::uniform_real_distribution<> dis;
-
-	static inline float clamp(float x) {
-		return std::max(-1.0f, std::min(1.0f, x));
-	}
-
-public:
-	NeuralNetwork() : gen(std::random_device()()), dis(-1, 1) {
-		randomize();
-	}
-
-	void randomize() {
-		const float scale1 = std::sqrt(2.0f / 2);  // He initialization
-		const float scale2 = std::sqrt(2.0f / 3);
-
-		for (int i = 0; i < 3; ++i) {
-			for (int j = 0; j < 2; ++j) {
-				weights1[i][j] = scale1 * dis(gen);
-			}
-			weights2[i] = scale2 * dis(gen);
-			bias1[i] = scale1 * dis(gen);
-		}
-		bias2 = scale2 * dis(gen);
-	}
-
-	float feedForward(const float input1, const float input2) const {
-		float hidden[3];
-		for (int i = 0; i < 3; ++i) {
-			hidden[i] = clamp(weights1[i][0] * input1 + weights1[i][1] * input2 + bias1[i]);
-		}
-
-		float output = bias2;
-		for (int i = 0; i < 3; ++i) {
-			output += weights2[i] * hidden[i];
-		}
-		return clamp(output);
-	}
-};
+constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
+constexpr size_t ANGLE_RESOLUTION = 360;
+constexpr float ang_res_div_2pi = ANGLE_RESOLUTION / TWO_PI;
 
 
 template<size_t population_size>
@@ -71,15 +27,17 @@ class ParticlePopulation : SystemSettings
 	// used to keep particles within bounds
 	sf::FloatRect bounds_{};
 
-	alignas(32) std::array<float, cos_sin_table_size> cos_table;
-	alignas(32) std::array<float, cos_sin_table_size> sin_table;
+	alignas(32) std::array<float, ANGLE_RESOLUTION> sin_table;
+	alignas(32) std::array<float, ANGLE_RESOLUTION> cos_table;
 
+	
 	// Use Structure of Arrays for better cache utilization
-	alignas(32) std::array<float, population_size> positions_x;
-	alignas(32) std::array<float, population_size> positions_y;
-	alignas(32) std::array<float, population_size> angles;
-	alignas(32) std::array<uint8_t, population_size> left;
-	alignas(32) std::array<uint8_t, population_size> right;
+	alignas(32) std::vector<float> positions_x;
+	alignas(32) std::vector<float> positions_y;
+	alignas(32) std::vector<float> angles;
+	alignas(32) std::vector<uint8_t> left;
+	alignas(32) std::vector<uint8_t> right;
+	alignas(32) std::vector<cell_idx> cell_indexes;
 
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
 	sf::Vector2f hash_cell_size;
@@ -88,14 +46,16 @@ class ParticlePopulation : SystemSettings
 	sf::CircleShape circle_drawer{};
 
 
-
-public:
-	NeuralNetwork network{};
-
-
 public:
 	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds)
 	{
+		positions_x.resize(population_size);
+		positions_y.resize(population_size);
+		angles.resize(population_size);
+		left.resize(population_size);
+		right.resize(population_size);
+		cell_indexes.resize(population_size);
+
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
 		{
@@ -107,14 +67,17 @@ public:
 			right[i] = 0;
 		}
 
+		// Initialize sin and cos tables
+		for (size_t i = 0; i < ANGLE_RESOLUTION; ++i)
+		{
+			float angle = static_cast<float>(i) * 2.0f * pi / ANGLE_RESOLUTION;
+			sin_table[i] = std::sin(angle);
+			cos_table[i] = std::cos(angle);
+		}
+
+
 		// initializing renderer
 		circle_drawer.setRadius(radius);
-
-		hash_cell_size = hash_grid.get_cell_size();
-
-		std::cout << hash_cell_size.x << " " << visual_radius << "\n";
-
-
 	}
 
 
@@ -124,7 +87,7 @@ public:
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			hash_grid.addObject({ positions_x[i], positions_y[i]}, i);
+			cell_indexes[i] = hash_grid.add_object({ positions_x[i], positions_y[i]}, i);
 		}
 
 		// for each particle we calculate its neighbours
@@ -138,20 +101,16 @@ public:
 
 	void render(sf::RenderWindow& window, const bool debug = false, const bool draw_hash_grid = false)
 	{
-		for (size_t i = 0; i < population_size; ++i)
-		{
-			circle_drawer.setFillColor(get_color(i));
-
-			circle_drawer.setPosition({ positions_x[i] - radius, positions_y[i] - radius });
-			window.draw(circle_drawer, sf::BlendAdd);
-
-			if (debug)
-				render_debug(window, i);
-		}
-
 		if (draw_hash_grid)
 		{
 			window.draw(hash_grid.vertexBuffer);
+		}
+
+		for (size_t i = 0; i < population_size; ++i)
+		{
+			circle_drawer.setFillColor(get_color(i));
+			circle_drawer.setPosition({ positions_x[i] - radius, positions_y[i] - radius });
+			window.draw(circle_drawer, sf::BlendAdd);
 		}
 	}
 
@@ -159,84 +118,71 @@ public:
 private:
 	sf::Color get_color(const size_t index)
 	{
-		for (size_t i = colors.size() - 1; i >= 0; --i)
-		{
-			if (left[index] + right[index] >= colors[i].first)
-			{
-				return colors[i].second;
-			}
-		}
+		const uint16_t total = left[index] + right[index];
+
+		// Assuming colors is sorted in descending order of first element
+		auto it = std::lower_bound(colors.rbegin(), colors.rend(), total,
+			[](const auto& pair, uint16_t value) {
+				return pair.first > value;
+			});
+
+		return it != colors.rend() ? it->second : colors.back().second;
 	}
 
 
 	void calculate_neighbours(const size_t index)
 	{
 		// resetting the particle
-		left[index] = 0;
-		right[index] = 0;
+		uint8_t l = 0;
+		uint8_t r = 0;
 
 		const sf::Vector2f& position = { positions_x[index], positions_y[index] };
-		const c_Vec& near = hash_grid.find(position);
+		const c_Vec& near = hash_grid.find(cell_indexes[index]);
 
 		for (size_t i = 0; i < near.size; i++)
 		{
 			const int16_t other_index = near.array[i];
 
-			bool should_use_torodial = near.at_border;
 			sf::Vector2f other_position = {positions_x[other_index], positions_y[other_index]};
 
-			sf::Vector2f dir{};
-			float dist_sq = 0.f;
-			if (should_use_torodial)
-			{
-				dir = toroidal_direction(position, other_position, bounds_);
-				dist_sq = dir.x * dir.x + dir.y * dir.y;
-			}
-			else
-			{
-				const sf::Vector2f delta = position - other_position;
-				dist_sq = delta.x * delta.x + delta.y * delta.y;
-			}
+			sf::Vector2f dir = near.at_border ? toroidal_direction(position, other_position, bounds_) : other_position - position;
+			float dist_sq = dir.x * dir.x + dir.y * dir.y;
 
-			constexpr float rad_sq = visual_radius * visual_radius;
 
 			if (dist_sq > 0 && dist_sq < rad_sq)
 			{
 				// Calculate the x and y coordinates of other_pos relative to pos
-				sf::Vector2f relative = should_use_torodial ? dir : other_position - position;
-				const bool is_on_right = isOnRightHemisphere(relative, angles[index], bounds_, should_use_torodial);
+				const bool is_on_right = isOnRightHemisphere(dir, angles[index]);
 
-				if (is_on_right) ++right[index];
-				else       ++left[index];
+				r += is_on_right;
+				l += !is_on_right;
 			}
 		}
+
+		left[index]  = l;
+		right[index] = r;
 	}
 
-	float calculate_b(const int l, const int r)
-	{
-		return network.feedForward(l/15, r/15) * 180;
-		const float result = tanh(l * w1 + r * w2 + (l + r) * w3 + b);
-		return (result + 1) * 180.f;
-	}
 
 	void update_particle_positioning(const size_t index)
 	{
 		float& pos_x = positions_x[index];
 		float& pos_y = positions_y[index];
+		float& angle = angles[index];
 
-		// delta_phi = alpha + beta × N × sign(R - L)
-		const unsigned sum = right[index] + left[index]; // TODO do this all at once too
+		// delta_phi = alpha + beta Ã— N Ã— sign(R - L)
+		const unsigned sum = right[index] + left[index];
 
 		//const float act_sum = sum <= activation ? sum : 0;
 		
 		const float delta = alpha + beta * sum * sign(right[index] - left[index]); // calculate_b(left[index], right[index]);
-		angles[index] += delta * (pi / 180.f);
+		angle += delta * pi_div_180;
 
-		float deltaX = gamma * std::cos(angles[index]);
-		float deltaY = gamma * std::sin(angles[index]);
+		// Convert angle to index in the pre-generated tables
+		const int angle_index = static_cast<int>(angle * ang_res_div_2pi) % ANGLE_RESOLUTION;
 
-		pos_x += deltaX;
-		pos_y += deltaY;
+		pos_x += gamma * cos_table[angle_index];
+		pos_y += gamma * sin_table[angle_index];
 
 		pos_x = std::fmod(pos_x + bounds_.width, bounds_.width);
 		pos_y = std::fmod(pos_y + bounds_.height, bounds_.height);
@@ -267,3 +213,5 @@ private:
 	}
 
 };
+
+// 82

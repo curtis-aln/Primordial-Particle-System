@@ -147,6 +147,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\particle_system.h" />
+    <ClInclude Include="src\utils\Camera.hpp" />
     <ClInclude Include="src\utils\font.h" />
     <ClInclude Include="src\utils\smooth_frame_rates.h" />
     <ClInclude Include="src\utils\random.h" />

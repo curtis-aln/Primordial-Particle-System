@@ -16,11 +16,11 @@
 // when adding an object return its 2d and 1d cell index to use when they want to call find
 // todo replace check_valid index with a wrap modulus
 
-using cell_idx = uint16_t;
-using obj_idx = uint16_t;
+using cell_idx = uint32_t;
+using obj_idx = uint32_t;
 
 
-static constexpr uint8_t cell_capacity = 18;
+static constexpr uint8_t cell_capacity = 25;
 static constexpr uint8_t max_cell_idx = cell_capacity - 1;
 
 
@@ -30,7 +30,7 @@ struct CollisionCells
 	alignas(32) std::vector<bool> at_border;
 	alignas(32) std::vector<uint8_t> object_counts;
 	alignas(32) std::vector< std::vector<obj_idx> > objects;
-	alignas(32) cell_idx neighbour_indices[size][9];
+	alignas(32) std::vector<std::vector<cell_idx>> neighbour_indices;
 };
 
 
@@ -45,7 +45,7 @@ struct c_Vec
 	uint8_t size = 0;
 
 
-	inline [[nodiscard]] int16_t at(const unsigned index) const
+	inline [[nodiscard]] obj_idx at(const unsigned index) const
 	{
 		return array[index];
 	}
@@ -61,6 +61,7 @@ public:
 		collision_cells_.at_border.resize(total_cells);
 		collision_cells_.object_counts.resize(total_cells);
 		collision_cells_.objects.resize(total_cells, std::vector<obj_idx>(cell_capacity));
+		collision_cells_.neighbour_indices.resize(total_cells, std::vector<obj_idx>(9));
 
 		pre_compute_data();
 		init_graphics();
@@ -148,7 +149,7 @@ public:
 
 		found.at_border = collision_cells_.at_border[cell_index];
 
-		const cell_idx* neighbour_indices = collision_cells_.neighbour_indices[cell_index];
+		const auto& neighbour_indices = collision_cells_.neighbour_indices[cell_index];
 
 		for (size_t n = 0; n < 9; ++n)
 		{

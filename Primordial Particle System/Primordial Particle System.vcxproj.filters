@@ -47,6 +47,9 @@
     <ClInclude Include="src\utils\font.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\Camera.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />

@@ -38,9 +38,6 @@
     <ClInclude Include="src\particle_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\utils\toroidal_space.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\utils\smooth_frame_rates.h">
       <Filter>Header Files</Filter>
     </ClInclude>

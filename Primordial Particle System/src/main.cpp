@@ -9,10 +9,12 @@
 /*
 Implement time stepping with adaptive step sizes to balance accuracy and performance.
 Use circular buffers for efficient handling of the toroidal space wrapping.
-
+todo mkae sure particle doesnt interact with itself
+todo understand how atan2 works
 
 Completity idea:
 - turning depends on the directions of the other particles. those facing towards the particle have a higher weight
+
 */
 
 
@@ -21,4 +23,6 @@ int main()
 	Simulation().run();
 }
 
-// baseline 100k - 7fps
+// baseline 50k                       - 50fps
+// optimizing Hemisphere calculations - 70fps
+// vectorising update loop            - 80fps

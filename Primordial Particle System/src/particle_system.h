@@ -65,11 +65,14 @@ class ParticlePopulation : SystemSettings
 
 	
 	// Use Structure of Arrays for better cache utilization
-	alignas(32) std::vector<float> positions_x;
-	alignas(32) std::vector<float> positions_y;
+	alignas(32) std::vector<sf::Vector2f> positions;
+
 	alignas(32) std::vector<float> angles;
+	alignas(32) std::vector<int> angle_indexes;
+
 	alignas(32) std::vector<uint8_t> left;
 	alignas(32) std::vector<uint8_t> right;
+
 	alignas(32) std::vector<cell_idx> cell_indexes;
 
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
@@ -80,12 +83,18 @@ class ParticlePopulation : SystemSettings
 	sf::RectangleShape render_bounds{};
 
 
+	const float inv_width;
+	const float inv_height;
+
+
 public:
-	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds)
+	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds), inv_width(1.f / bounds_.width), inv_height(1.f / bounds_.height)
 	{
-		positions_x.resize(population_size);
-		positions_y.resize(population_size);
+		positions.resize(population_size);
+
 		angles.resize(population_size);
+		angle_indexes.resize(population_size);
+
 		left.resize(population_size);
 		right.resize(population_size);
 		cell_indexes.resize(population_size);
@@ -93,9 +102,7 @@ public:
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			sf::Vector2f pos = Random::rand_pos_in_rect(bounds);
-			positions_x[i] = pos.x;
-			positions_y[i] = pos.y;
+			positions[i] = Random::rand_pos_in_rect(bounds);
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
 			left[i] = 0;
 			right[i] = 0;
@@ -115,20 +122,43 @@ public:
 	}
 
 
-	void update()
+	void update_vectorized()
 	{
 		// resetting updating the spatial hash grid
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			cell_indexes[i] = hash_grid.add_object({ positions_x[i], positions_y[i]}, i);
+			cell_indexes[i] = hash_grid.add_object(positions[i], i);
 		}
 
-		// for each particle we calculate its neighbours
+		// filling the left and right arrays with data
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			calculate_neighbours(i);
-			update_particle_positioning(i);
+			calculate_left_and_right(i);
+		}
+
+		// calculating change in angle
+		for (size_t i = 0; i < population_size; ++i)
+		{
+			angles[i] += (alpha + beta * (right[i] + left[i]) * (1 | ((right[i] - left[i])) >> 31)) * pi_div_180;
+		}
+
+		// calculating the angle index so the sin and cos value can be accessed from the table
+		for (size_t i = 0; i < population_size; ++i)
+		{
+			angle_indexes[i] = static_cast<int>(angles[i] * ang_res_div_2pi) % ANGLE_RESOLUTION;
+		}
+
+		for (size_t i = 0; i < population_size; ++i)
+		{
+			// Convert angle to index in the pre-generated tables
+			const int angle_index = angle_indexes[i];
+			sf::Vector2f& position = positions[i];
+
+			position += {gamma * cos_table[angle_index], gamma * sin_table[angle_index]};
+
+			position.x = std::fmod(position.x + bounds_.width, bounds_.width);
+			position.y = std::fmod(position.y + bounds_.height, bounds_.height);
 		}
 	}
 
@@ -143,7 +173,7 @@ public:
 		for (size_t i = 0; i < population_size; ++i)
 		{
 			circle_drawer.setFillColor(get_color(i));
-			circle_drawer.setPosition({ positions_x[i] - radius, positions_y[i] - radius });
+			circle_drawer.setPosition(positions[i] - sf::Vector2f{radius, radius});
 			window.draw(circle_drawer, sf::BlendAdd);
 		}
 
@@ -166,29 +196,31 @@ private:
 	}
 
 
-	void calculate_neighbours(const size_t index)
+	void calculate_left_and_right(const size_t index)
 	{
 		// resetting the particle
 		uint8_t l = 0;
 		uint8_t r = 0;
 
-		const sf::Vector2f& position = { positions_x[index], positions_y[index] };
+		const sf::Vector2f& position = positions[index];
 		const c_Vec& near = hash_grid.find(cell_indexes[index]);
 
 		for (size_t i = 0; i < near.size; i++)
 		{
 			const obj_idx other_index = near.array[i];
 
-			sf::Vector2f other_position = {positions_x[other_index], positions_y[other_index]};
+			sf::Vector2f other_position = positions[other_index];
 
-			sf::Vector2f dir = near.at_border ? toroidal_direction(position, other_position, bounds_) : other_position - position;
-			float dist_sq = dir.x * dir.x + dir.y * dir.y;
-
+			const sf::Vector2f dir = !near.at_border ? other_position - position : toroidal_direction(other_position - position);
+			
+			const float dist_sq = dir.x * dir.x + dir.y * dir.y;
 
 			if (dist_sq > 0 && dist_sq < rad_sq)
 			{
-				// Calculate the x and y coordinates of other_pos relative to pos
-				const bool is_on_right = isOnRightHemisphere(dir, angles[index]);
+				// Create a unit vector representing the particle's orientation
+				const int angle_index = angle_indexes[index];
+
+				const bool is_on_right = (dir.x * sin_table[angle_index] - dir.y * cos_table[angle_index]) < 0;
 
 				r += is_on_right;
 				l += !is_on_right;
@@ -200,30 +232,11 @@ private:
 	}
 
 
-	void update_particle_positioning(const size_t index)
+	sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const
 	{
-		float& pos_x = positions_x[index];
-		float& pos_y = positions_y[index];
-		float& angle = angles[index];
-
-		// delta_phi = alpha + beta × N × sign(R - L)
-		const unsigned sum = right[index] + left[index];
-
-		//const float act_sum = sum <= activation ? sum : 0;
-		
-		const float delta = alpha + beta * sum * sign(right[index] - left[index]); // calculate_b(left[index], right[index]);
-		angle += delta * pi_div_180;
-
-		// Convert angle to index in the pre-generated tables
-		const int angle_index = static_cast<int>(angle * ang_res_div_2pi) % ANGLE_RESOLUTION;
-
-		pos_x += gamma * cos_table[angle_index];
-		pos_y += gamma * sin_table[angle_index];
-
-		pos_x = std::fmod(pos_x + bounds_.width, bounds_.width);
-		pos_y = std::fmod(pos_y + bounds_.height, bounds_.height);
+		return { direction.x - bounds_.width * std::round(direction.x * inv_width),
+		direction.y - bounds_.height * std::round(direction.y * inv_height) };
 	}
-
 
 
 
@@ -236,18 +249,16 @@ private:
 
 		for (unsigned i = 0; i < population_size; i++)
 		{
-			if (i % 3 == 0) // one in three
-			{
-				p_visual_radius.setPosition(sf::Vector2f{positions_x[index] - visual_radius, positions_y[index] - visual_radius});
-				window.draw(p_visual_radius);
-
-				window.draw(createLine({ positions_x[index], positions_y[index] }, angles[index], 15));
-			}
+			//if (i % 3 == 0) // one in three
+			//{
+			//	p_visual_radius.setPosition(sf::Vector2f{positions_x[index] - visual_radius, positions_y[index] - visual_radius});
+			//	window.draw(p_visual_radius);
+			//
+			//	window.draw(createLine({ positions_x[index], positions_y[index] }, angles[index], 15));
+			//}
 			
 		}
 
 	}
 
 };
-
-// 82

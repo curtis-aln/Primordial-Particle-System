@@ -104,7 +104,7 @@ class Simulation : SystemSettings, SimulationSettings
 	}
 
 public:
-	Simulation() : window_(sf::VideoMode(screen_width, screen_height), window_name, sf::Style::None)
+	Simulation() : window_(sf::VideoMode(screen_width, screen_height), window_name)//, sf::Style::None)
 	{
 		window_.setFramerateLimit(frame_rate);
 		window_.setVerticalSyncEnabled(false);
@@ -118,7 +118,7 @@ public:
 
 			if (!paused_)
 			{
-				particle_system_.update();
+				particle_system_.update_vectorized();
 			}
 
 			if (rendering_)

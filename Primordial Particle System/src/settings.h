@@ -5,8 +5,8 @@
 
 struct SimulationSettings
 {
-	inline static constexpr unsigned screen_width = 1920;
-	inline static constexpr unsigned screen_height = 1100;
+	inline static constexpr unsigned screen_width = 1900;
+	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 
 	inline static constexpr unsigned frame_rate = 60000;
@@ -20,9 +20,11 @@ struct SystemSettings
 {
 	//inline static constexpr float scale = 1.3f;
 	inline static constexpr float scale = .75f;
-	//inline static constexpr unsigned particle_count = 10'000;
+	//inline static constexpr float scale = .4f;
 
+	//inline static constexpr unsigned particle_count = 10'000;
 	inline static constexpr unsigned particle_count = 30'000;
+	//inline static constexpr unsigned particle_count = 100'000;
 
 	inline static constexpr auto hash_cells_y = static_cast< size_t>(30.f / scale);
 	inline static constexpr auto hash_cells_x = static_cast<size_t>((30.f / scale) * SimulationSettings::aspect_ratio);

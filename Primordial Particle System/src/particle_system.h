@@ -2,15 +2,13 @@
 
 #include <SFML/Graphics.hpp>
 #include "settings.h"
-#include "utils/spatial_hash_grid.h"
+#include "utils/spatial_hash_grid_array.h"
 #include "utils/random.h"
 #include "utils/utils.h"
 
 
 #include <cmath>
-#include <random>
 
-#include <immintrin.h> // For AVX instructions
 #include <array>
 
 inline float dist_squared(const sf::Vector2f position_a, const sf::Vector2f position_b)
@@ -51,7 +49,7 @@ constexpr float pi_div_180 = pi / 180.f;
 constexpr size_t cos_sin_table_size = 360;
 constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
 constexpr size_t ANGLE_RESOLUTION = 360;
-constexpr float ang_res_div_2pi = ANGLE_RESOLUTION / TWO_PI;
+constexpr float ang_res_div_2_pi = ANGLE_RESOLUTION / TWO_PI;
 
 
 template<size_t population_size>
@@ -62,56 +60,37 @@ class ParticlePopulation : SystemSettings
 
 	alignas(32) std::array<float, ANGLE_RESOLUTION> sin_table;
 	alignas(32) std::array<float, ANGLE_RESOLUTION> cos_table;
-
+	alignas(32) std::array<float, population_size> angles;
 	
-	// Use Structure of Arrays for better cache utilization
-	alignas(32) std::vector<sf::Vector2f> positions;
+	alignas(32) std::array<sf::Vector2f, population_size> positions;
 
-	alignas(32) std::vector<float> angles;
-	alignas(32) std::vector<int> angle_indexes;
-
-	alignas(32) std::vector<uint8_t> left;
-	alignas(32) std::vector<uint8_t> right;
-
-	alignas(32) std::vector<cell_idx> cell_indexes;
+	alignas(32) std::array<uint16_t, population_size> neighbourhood_count;
 
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
-	sf::Vector2f hash_cell_size;
 
 	// rendering and graphics
 	sf::CircleShape circle_drawer{};
 	sf::RectangleShape render_bounds{};
 
 
-	const float inv_width;
-	const float inv_height;
+	const float inv_width{};
+	const float inv_height{};
 
 
 public:
 	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds), inv_width(1.f / bounds_.width), inv_height(1.f / bounds_.height)
 	{
-		positions.resize(population_size);
-
-		angles.resize(population_size);
-		angle_indexes.resize(population_size);
-
-		left.resize(population_size);
-		right.resize(population_size);
-		cell_indexes.resize(population_size);
-
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
 		{
 			positions[i] = Random::rand_pos_in_rect(bounds);
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
-			left[i] = 0;
-			right[i] = 0;
 		}
 
 		// Initialize sin and cos tables
 		for (size_t i = 0; i < ANGLE_RESOLUTION; ++i)
 		{
-			float angle = static_cast<float>(i) * 2.0f * pi / ANGLE_RESOLUTION;
+			const float angle = static_cast<float>(i) * 2.0f * pi / ANGLE_RESOLUTION;
 			sin_table[i] = std::sin(angle);
 			cos_table[i] = std::cos(angle);
 		}
@@ -119,6 +98,7 @@ public:
 
 		// initializing renderer
 		circle_drawer.setRadius(radius);
+		circle_drawer.setPointCount(20);
 	}
 
 
@@ -128,7 +108,7 @@ public:
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			cell_indexes[i] = hash_grid.add_object(positions[i], i);
+			hash_grid.add_object(positions[i], i);
 		}
 
 		// filling the left and right arrays with data
@@ -137,22 +117,10 @@ public:
 			calculate_left_and_right(i);
 		}
 
-		// calculating change in angle
-		for (size_t i = 0; i < population_size; ++i)
-		{
-			angles[i] += (alpha + beta * (right[i] + left[i]) * (1 | ((right[i] - left[i])) >> 31)) * pi_div_180;
-		}
-
-		// calculating the angle index so the sin and cos value can be accessed from the table
-		for (size_t i = 0; i < population_size; ++i)
-		{
-			angle_indexes[i] = static_cast<int>(angles[i] * ang_res_div_2pi) % ANGLE_RESOLUTION;
-		}
-
 		for (size_t i = 0; i < population_size; ++i)
 		{
 			// Convert angle to index in the pre-generated tables
-			const int angle_index = angle_indexes[i];
+			const int angle_index = static_cast<int>(angles[i] * ang_res_div_2_pi) % ANGLE_RESOLUTION;
 			sf::Vector2f& position = positions[i];
 
 			position += {gamma * cos_table[angle_index], gamma * sin_table[angle_index]};
@@ -184,7 +152,7 @@ public:
 private:
 	sf::Color get_color(const size_t index)
 	{
-		const uint16_t total = left[index] + right[index];
+		const uint16_t total = neighbourhood_count[index];
 
 		// Assuming colors is sorted in descending order of first element
 		auto it = std::lower_bound(colors.rbegin(), colors.rend(), total,
@@ -203,32 +171,33 @@ private:
 		uint8_t r = 0;
 
 		const sf::Vector2f& position = positions[index];
-		const c_Vec& near = hash_grid.find(cell_indexes[index]);
+		const c_Vec& near = hash_grid.find(position);
 
 		for (size_t i = 0; i < near.size; i++)
 		{
-			const obj_idx other_index = near.array[i];
-
-			sf::Vector2f other_position = positions[other_index];
+			sf::Vector2f other_position = positions[near.array[i]];
 
 			const sf::Vector2f dir = !near.at_border ? other_position - position : toroidal_direction(other_position - position);
 			
 			const float dist_sq = dir.x * dir.x + dir.y * dir.y;
 
-			if (dist_sq > 0 && dist_sq < rad_sq)
-			{
-				// Create a unit vector representing the particle's orientation
-				const int angle_index = angle_indexes[index];
+			if (dist_sq == 0 || dist_sq > rad_sq)
+				continue;
 
-				const bool is_on_right = (dir.x * sin_table[angle_index] - dir.y * cos_table[angle_index]) < 0;
 
-				r += is_on_right;
-				l += !is_on_right;
-			}
+			// Create a unit vector representing the particle's orientation
+			const int angle_index = static_cast<int>(angles[index] * ang_res_div_2_pi) % ANGLE_RESOLUTION;
+
+			const bool is_on_right = (dir.x * sin_table[angle_index] - dir.y * cos_table[angle_index]) < 0;
+
+			r += is_on_right;
+			l += !is_on_right;
+			
 		}
 
-		left[index]  = l;
-		right[index] = r;
+		// a + b x N x sign(r-l)
+		neighbourhood_count[index] = r + l;
+		angles[index] += (alpha + beta * (r + l) * (1 | ((r - l)) >> 31)) * pi_div_180;
 	}
 
 

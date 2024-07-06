@@ -1,6 +1,5 @@
 #pragma once
 #include "settings.h"
-#include "utils/spatial_hash_grid.h"
 #include "particle_system.h"
 #include "utils/smooth_frame_rates.h"
 #include "utils/font.h"

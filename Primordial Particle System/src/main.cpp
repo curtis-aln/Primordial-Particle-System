@@ -18,4 +18,5 @@ int main()
 	Simulation().run();
 }
 
-// baseline 30k               70-75 fps
+// baseline 30k                        70-75 fps
+// SPH copying array data optimization 100fps

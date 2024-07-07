@@ -9,7 +9,7 @@ struct SimulationSettings
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 
-	inline static constexpr unsigned frame_rate = 60000;
+	inline static constexpr unsigned frame_rate = 60;
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string window_name = "Primordial Particle Simulation";
 
@@ -18,16 +18,18 @@ struct SimulationSettings
 
 struct SystemSettings
 {
+	//inline static constexpr float scale = 3.3f;
 	//inline static constexpr float scale = 1.3f;
 	inline static constexpr float scale = .75f;
 	//inline static constexpr float scale = .4f;
 
+	//inline static constexpr unsigned particle_count = 1'000;
 	//inline static constexpr unsigned particle_count = 10'000;
 	inline static constexpr unsigned particle_count = 30'000;
 	//inline static constexpr unsigned particle_count = 100'000;
 
-	inline static constexpr auto hash_cells_y = static_cast< size_t>(30.f / scale);
-	inline static constexpr auto hash_cells_x = static_cast<size_t>((30.f / scale) * SimulationSettings::aspect_ratio);
+	inline static constexpr auto hash_cells_y = static_cast< size_t>(35.f / scale);
+	inline static constexpr auto hash_cells_x = static_cast<size_t>((35.f / scale) * SimulationSettings::aspect_ratio);
 
 	inline static constexpr float param_scale = 3;
 

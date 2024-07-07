@@ -58,11 +58,8 @@ class ParticlePopulation : SystemSettings
 	// used to keep particles within bounds
 	sf::FloatRect bounds_{};
 
-	alignas(32) std::array<float, ANGLE_RESOLUTION> sin_table;
-	alignas(32) std::array<float, ANGLE_RESOLUTION> cos_table;
-	alignas(32) std::array<float, population_size> angles;
-	
 	alignas(32) std::array<sf::Vector2f, population_size> positions;
+	alignas(32) std::array<float, population_size> angles;
 
 	alignas(32) std::array<uint16_t, population_size> neighbourhood_count;
 
@@ -87,15 +84,6 @@ public:
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
 		}
 
-		// Initialize sin and cos tables
-		for (size_t i = 0; i < ANGLE_RESOLUTION; ++i)
-		{
-			const float angle = static_cast<float>(i) * 2.0f * pi / ANGLE_RESOLUTION;
-			sin_table[i] = std::sin(angle);
-			cos_table[i] = std::cos(angle);
-		}
-
-
 		// initializing renderer
 		circle_drawer.setRadius(radius);
 		circle_drawer.setPointCount(20);
@@ -114,19 +102,7 @@ public:
 		// filling the left and right arrays with data
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			calculate_left_and_right(i);
-		}
-
-		for (size_t i = 0; i < population_size; ++i)
-		{
-			// Convert angle to index in the pre-generated tables
-			const int angle_index = static_cast<int>(angles[i] * ang_res_div_2_pi) % ANGLE_RESOLUTION;
-			sf::Vector2f& position = positions[i];
-
-			position += {gamma * cos_table[angle_index], gamma * sin_table[angle_index]};
-
-			position.x = std::fmod(position.x + bounds_.width, bounds_.width);
-			position.y = std::fmod(position.y + bounds_.height, bounds_.height);
+			update_angles_optimized(i);
 		}
 	}
 
@@ -164,44 +140,51 @@ private:
 	}
 
 
-	void calculate_left_and_right(const size_t index)
+	inline void update_angles_optimized(const size_t index)
 	{
-		// resetting the particle
-		uint8_t l = 0;
-		uint8_t r = 0;
+		sf::Vector2f& position = positions[index];
+		hash_grid.find(position);
 
-		const sf::Vector2f& position = positions[index];
-		const c_Vec& near = hash_grid.find(position);
+		
 
-		for (size_t i = 0; i < near.size; i++)
+		// calculating sum direction, we cant use average position due to toroidal wrapping. does not need to be average, functionally the same
+		float& angle = angles[index];
+
+		const float sin_angle = std::sin(angle);
+		const float cos_angle = std::cos(angle);
+
+		sf::Vector2f average_direction = {0, 0};
+
+		int nearby = 0;
+		for (int i = 0; i < hash_grid.found_array_size; ++i)
 		{
-			sf::Vector2f other_position = positions[near.array[i]];
+			const sf::Vector2f other_position = positions[hash_grid.found_array[i]];
 
-			const sf::Vector2f dir = !near.at_border ? other_position - position : toroidal_direction(other_position - position);
-			
+			const sf::Vector2f dir = !hash_grid.at_border ? other_position - position : toroidal_direction(other_position - position);
 			const float dist_sq = dir.x * dir.x + dir.y * dir.y;
 
-			if (dist_sq == 0 || dist_sq > rad_sq)
-				continue;
-
-
-			// Create a unit vector representing the particle's orientation
-			const int angle_index = static_cast<int>(angles[index] * ang_res_div_2_pi) % ANGLE_RESOLUTION;
-
-			const bool is_on_right = (dir.x * sin_table[angle_index] - dir.y * cos_table[angle_index]) < 0;
-
-			r += is_on_right;
-			l += !is_on_right;
-			
+			const float conditions = (dist_sq != 0 && dist_sq < rad_sq);
+			nearby += conditions;
+			average_direction += dir * conditions;
 		}
 
-		// a + b x N x sign(r-l)
-		neighbourhood_count[index] = r + l;
-		angles[index] += (alpha + beta * (r + l) * (1 | ((r - l)) >> 31)) * pi_div_180;
+		const bool is_on_right = (average_direction.x * sin_angle - average_direction.y * cos_angle) < 0;
+		const float resized = 2 * is_on_right - 1;
+
+		neighbourhood_count[index] = nearby;
+		angle += (alpha + beta * nearby * resized) * pi_div_180;
+
+
+		// updating the position
+		position += {gamma * cos_angle, gamma * sin_angle};
+
+		position.x = std::fmod(position.x + bounds_.width, bounds_.width);
+		position.y = std::fmod(position.y + bounds_.height, bounds_.height);
 	}
 
 
-	sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const
+
+	inline sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const
 	{
 		return { direction.x - bounds_.width * std::round(direction.x * inv_width),
 		direction.y - bounds_.height * std::round(direction.y * inv_height) };

@@ -12,42 +12,17 @@
 - if experiencing error make sure your objects dont go out of bounds
 */
 
-// when adding an object return its 2d and 1d cell index to use when they want to call find
-// todo replace check_valid index with a wrap modulus
 
 using cell_idx = uint32_t;
 using obj_idx = uint32_t;
 
 
-static constexpr uint8_t cell_capacity = 30;
+static constexpr uint8_t cell_capacity = 20;
 static constexpr uint8_t max_cell_idx = cell_capacity - 1;
 
+static constexpr uint16_t max_size = cell_capacity * 9;
+static constexpr uint16_t max_idx = max_size - 1;
 
-template<size_t size>
-struct CollisionCells
-{
-	alignas(32) std::array<bool, size> at_border;
-	alignas(32) std::array<uint8_t, size> object_counts;
-	alignas(32) std::array<std::array<obj_idx, cell_capacity>, size> objects;
-};
-
-
-struct c_Vec
-{
-	bool at_border = false;
-
-	static constexpr uint16_t max_size = cell_capacity * 9;
-	static constexpr uint16_t max_idx = max_size - 1;
-
-	obj_idx array[max_size] = {};
-	uint16_t size = 0;
-
-
-	inline [[nodiscard]] obj_idx at(const unsigned index) const
-	{
-		return array[index];
-	}
-};
 
 
 template<size_t cells_x, size_t cells_y>
@@ -74,7 +49,6 @@ public:
 		m_cellSize = { m_screenSize.width / static_cast<float>(cells_x),
 						  m_screenSize.height / static_cast<float>(cells_y) };
 
-		map_conversion_units = { 1.f / m_cellSize.x, 1.f / m_cellSize.y };
 	}
 
 
@@ -82,63 +56,56 @@ public:
 	void add_object(const sf::Vector2f& pos, const size_t id)
 	{
 		// mapping the position to the hash grid
-		const auto cell_x = static_cast<cell_idx>(pos.x * map_conversion_units.x);
-		const auto cell_y = static_cast<cell_idx>(pos.y * map_conversion_units.y);
+		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
+		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
 
 		// calculating the 1d index so it can be accessed in memory
 		const auto cell_index = static_cast<cell_idx>(cell_x + cell_y * cells_x);
 
 		// adding the atom and incrementing the size
-		uint8_t& object_count = collision_cells_.object_counts[cell_index];
+		uint8_t& object_count = objects_count[cell_index];
 
-		collision_cells_.objects[cell_index][object_count] = id;
+		objects[cell_index][object_count] = id;
 		object_count += object_count < max_cell_idx;
 	}
 
 
-	c_Vec& find(const sf::Vector2f& position)
+	void find(const sf::Vector2f& position)
 	{
 		// mapping the position to the hash grid
-		const auto cell_x = static_cast<int>(position.x * map_conversion_units.x);
-		const auto cell_y = static_cast<int>(position.y * map_conversion_units.y);
+		const auto cell_x = static_cast<int>(position.x / m_cellSize.x);
+		const auto cell_y = static_cast<int>(position.y / m_cellSize.y);
 
 		// calculating the 1d index so it can be accessed in memory
 		const auto cell_index = static_cast<cell_idx>(cell_x + cell_y * cells_x);
 		
-		found.size = 0;
+		found_array_size = 0;
 
-		found.at_border = collision_cells_.at_border[cell_index];
+		at_border = cell_x == 0 || cell_y == 0 || cell_x == cells_x - 1 || cell_y == cells_y - 1;
 
 		for (int nx = cell_x - 1; nx <= cell_x + 1; ++nx)
 		{
 			for (int ny = cell_y - 1; ny <= cell_y + 1; ++ny)
 			{
-				// wrap function
-				const auto n_idx_x = (static_cast<size_t>(nx) + cells_x) % cells_x;
-				const auto n_idx_y = (static_cast<size_t>(ny) + cells_y) % cells_y;
+				// if the cell is on the border we wrap it
+				const auto n_idx_x = !at_border ? nx : (nx + cells_x) % cells_x;
+				const auto n_idx_y = !at_border ? ny : (ny + cells_y) % cells_y;
 
-				const auto neighbour_index = static_cast<cell_idx>(n_idx_x + n_idx_y * cells_x);
+				const auto neighbour_index = n_idx_x + n_idx_y * cells_x;
+				const auto& contents = objects[neighbour_index];
+				const auto size = objects_count[neighbour_index];
 
-				for (uint8_t i = 0; i < collision_cells_.object_counts[neighbour_index]; ++i)
-				{
-					found.array[found.size] = collision_cells_.objects[neighbour_index][i];
-					found.size += found.size < c_Vec::max_idx;
-				}
+				std::copy(contents.begin(), contents.begin() + size, found_array + found_array_size);
+				found_array_size += size;
+			
 			}
 		}
-
-
-		return found;
 	}
 
 
 	inline void clear()
 	{
-		// todo optimize
-		for (size_t i = 0; i < total_cells; ++i)
-		{
-			collision_cells_.object_counts[i] = 0;
-		}
+		memset(objects_count.data(), 0, total_cells * sizeof(uint8_t));
 	}
 
 
@@ -179,18 +146,20 @@ private:
 private:
 	inline static constexpr size_t total_cells = cells_x * cells_y;
 
-	CollisionCells<total_cells> collision_cells_{};
-
-	sf::Vector2f map_conversion_units{};
-	c_Vec found{};
-
 	// graphics
 	sf::Vector2f m_cellSize{};
 	sf::FloatRect m_screenSize{};
 
 
+	alignas(32) std::array<uint8_t, total_cells> objects_count;
+	alignas(32) std::array<std::array<obj_idx, cell_capacity>, total_cells> objects;
+
+
+
 public:
 	sf::VertexBuffer vertexBuffer{};
 
-	int largest = 0;
+	bool at_border = false;
+	obj_idx found_array[max_size] = {};
+	uint16_t found_array_size = 0;
 };

@@ -155,7 +155,6 @@
     <ClInclude Include="src\simulation.h" />
     <ClInclude Include="src\utils\spatial_hash_grid_array.h" />
     <ClInclude Include="src\utils\utils.h" />
-    <ClInclude Include="src\utils\spatial_hash_grid_vector.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />

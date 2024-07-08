@@ -32,9 +32,6 @@
     <ClInclude Include="src\utils\utils.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\utils\spatial_hash_grid_vector.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\particle_system.h">
       <Filter>Header Files</Filter>
     </ClInclude>

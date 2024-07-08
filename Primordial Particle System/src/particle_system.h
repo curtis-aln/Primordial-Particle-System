@@ -6,50 +6,12 @@
 #include "utils/random.h"
 #include "utils/utils.h"
 
-
 #include <cmath>
-
 #include <array>
 
-inline float dist_squared(const sf::Vector2f position_a, const sf::Vector2f position_b)
-{
-	const sf::Vector2f delta = position_b - position_a;
-	return delta.x * delta.x + delta.y * delta.y;
-}
 
-
-inline void draw_thick_line(sf::RenderWindow& window, const sf::Vector2f& point1, const sf::Vector2f& point2,
-	const float thickness = {}, const sf::Color& fill_color = {255, 255, 255})
-{
-	// Calculate the length and angle of the line
-	const float length = std::sqrt(dist_squared(point1, point2));
-	const float angle = std::atan2(point2.y - point1.y, point2.x - point1.x) * 180 / pi;
-
-	// Create the rectangle shape
-	sf::RectangleShape line(sf::Vector2f(length, thickness));
-	line.setOrigin(0, thickness / 2.0f);
-	line.setPosition(point1);
-	line.setRotation(angle);
-	line.setFillColor(fill_color);
-
-	// Draw the line
-	window.draw(line);
-}
-
-inline void draw_rect_outline(sf::Vector2f top_left, sf::Vector2f bottom_right, sf::RenderWindow& window, const float thickness)
-{
-	draw_thick_line(window, top_left, { bottom_right.x, top_left.y }, thickness);
-	draw_thick_line(window, bottom_right, { top_left.x, bottom_right.y }, thickness);
-	draw_thick_line(window, bottom_right, { bottom_right.x, top_left.y }, thickness);
-	draw_thick_line(window, top_left, { top_left.x, bottom_right.y }, thickness);
-}
-
-
-constexpr float pi_div_180 = pi / 180.f;
-constexpr size_t cos_sin_table_size = 360;
-constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
-constexpr size_t ANGLE_RESOLUTION = 360;
-constexpr float ang_res_div_2_pi = ANGLE_RESOLUTION / TWO_PI;
+// pre-calculating variables
+inline static constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
 
 
 template<size_t population_size>
@@ -121,6 +83,11 @@ public:
 			window.draw(circle_drawer, sf::BlendAdd);
 		}
 
+		if (debug)
+		{
+			render_debug(window);
+		}
+
 		draw_rect_outline(bounds_.getPosition(), bounds_.getPosition() + bounds_.getSize(), window, 4);
 	}
 
@@ -142,20 +109,21 @@ private:
 
 	inline void update_angles_optimized(const size_t index)
 	{
+		// first fetch the data we need
 		sf::Vector2f& position = positions[index];
-		hash_grid.find(position);
-
-		
-
-		// calculating sum direction, we cant use average position due to toroidal wrapping. does not need to be average, functionally the same
 		float& angle = angles[index];
 
+		// then pre-calculate the sin and cos values for the angle
 		const float sin_angle = std::sin(angle);
 		const float cos_angle = std::cos(angle);
 
-		sf::Vector2f average_direction = {0, 0};
+		// finds the nearby indexes in each of the 9 neighbouring cells
+		hash_grid.find(position);
 
+		// calculating the cumulative direction, does not need to be average to function the same
+		sf::Vector2f cumulative_dir = {0, 0};
 		int nearby = 0;
+
 		for (int i = 0; i < hash_grid.found_array_size; ++i)
 		{
 			const sf::Vector2f other_position = positions[hash_grid.found_array[i]];
@@ -165,15 +133,17 @@ private:
 
 			const float conditions = (dist_sq != 0 && dist_sq < rad_sq);
 			nearby += conditions;
-			average_direction += dir * conditions;
+			cumulative_dir += dir * conditions;
 		}
 
-		const bool is_on_right = (average_direction.x * sin_angle - average_direction.y * cos_angle) < 0;
+		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
+		const bool is_on_right = (cumulative_dir.x * sin_angle - cumulative_dir.y * cos_angle) < 0;
 		const float resized = 2 * is_on_right - 1;
 
 		neighbourhood_count[index] = nearby;
-		angle += (alpha + beta * nearby * resized) * pi_div_180;
 
+		// updating the angle
+		angle += (alpha + beta * nearby * resized) * pi_div_180;
 
 		// updating the position
 		position += {gamma * cos_angle, gamma * sin_angle};
@@ -186,28 +156,28 @@ private:
 
 	inline sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const
 	{
-		return { direction.x - bounds_.width * std::round(direction.x * inv_width),
-		direction.y - bounds_.height * std::round(direction.y * inv_height) };
+		return { // todo check using int instead of round
+			direction.x - bounds_.width * std::round(direction.x * inv_width),
+			direction.y - bounds_.height * std::round(direction.y * inv_height)
+		};
 	}
 
 
 
-	void render_debug(sf::RenderWindow& window, const size_t index)
+	void render_debug(sf::RenderWindow& window)
 	{
-		sf::CircleShape p_visual_radius{ visual_radius };
-		p_visual_radius.setFillColor({ 0, 0, 0, 0 });
-		p_visual_radius.setOutlineThickness(1);
-		p_visual_radius.setOutlineColor({ 255 ,255, 255 });
+		//sf::CircleShape p_visual_radius{ visual_radius };
+		//p_visual_radius.setFillColor({ 0, 0, 0, 0 });
+		//p_visual_radius.setOutlineThickness(1);
+		//p_visual_radius.setOutlineColor({ 255 ,255, 255 });
 
 		for (unsigned i = 0; i < population_size; i++)
 		{
-			//if (i % 3 == 0) // one in three
-			//{
-			//	p_visual_radius.setPosition(sf::Vector2f{positions_x[index] - visual_radius, positions_y[index] - visual_radius});
-			//	window.draw(p_visual_radius);
-			//
-			//	window.draw(createLine({ positions_x[index], positions_y[index] }, angles[index], 15));
-			//}
+			const float angle = angles[i];
+			sf::Vector2f dir = { sin(angle) * radius, cos(angle) * radius };
+
+			draw_thick_line(window, positions[i], positions[i] + dir, 2);
+			
 			
 		}
 

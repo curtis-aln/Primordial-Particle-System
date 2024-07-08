@@ -9,32 +9,36 @@
 /*
 	SpatialHashGrid
 - have no more than 65,536 (2^16) objects
-- if experiencing error make sure your objects dont go out of bounds
+- if experiencing error make sure your objects don't go out of bounds
 */
 
+// make cell grid 2d
+// tell objects what index they are in
+// instead of removing and re-adding every frame. only remove and re-add if a object changes its cell
 
-using cell_idx = uint32_t;
-using obj_idx = uint32_t;
+// resize these to either
+// - uint32_t (4.2 billion max cells/objects, 65,000 x 65,000 grid)
+// - uint16_t (65,536 max cells/objects, 256 x 256 grid)
+using cell_idx = uint16_t;
+using obj_idx = uint16_t;
 
-
-static constexpr uint8_t cell_capacity = 20;
-static constexpr uint8_t max_cell_idx = cell_capacity - 1;
-
+// maximum number of objects a cell can hold
+static constexpr uint8_t cell_capacity = 30;
 static constexpr uint16_t max_size = cell_capacity * 9;
-static constexpr uint16_t max_idx = max_size - 1;
+
+using cellIndex = std::pair < cell_idx, cell_idx>;
 
 
-
-template<size_t cells_x, size_t cells_y>
-class SpatialHashGrid
+template<size_t CellsX, size_t CellsY>
+class SpatialHashGridOptimized
 {
 public:
-	explicit SpatialHashGrid(const sf::FloatRect screenSize = {}) : m_screenSize(screenSize)
+	explicit SpatialHashGridOptimized(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
 	{
 		init_graphics();
 		initVertexBuffer();
 	}
-	~SpatialHashGrid() = default;
+	~SpatialHashGridOptimized() = default;
 
 
 	void init_graphics()
@@ -46,58 +50,56 @@ public:
 		m_screenSize.width += resize;
 		m_screenSize.height += resize;
 
-		m_cellSize = { m_screenSize.width / static_cast<float>(cells_x),
-						  m_screenSize.height / static_cast<float>(cells_y) };
+		m_cellSize = { m_screenSize.width / static_cast<float>(CellsX),
+						  m_screenSize.height / static_cast<float>(CellsY) };
 
 	}
 
 
-	// adding an object to the spatial hash grid by a position and storing its id
-	void add_object(const sf::Vector2f& pos, const size_t id)
+	cellIndex inline hash(const sf::Vector2f pos) const
 	{
-		// mapping the position to the hash grid
 		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
 		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
+		return { cell_x, cell_y };
+	}
 
-		// calculating the 1d index so it can be accessed in memory
-		const auto cell_index = static_cast<cell_idx>(cell_x + cell_y * cells_x);
+
+	// adding an object to the spatial hash grid by a position and storing its obj_id
+	void add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
+	{
+		const cellIndex index = hash(obj_pos);
 
 		// adding the atom and incrementing the size
-		uint8_t& object_count = objects_count[cell_index];
+		uint8_t& count = objects_count[index.first][index.second];
 
-		objects[cell_index][object_count] = id;
-		object_count += object_count < max_cell_idx;
+		grid[index.first][index.second][count] = obj_id;
+		count += count < cell_capacity;
 	}
 
 
 	void find(const sf::Vector2f& position)
 	{
-		// mapping the position to the hash grid
-		const auto cell_x = static_cast<int>(position.x / m_cellSize.x);
-		const auto cell_y = static_cast<int>(position.y / m_cellSize.y);
+		// mapping the position to the grid
+		const cellIndex cell_index = hash(position);
 
-		// calculating the 1d index so it can be accessed in memory
-		const auto cell_index = static_cast<cell_idx>(cell_x + cell_y * cells_x);
-		
+		// resetting the found array
 		found_array_size = 0;
 
-		at_border = cell_x == 0 || cell_y == 0 || cell_x == cells_x - 1 || cell_y == cells_y - 1;
+		// at border is calculated so the object can determine whether to use toroidal wrapping or not
+		at_border = cell_index.first == 0 || cell_index.second == 0 || cell_index.first == CellsX - 1 || cell_index.second == CellsY - 1;
 
-		for (int nx = cell_x - 1; nx <= cell_x + 1; ++nx)
+		for (int dx = -1; dx != 2; ++dx)
 		{
-			for (int ny = cell_y - 1; ny <= cell_y + 1; ++ny)
+			for (int dy = -1; dy != 2; ++dy)
 			{
-				// if the cell is on the border we wrap it
-				const auto n_idx_x = !at_border ? nx : (nx + cells_x) % cells_x;
-				const auto n_idx_y = !at_border ? ny : (ny + cells_y) % cells_y;
+				const int index_x = (cell_index.first + dx + CellsX) % CellsX;
+				const int index_y = (cell_index.second + dy + CellsY) % CellsY;
 
-				const auto neighbour_index = n_idx_x + n_idx_y * cells_x;
-				const auto& contents = objects[neighbour_index];
-				const auto size = objects_count[neighbour_index];
+				const auto& contents = grid[index_x][index_y];
+				const auto size = objects_count[index_x][index_y];
 
 				std::copy(contents.begin(), contents.begin() + size, found_array + found_array_size);
 				found_array_size += size;
-			
 			}
 		}
 	}
@@ -112,13 +114,13 @@ public:
 private:
 	void initVertexBuffer()
 	{
-		std::vector<sf::Vertex> vertices(static_cast<std::vector<sf::Vertex>::size_type>((cells_x + cells_y) * 2));
+		std::vector<sf::Vertex> vertices(static_cast<std::vector<sf::Vertex>::size_type>((CellsX + CellsY) * 2));
 
 		vertexBuffer = sf::VertexBuffer(sf::Lines, sf::VertexBuffer::Static);
 		vertexBuffer.create(vertices.size());
 
 		size_t counter = 0;
-		for (size_t x = 0; x < cells_x; x++)
+		for (size_t x = 0; x < CellsX; x++)
 		{
 			const float posX = static_cast<float>(x) * m_cellSize.x;
 			vertices[counter].position = { posX, 0 };
@@ -126,7 +128,7 @@ private:
 			counter += 2;
 		}
 
-		for (size_t y = 0; y < cells_y; y++)
+		for (size_t y = 0; y < CellsY; y++)
 		{
 			const float posY = static_cast<float>(y) * m_cellSize.y;
 			vertices[counter].position = { 0, posY };
@@ -144,16 +146,16 @@ private:
 
 
 private:
-	inline static constexpr size_t total_cells = cells_x * cells_y;
+	inline static constexpr size_t total_cells = CellsX * CellsY;
 
 	// graphics
 	sf::Vector2f m_cellSize{};
 	sf::FloatRect m_screenSize{};
 
+	using cell_container = std::array<cell_idx, cell_capacity>;
 
-	alignas(32) std::array<uint8_t, total_cells> objects_count;
-	alignas(32) std::array<std::array<obj_idx, cell_capacity>, total_cells> objects;
-
+	std::array < std::array<cell_container, CellsY>,CellsX> grid;
+	alignas(32) std::array< std::array<uint8_t, CellsY>, CellsX> objects_count;
 
 
 public:

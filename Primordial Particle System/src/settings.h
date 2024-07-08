@@ -18,6 +18,9 @@ struct SimulationSettings
 
 struct SystemSettings
 {
+	inline static constexpr unsigned world_width = SimulationSettings::screen_width * 10.f;
+	inline static constexpr unsigned world_height = SimulationSettings::screen_height * 10.f;
+
 	inline static constexpr float scale = 3.3f;
 	//inline static constexpr float scale = 1.3f;
 	//inline static constexpr float scale = .75f;
@@ -33,7 +36,7 @@ struct SystemSettings
 
 	inline static constexpr float param_scale = 3;
 
-	inline static constexpr float radius = 0.8 * param_scale * scale;
+	inline static constexpr float radius = 0.8 * scale;
 	inline static constexpr float visual_radius = 5.f * param_scale * scale;
 	inline static constexpr float gamma = 0.67f * param_scale * scale;
 

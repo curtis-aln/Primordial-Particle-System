@@ -5,6 +5,8 @@
 // track number of each particle and store in a file.
 // screen translations and zooming
 
+// test if the cells act as a wave. see how far particles travel over time
+// the whole particle system is way too small. font looks pixelated.
 
 /*
 	1. Learn how an actual spatial hash grid works
@@ -17,6 +19,3 @@ int main()
 {
 	Simulation().run();
 }
-
-// baseline 30k                        70-75 fps
-// SPH copying array data optimization 100fps

@@ -13,7 +13,12 @@ class Simulation : SystemSettings, SimulationSettings
 	void render()
 	{
 		window_.clear(screen_color);
-		particle_system_.render(window_, debug_, render_hash_grid_);
+		particle_system_.render(window_, render_hash_grid_);
+
+		if (debug_)
+		{
+			particle_system_.render_debug(window_, text_font);
+		}
 		window_.display();
 	}
 

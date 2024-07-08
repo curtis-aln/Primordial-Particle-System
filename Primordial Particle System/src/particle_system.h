@@ -9,6 +9,8 @@
 #include <cmath>
 #include <array>
 
+#include "utils/font.h"
+
 
 // pre-calculating variables
 inline static constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
@@ -25,12 +27,11 @@ class ParticlePopulation : SystemSettings
 
 	alignas(32) std::array<uint16_t, population_size> neighbourhood_count;
 
-	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
+	SpatialHashGridOptimized<hash_cells_x, hash_cells_y> hash_grid;
 
 	// rendering and graphics
 	sf::CircleShape circle_drawer{};
 	sf::RectangleShape render_bounds{};
-
 
 	const float inv_width{};
 	const float inv_height{};
@@ -69,7 +70,7 @@ public:
 	}
 
 
-	void render(sf::RenderWindow& window, const bool debug = false, const bool draw_hash_grid = false)
+	void render(sf::RenderWindow& window, const bool draw_hash_grid = false)
 	{
 		if (draw_hash_grid)
 		{
@@ -83,12 +84,32 @@ public:
 			window.draw(circle_drawer, sf::BlendAdd);
 		}
 
-		if (debug)
+		draw_rect_outline(bounds_.getPosition(), bounds_.getPosition() + bounds_.getSize(), window, 4);
+	}
+
+	void render_debug(sf::RenderWindow& window, Font& font)
+	{
+		sf::CircleShape p_visual_radius{ visual_radius };
+		p_visual_radius.setFillColor({ 0, 0, 0, 0 });
+		p_visual_radius.setOutlineThickness(1);
+		p_visual_radius.setOutlineColor({ 255 ,255, 255, 100 });
+
+		for (unsigned i = 0; i < population_size; i++)
 		{
-			render_debug(window);
+			const float angle = angles[i];
+			const sf::Vector2f position = positions[i];
+			const sf::Vector2f direction = { sin(angle) * radius, cos(angle) * radius };
+
+			draw_thick_line(window, positions[i], positions[i] + direction, 0.5f);
+
+			p_visual_radius.setPosition(position - sf::Vector2f{ visual_radius, visual_radius });
+			window.draw(p_visual_radius, sf::BlendAdd);
+
+			// drawing the amount of neighbours the particle has
+			const sf::Vector2f offset = { 20, 20 };
+			font.draw(position + offset, std::to_string(neighbourhood_count[i]), true);
 		}
 
-		draw_rect_outline(bounds_.getPosition(), bounds_.getPosition() + bounds_.getSize(), window, 4);
 	}
 
 
@@ -161,26 +182,4 @@ private:
 			direction.y - bounds_.height * std::round(direction.y * inv_height)
 		};
 	}
-
-
-
-	void render_debug(sf::RenderWindow& window)
-	{
-		//sf::CircleShape p_visual_radius{ visual_radius };
-		//p_visual_radius.setFillColor({ 0, 0, 0, 0 });
-		//p_visual_radius.setOutlineThickness(1);
-		//p_visual_radius.setOutlineColor({ 255 ,255, 255 });
-
-		for (unsigned i = 0; i < population_size; i++)
-		{
-			const float angle = angles[i];
-			sf::Vector2f dir = { sin(angle) * radius, cos(angle) * radius };
-
-			draw_thick_line(window, positions[i], positions[i] + dir, 2);
-			
-			
-		}
-
-	}
-
 };

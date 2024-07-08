@@ -37,23 +37,9 @@ public:
 	{
 		init_graphics();
 		initVertexBuffer();
+		initFont();
 	}
 	~SpatialHashGridOptimized() = default;
-
-
-	void init_graphics()
-	{
-		// increasing the size of the boundaries very slightly stops any out-of-range errors 
-		constexpr float resize = 0.0001f;
-		m_screenSize.left -= resize;
-		m_screenSize.top -= resize;
-		m_screenSize.width += resize;
-		m_screenSize.height += resize;
-
-		m_cellSize = { m_screenSize.width / static_cast<float>(CellsX),
-						  m_screenSize.height / static_cast<float>(CellsY) };
-
-	}
 
 
 	cellIndex inline hash(const sf::Vector2f pos) const
@@ -72,7 +58,7 @@ public:
 		// adding the atom and incrementing the size
 		uint8_t& count = objects_count[index.first][index.second];
 
-		grid[index.first][index.second][count] = obj_id;
+		grid[index.first][index.second][count] = static_cast<obj_idx>(obj_id);
 		count += count < cell_capacity;
 	}
 
@@ -88,17 +74,23 @@ public:
 		// at border is calculated so the object can determine whether to use toroidal wrapping or not
 		at_border = cell_index.first == 0 || cell_index.second == 0 || cell_index.first == CellsX - 1 || cell_index.second == CellsY - 1;
 
-		for (int dx = -1; dx != 2; ++dx)
+		for (int dx = -1; dx <= 1; ++dx)
 		{
-			for (int dy = -1; dy != 2; ++dy)
+			for (int dy = -1; dy <= 1; ++dy)
 			{
-				const int index_x = (cell_index.first + dx + CellsX) % CellsX;
-				const int index_y = (cell_index.second + dy + CellsY) % CellsY;
+				int index_x = cell_index.first + dx;
+				int index_y = cell_index.second + dy;
+
+				if (at_border) // todo
+				{
+					index_x = (index_x + CellsX) % CellsX;
+					index_y = (index_x + CellsY) % CellsY;
+				}
 
 				const auto& contents = grid[index_x][index_y];
 				const auto size = objects_count[index_x][index_y];
 
-				std::copy(contents.begin(), contents.begin() + size, found_array + found_array_size);
+				std::copy(contents.begin(), contents.begin() + size, found_array.begin() + found_array_size);
 				found_array_size += size;
 			}
 		}
@@ -110,6 +102,23 @@ public:
 		memset(objects_count.data(), 0, total_cells * sizeof(uint8_t));
 	}
 
+
+	void render_grid(sf::RenderWindow& window)
+	{
+		window.draw(vertexBuffer);
+
+		// rendering the locations of each cell with their content counts
+		for (int x = 0; x < CellsX; ++x)
+		{
+			for (int y = 0; y < CellsY; ++y)
+			{
+				const sf::Vector2f topleft = { x * m_cellSize.x, y * m_cellSize.y };
+				text.setString("(" + std::to_string(x) + ", " + std::to_string(y) + ")  obj count: " + std::to_string(objects_count[x][y]));
+				text.setPosition(topleft);
+				window.draw(text);
+			}
+		}
+	}
 
 private:
 	void initVertexBuffer()
@@ -144,6 +153,32 @@ private:
 		vertexBuffer.update(vertices.data(), vertices.size(), 0);
 	}
 
+	void initFont()
+	{
+		const int char_size = 45;
+		const std::string font_location = "fonts/Calibri.ttf";
+		if (!font.loadFromFile(font_location))
+		{
+			std::cerr << "[ERROR]: Failed to load font from: " << font_location << '\n';
+			return;
+		}
+		text = sf::Text("", font, char_size);
+	}
+
+	void init_graphics()
+	{
+		// increasing the size of the boundaries very slightly stops any out-of-range errors 
+		constexpr float resize = 0.0001f;
+		m_screenSize.left -= resize;
+		m_screenSize.top -= resize;
+		m_screenSize.width += resize;
+		m_screenSize.height += resize;
+
+		m_cellSize = { m_screenSize.width / static_cast<float>(CellsX),
+						  m_screenSize.height / static_cast<float>(CellsY) };
+
+	}
+
 
 private:
 	inline static constexpr size_t total_cells = CellsX * CellsY;
@@ -152,16 +187,16 @@ private:
 	sf::Vector2f m_cellSize{};
 	sf::FloatRect m_screenSize{};
 
-	using cell_container = std::array<cell_idx, cell_capacity>;
+	sf::VertexBuffer vertexBuffer{};
+	sf::Font font;
+	sf::Text text;
 
-	std::array < std::array<cell_container, CellsY>,CellsX> grid;
+	std::array < std::array<std::array<obj_idx, cell_capacity>, CellsY>,CellsX> grid;
 	alignas(32) std::array< std::array<uint8_t, CellsY>, CellsX> objects_count;
 
 
 public:
-	sf::VertexBuffer vertexBuffer{};
-
 	bool at_border = false;
-	obj_idx found_array[max_size] = {};
+	std::array<obj_idx, max_size> found_array = {};
 	uint16_t found_array_size = 0;
 };

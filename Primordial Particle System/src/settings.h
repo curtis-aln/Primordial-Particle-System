@@ -21,22 +21,22 @@ struct SystemSettings
 	inline static constexpr unsigned world_width = SimulationSettings::screen_width * 10.f;
 	inline static constexpr unsigned world_height = SimulationSettings::screen_height * 10.f;
 
-	inline static constexpr float scale = 3.3f;
+	inline static constexpr float scale = 1.f;
 	//inline static constexpr float scale = 1.3f;
 	//inline static constexpr float scale = .75f;
 	//inline static constexpr float scale = .4f;
 
-	inline static constexpr unsigned particle_count = 900;
+	inline static constexpr unsigned particle_count = 200;
 	//inline static constexpr unsigned particle_count = 10'000;
 	//inline static constexpr unsigned particle_count = 30'000;
 	//inline static constexpr unsigned particle_count = 100'000;
 
-	inline static constexpr auto hash_cells_y = static_cast< size_t>(35.f / scale);
-	inline static constexpr auto hash_cells_x = static_cast<size_t>((35.f / scale) * SimulationSettings::aspect_ratio);
+	inline static constexpr auto hash_cells_y = static_cast< size_t>(10.f / scale);
+	inline static constexpr auto hash_cells_x = static_cast<size_t>((10.f / scale) * SimulationSettings::aspect_ratio);
 
-	inline static constexpr float param_scale = 3;
+	inline static constexpr float param_scale = 200;
 
-	inline static constexpr float radius = 0.8 * scale;
+	inline static constexpr float radius = 100 * scale;
 	inline static constexpr float visual_radius = 5.f * param_scale * scale;
 	inline static constexpr float gamma = 0.67f * param_scale * scale;
 

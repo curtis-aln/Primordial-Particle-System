@@ -135,13 +135,13 @@ public:
 
 
 private:
-	ParticlePopulation<particle_count> particle_system_{ sim_bounds };
+	ParticlePopulation<particle_count> particle_system_{ };
 
 	sf::RenderWindow window_{};
 	sf::Clock clock_{};
 	FrameRateSmoothing<10> fps_manager{};
 
-	Camera camera{&window_};
+	Camera camera{&window_, 0.1f};
 
 	Font title_font = { &window_, 30, "fonts/Calibri.ttf" };
 	Font text_font = { &window_, 20, "fonts/Calibri.ttf" };

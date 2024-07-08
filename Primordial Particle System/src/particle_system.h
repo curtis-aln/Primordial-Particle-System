@@ -19,9 +19,6 @@ inline static constexpr float rad_sq = SystemSettings::visual_radius * SystemSet
 template<size_t population_size>
 class ParticlePopulation : SystemSettings
 {
-	// used to keep particles within bounds
-	sf::FloatRect bounds_{};
-
 	alignas(32) std::array<sf::Vector2f, population_size> positions;
 	alignas(32) std::array<float, population_size> angles;
 
@@ -38,12 +35,12 @@ class ParticlePopulation : SystemSettings
 
 
 public:
-	ParticlePopulation(const sf::FloatRect& bounds) : bounds_(bounds), hash_grid(bounds), inv_width(1.f / bounds_.width), inv_height(1.f / bounds_.height)
+	ParticlePopulation() : hash_grid({0, 0, world_width, world_height}), inv_width(1.f / world_width), inv_height(1.f / world_height)
 	{
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			positions[i] = Random::rand_pos_in_rect(bounds);
+			positions[i] = Random::rand_pos_in_rect(sf::FloatRect{0, 0, world_width, world_height});
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
 		}
 
@@ -74,7 +71,7 @@ public:
 	{
 		if (draw_hash_grid)
 		{
-			window.draw(hash_grid.vertexBuffer);
+			hash_grid.render_grid(window);
 		}
 
 		for (size_t i = 0; i < population_size; ++i)
@@ -84,14 +81,14 @@ public:
 			window.draw(circle_drawer, sf::BlendAdd);
 		}
 
-		draw_rect_outline(bounds_.getPosition(), bounds_.getPosition() + bounds_.getSize(), window, 4);
+		draw_rect_outline({ 0, 0 }, {world_width, world_height}, window, 20);
 	}
 
 	void render_debug(sf::RenderWindow& window, Font& font)
 	{
 		sf::CircleShape p_visual_radius{ visual_radius };
 		p_visual_radius.setFillColor({ 0, 0, 0, 0 });
-		p_visual_radius.setOutlineThickness(1);
+		p_visual_radius.setOutlineThickness(8);
 		p_visual_radius.setOutlineColor({ 255 ,255, 255, 100 });
 
 		for (unsigned i = 0; i < population_size; i++)
@@ -100,7 +97,7 @@ public:
 			const sf::Vector2f position = positions[i];
 			const sf::Vector2f direction = { sin(angle) * radius, cos(angle) * radius };
 
-			draw_thick_line(window, positions[i], positions[i] + direction, 0.5f);
+			draw_thick_line(window, positions[i], positions[i] + direction, 8.f);
 
 			p_visual_radius.setPosition(position - sf::Vector2f{ visual_radius, visual_radius });
 			window.draw(p_visual_radius, sf::BlendAdd);
@@ -148,13 +145,18 @@ private:
 		for (int i = 0; i < hash_grid.found_array_size; ++i)
 		{
 			const sf::Vector2f other_position = positions[hash_grid.found_array[i]];
+			sf::Vector2f direction_to = other_position - position;
+			if (hash_grid.at_border)
+			{
+				direction_to = toroidal_direction(direction_to);
+			}
 
-			const sf::Vector2f dir = !hash_grid.at_border ? other_position - position : toroidal_direction(other_position - position);
-			const float dist_sq = dir.x * dir.x + dir.y * dir.y;
+			const float dist_sq = direction_to.x * direction_to.x + direction_to.y * direction_to.y;
 
-			const float conditions = (dist_sq != 0 && dist_sq < rad_sq);
+			const float conditions = (dist_sq > 0 && dist_sq < rad_sq);
+
 			nearby += conditions;
-			cumulative_dir += dir * conditions;
+			cumulative_dir += direction_to * conditions;
 		}
 
 		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
@@ -169,8 +171,8 @@ private:
 		// updating the position
 		position += {gamma * cos_angle, gamma * sin_angle};
 
-		position.x = std::fmod(position.x + bounds_.width, bounds_.width);
-		position.y = std::fmod(position.y + bounds_.height, bounds_.height);
+		position.x = std::fmod(position.x + world_width, world_width);
+		position.y = std::fmod(position.y + world_height, world_height);
 	}
 
 
@@ -178,8 +180,8 @@ private:
 	inline sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const
 	{
 		return { // todo check using int instead of round
-			direction.x - bounds_.width * std::round(direction.x * inv_width),
-			direction.y - bounds_.height * std::round(direction.y * inv_height)
+			direction.x - world_width * std::round(direction.x * inv_width),
+			direction.y - world_height * std::round(direction.y * inv_height)
 		};
 	}
 };

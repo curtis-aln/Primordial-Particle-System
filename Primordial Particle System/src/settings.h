@@ -9,7 +9,7 @@ struct SimulationSettings
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 
-	inline static constexpr unsigned frame_rate = 60;
+	inline static constexpr unsigned frame_rate = 30;
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string window_name = "Primordial Particle Simulation";
 

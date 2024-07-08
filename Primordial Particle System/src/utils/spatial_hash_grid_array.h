@@ -44,6 +44,7 @@ public:
 
 	cellIndex inline hash(const sf::Vector2f pos) const
 	{
+		constexpr float epsilon = 0.1f;  // Adjust this value as needed
 		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
 		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
 		return { cell_x, cell_y };
@@ -84,7 +85,7 @@ public:
 				if (at_border) // todo
 				{
 					index_x = (index_x + CellsX) % CellsX;
-					index_y = (index_x + CellsY) % CellsY;
+					index_y = (index_y + CellsY) % CellsY;
 				}
 
 				const auto& contents = grid[index_x][index_y];

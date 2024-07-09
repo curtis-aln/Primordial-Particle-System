@@ -13,7 +13,7 @@ class Simulation : SystemSettings, SimulationSettings
 	void render()
 	{
 		window_.clear(screen_color);
-		particle_system_.render(window_, render_hash_grid_);
+		particle_system_.render(window_, render_hash_grid_, camera.get_world_mouse_pos());
 
 		if (debug_)
 		{
@@ -120,10 +120,10 @@ public:
 		{
 			poll_events();
 
-			if (!paused_)
-			{
-				particle_system_.update_vectorized();
-			}
+
+			particle_system_.add_particles_to_grid();
+			particle_system_.update_particles(paused_);
+			
 
 			if (rendering_)
 			{
@@ -143,8 +143,8 @@ private:
 
 	Camera camera{&window_, 0.1f};
 
-	Font title_font = { &window_, 30, "fonts/Calibri.ttf" };
-	Font text_font = { &window_, 20, "fonts/Calibri.ttf" };
+	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
+	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
 	bool paused_ = false;
 	bool running_ = true;

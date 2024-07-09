@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include "settings.h"
-#include "utils/spatial_hash_grid_array.h"
+#include "utils/spatial_hash_grid.h"
 #include "utils/random.h"
 #include "utils/utils.h"
 
@@ -24,7 +24,9 @@ class ParticlePopulation : SystemSettings
 
 	alignas(32) std::array<uint16_t, population_size> neighbourhood_count;
 
-	SpatialHashGridOptimized<hash_cells_x, hash_cells_y> hash_grid;
+	alignas(32) std::array<cellIndex, population_size> cell_indexes;
+
+	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
 
 	// rendering and graphics
 	sf::CircleShape circle_drawer{};
@@ -50,25 +52,41 @@ public:
 	}
 
 
-	void update_vectorized()
+	void add_particles_to_grid()
 	{
-		// resetting updating the spatial hash grid
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			hash_grid.add_object(positions[i], i);
+			cell_indexes[i] = hash_grid.add_object(positions[i], i);
 		}
+	}
 
+	void update_particles(const bool paused = false)
+	{
 		// filling the left and right arrays with data
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			update_angles_optimized(i);
+			update_angles_optimized(i, paused);
 		}
 	}
 
 
-	void render(sf::RenderWindow& window, const bool draw_hash_grid = false)
+
+	void render(sf::RenderWindow& window, const bool draw_hash_grid = false, sf::Vector2f pos = {0 ,0})
 	{
+		if (pos.x > 0 && pos.y > 0 && pos.x < world_width && pos.y < world_height)
+		{
+			for (int i = 0; i < 1; ++i)
+			{
+				positions[i] = pos + Random::rand_vector(-50.f, 50.f);
+			}
+		}
+
+		//for (int i = 0; i < particle_count; ++i)
+		//{
+		//	positions[i].x += 1.f;
+		//}
+
 		if (draw_hash_grid)
 		{
 			hash_grid.render_grid(window);
@@ -103,8 +121,15 @@ public:
 			window.draw(p_visual_radius, sf::BlendAdd);
 
 			// drawing the amount of neighbours the particle has
-			const sf::Vector2f offset = { 20, 20 };
-			font.draw(position + offset, std::to_string(neighbourhood_count[i]), true);
+			const sf::Vector2f offset = { 0, 30 };
+
+			const auto neighbours = std::to_string(neighbourhood_count[i]);
+			font.draw(position + offset, "nearby: " + neighbours, true);
+
+			// draw the grid cell the particle is in
+			const auto cellX = std::to_string(cell_indexes[i].first);
+			const auto cellY = std::to_string(cell_indexes[i].second);
+			font.draw(position + offset * 2.f, "at cell: (" + cellX + ", " + cellY + ")", true);
 		}
 
 	}
@@ -125,7 +150,7 @@ private:
 	}
 
 
-	inline void update_angles_optimized(const size_t index)
+	inline void update_angles_optimized(const size_t index, const bool paused)
 	{
 		// first fetch the data we need
 		sf::Vector2f& position = positions[index];
@@ -167,6 +192,11 @@ private:
 
 		// updating the angle
 		angle += (alpha + beta * nearby * resized) * pi_div_180;
+
+		if (paused)
+		{
+			return;
+		}
 
 		// updating the position
 		position += {gamma * cos_angle, gamma * sin_angle};

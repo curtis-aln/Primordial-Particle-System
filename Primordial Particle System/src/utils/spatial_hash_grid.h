@@ -23,28 +23,26 @@ using cell_idx = uint16_t;
 using obj_idx = uint16_t;
 
 // maximum number of objects a cell can hold
-static constexpr uint8_t cell_capacity = 30;
-static constexpr uint16_t max_size = cell_capacity * 9;
+static constexpr uint8_t cell_capacity = 50;
 
 using cellIndex = std::pair < cell_idx, cell_idx>;
 
 
 template<size_t CellsX, size_t CellsY>
-class SpatialHashGridOptimized
+class SpatialHashGrid
 {
 public:
-	explicit SpatialHashGridOptimized(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
+	explicit SpatialHashGrid(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
 	{
 		init_graphics();
 		initVertexBuffer();
 		initFont();
 	}
-	~SpatialHashGridOptimized() = default;
+	~SpatialHashGrid() = default;
 
 
 	cellIndex inline hash(const sf::Vector2f pos) const
 	{
-		constexpr float epsilon = 0.1f;  // Adjust this value as needed
 		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
 		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
 		return { cell_x, cell_y };
@@ -52,7 +50,7 @@ public:
 
 
 	// adding an object to the spatial hash grid by a position and storing its obj_id
-	void add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
+	cellIndex add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
 	{
 		const cellIndex index = hash(obj_pos);
 
@@ -61,6 +59,8 @@ public:
 
 		grid[index.first][index.second][count] = static_cast<obj_idx>(obj_id);
 		count += count < cell_capacity;
+
+		return index;
 	}
 
 
@@ -198,6 +198,6 @@ private:
 
 public:
 	bool at_border = false;
-	std::array<obj_idx, max_size> found_array = {};
+	std::array<obj_idx, cell_capacity * 9> found_array = {};
 	uint16_t found_array_size = 0;
 };

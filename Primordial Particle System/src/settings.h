@@ -26,7 +26,7 @@ struct SystemSettings
 	//inline static constexpr float scale = .75f;
 	//inline static constexpr float scale = .4f;
 
-	inline static constexpr unsigned particle_count = 200;
+	inline static constexpr unsigned particle_count = 500;
 	//inline static constexpr unsigned particle_count = 10'000;
 	//inline static constexpr unsigned particle_count = 30'000;
 	//inline static constexpr unsigned particle_count = 100'000;

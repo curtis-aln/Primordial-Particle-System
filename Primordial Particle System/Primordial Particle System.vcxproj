@@ -153,7 +153,7 @@
     <ClInclude Include="src\utils\random.h" />
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\simulation.h" />
-    <ClInclude Include="src\utils\spatial_hash_grid_array.h" />
+    <ClInclude Include="src\utils\spatial_hash_grid.h" />
     <ClInclude Include="src\utils\utils.h" />
   </ItemGroup>
   <ItemGroup>

@@ -17,7 +17,7 @@ class Simulation : SystemSettings, SimulationSettings
 
 		if (debug_)
 		{
-			particle_system_.render_debug(window_, text_font);
+			particle_system_.render_debug(window_);
 		}
 		window_.display();
 	}
@@ -135,13 +135,11 @@ public:
 
 
 private:
-	ParticlePopulation<particle_count> particle_system_{ };
-
 	sf::RenderWindow window_{};
 	sf::Clock clock_{};
 	FrameRateSmoothing<100> fps_manager{};
 
-	Camera camera{&window_, 1.f / SystemSettings::scale_factor};
+	Camera camera{&window_, 1.f / scale_factor};
 
 	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
 	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
@@ -153,4 +151,6 @@ private:
 	bool debug_ = false;
 	bool rendering_ = true;
 	bool mouse_pressed_event = false;
+
+	ParticlePopulation<particle_count> particle_system_{ text_font };
 };

@@ -169,7 +169,7 @@ private:
 	void init_graphics()
 	{
 		// increasing the size of the boundaries very slightly stops any out-of-range errors 
-		constexpr float resize = 0.0001f;
+		constexpr float resize = 1.f;
 		m_screenSize.left -= resize;
 		m_screenSize.top -= resize;
 		m_screenSize.width += resize;

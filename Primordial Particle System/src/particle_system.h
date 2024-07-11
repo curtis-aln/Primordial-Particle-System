@@ -11,16 +11,118 @@
 
 #include "utils/font.h"
 
-inline sf::Color get_color(const uint16_t total)
-{
+inline sf::Color get_color(const uint16_t total) {
 	// Assuming colors is sorted in descending order of first element
 	auto it = std::lower_bound(SystemSettings::colors.rbegin(), SystemSettings::colors.rend(), total,
-		[](const auto& pair, uint16_t value) {
-			return pair.first > value;
-		});
-
+		[](const auto& pair, uint16_t value) { return pair.first > value; });
 	return it != SystemSettings::colors.rend() ? it->second : SystemSettings::colors.back().second;
 }
+
+class PPS_Renderer {
+private:
+	sf::VertexArray vertex_array;
+	sf::Shader particle_shader;
+
+	// Debug rendering
+	sf::RectangleShape visual_radius_shape;
+	sf::VertexArray debug_lines;
+	Font& debug_font;
+
+	void initializeShader() {
+		if (!particle_shader.loadFromMemory(
+			"uniform vec2 resolution;"
+			"void main() {"
+			"    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;"
+			"    gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;"
+			"    gl_FrontColor = gl_Color;"
+			"}",
+			"uniform vec2 resolution;"
+			"void main() {"
+			"    vec2 coord = gl_FragCoord.xy / resolution - vec2(0.5);"
+			"    if (abs(coord.x) > 0.45 || abs(coord.y) > 0.45) discard;"
+			"    gl_FragColor = gl_Color;"
+			"}"
+		)) {
+			throw std::runtime_error("Failed to load particle shader");
+		}
+	}
+
+public:
+	PPS_Renderer(size_t population_size, float particle_size, Font& font)
+		: debug_font(font) {
+		vertex_array.setPrimitiveType(sf::Quads);
+		vertex_array.resize(population_size * 4);
+
+		initializeShader();
+
+		visual_radius_shape.setFillColor(sf::Color::Transparent);
+		visual_radius_shape.setOutlineThickness(1);
+		visual_radius_shape.setOutlineColor(sf::Color(255, 255, 255, 100));
+
+		debug_lines.setPrimitiveType(sf::Lines);
+	}
+
+	void updateParticles(const std::array<sf::Vector2f, SystemSettings::particle_count>& positions,
+		const std::array<uint16_t, SystemSettings::particle_count>& neighbourhood_count,
+		float particle_size) {
+		for (size_t i = 0; i < positions.size(); ++i) {
+			const sf::Vector2f& center = positions[i];
+			const sf::Color color = get_color(neighbourhood_count[i]);
+			const float half_size = particle_size / 2.f;
+
+			sf::Vertex* quad = &vertex_array[i * 4];
+			quad[0].position = center + sf::Vector2f(-half_size, -half_size);
+			quad[1].position = center + sf::Vector2f(half_size, -half_size);
+			quad[2].position = center + sf::Vector2f(half_size, half_size);
+			quad[3].position = center + sf::Vector2f(-half_size, half_size);
+
+			quad[0].color = quad[1].color = quad[2].color = quad[3].color = color;
+		}
+	}
+
+	void render(sf::RenderWindow& window) {
+		sf::RenderStates states;
+		states.shader = &particle_shader;
+		particle_shader.setUniform("resolution", sf::Glsl::Vec2(window.getSize()));
+
+		window.draw(vertex_array, states);
+	}
+
+	void renderDebug(sf::RenderWindow& window,
+		const std::array<sf::Vector2f, SystemSettings::particle_count>& positions,
+		const std::array<float, SystemSettings::particle_count>& angles,
+		const std::array<uint16_t, SystemSettings::particle_count>& neighbourhood_count,
+		const std::array<cellIndex, SystemSettings::particle_count>& cell_indexes,
+		float visual_radius, float particle_size) {
+		debug_lines.clear();
+		debug_lines.resize(positions.size() * 2);
+
+		for (size_t i = 0; i < positions.size(); ++i) {
+			const sf::Vector2f& position = positions[i];
+			float angle = angles[i];
+
+			// Draw direction line
+			sf::Vector2f direction = sf::Vector2f(std::sin(angle), std::cos(angle)) * particle_size;
+			debug_lines[i * 2].position = position;
+			debug_lines[i * 2].color = sf::Color::White;
+			debug_lines[i * 2 + 1].position = position + direction;
+			debug_lines[i * 2 + 1].color = sf::Color::White;
+
+			// Draw visual radius
+			visual_radius_shape.setSize(sf::Vector2f(visual_radius * 2, visual_radius * 2));
+			visual_radius_shape.setPosition(position - sf::Vector2f(visual_radius, visual_radius));
+			window.draw(visual_radius_shape, sf::BlendAdd);
+
+			// Draw debug text
+			sf::Vector2f text_pos = position + sf::Vector2f(0, 30);
+			debug_font.draw(text_pos, "nearby: " + std::to_string(neighbourhood_count[i]), true);
+			text_pos.y += 30;
+			debug_font.draw(text_pos, "at cell: (" + std::to_string(cell_indexes[i].first) + ", " + std::to_string(cell_indexes[i].second) + ")", true);
+		}
+
+		window.draw(debug_lines);
+	}
+};
 
 
 
@@ -40,25 +142,21 @@ class ParticlePopulation : SystemSettings
 
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid;
 
+	PPS_Renderer renderer;
+
 	// rendering and graphics
-	sf::CircleShape circle_drawer{};
 	sf::RectangleShape render_bounds{};
 
 	const float inv_width = 0.f;
 	const float inv_height = 0.f;
 
-	sf::RenderTexture particle_render_texture{};
-
-	const int circle_points = 15;  // Number of circle_points to approximate the circle
-	const float angleIncrement = two_pi / circle_points;
-	std::vector<sf::Vector2f> unitCircle;
-
-	// Reserve space in the vertex array
-	sf::VertexArray vertex_array{sf::Triangles};
 	
 
 public:
-	ParticlePopulation() : hash_grid({0, 0, world_width, world_height}), inv_width(1.f / world_width), inv_height(1.f / world_height)
+	ParticlePopulation(Font& debug_font)
+	: hash_grid({0, 0, world_width, world_height}),
+	inv_width(1.f / world_width), inv_height(1.f / world_height),
+		renderer(population_size, radius, debug_font)
 	{
 		// initializing particle
 		for (size_t i = 0; i < population_size; ++i)
@@ -66,21 +164,6 @@ public:
 			positions[i] = Random::rand_pos_in_rect(sf::FloatRect{0, 0, world_width, world_height});
 			angles[i] = Random::rand_range(0.f, 2.f * pi);
 		}
-
-		// initializing renderer
-		circle_drawer.setRadius(radius);
-		circle_drawer.setPointCount(20);
-
-
-		// Precompute the unit circle circle_points
-		unitCircle.resize(circle_points);
-		for (int i = 0; i < circle_points; ++i)
-		{
-			float angle = i * angleIncrement;
-			unitCircle[i] = sf::Vector2f(std::cos(angle), std::sin(angle));
-		}
-
-		vertex_array.resize(positions.size() * circle_points * 3);  // 3 vertices per triangle, 'circle_points' triangles per circle
 	}
 
 
@@ -89,7 +172,11 @@ public:
 		hash_grid.clear();
 		for (size_t i = 0; i < population_size; ++i)
 		{
-			cell_indexes[i] = hash_grid.add_object(positions[i], i);
+			sf::Vector2f& position = positions[i];
+			position.x = std::fmod(position.x + world_width, world_width);
+			position.y = std::fmod(position.y + world_height, world_height);
+
+			cell_indexes[i] = hash_grid.add_object(position, i);
 		}
 	}
 
@@ -106,19 +193,7 @@ public:
 
 	void render(sf::RenderWindow& window, const bool draw_hash_grid = false, sf::Vector2f pos = {0 ,0})
 	{
-		if (pos.x > 0 && pos.y > 0 && pos.x < world_width && pos.y < world_height)
-		{
-			for (int i = 0; i < 1; ++i)
-			{
-				positions[i] = pos + Random::rand_vector(-1.f, 1.f);
-			}
-		}
-
-		//for (int i = 0; i < particle_count; ++i)
-		//{
-		//	positions[i].x += 1.f;
-		//}
-
+		positions[0] = pos;
 		if (draw_hash_grid)
 		{
 			hash_grid.render_grid(window);
@@ -129,122 +204,25 @@ public:
 		draw_rect_outline({ 0, 0 }, {world_width, world_height}, window, 30);
 	}
 
+
 	void render_particles(sf::RenderWindow& window)
 	{
-		int vertexIndex = 0;
-		for (int pos_idx = 0; pos_idx < particle_count; ++pos_idx)
-		{
-			const sf::Vector2f pos = positions[pos_idx];
-			const sf::Color color = get_color(neighbourhood_count[pos_idx]);
-
-			for (int j = 0; j < circle_points; ++j)
-			{
-				const sf::Vector2f& point1 = unitCircle[j];
-				const sf::Vector2f& point2 = unitCircle[(j + 1) % circle_points];
-
-				vertex_array[vertexIndex++] = sf::Vertex(pos, color);
-				vertex_array[vertexIndex++] = sf::Vertex(sf::Vector2f(pos.x + point1.x * radius, pos.y + point1.y * radius), color);
-				vertex_array[vertexIndex++] = sf::Vertex(sf::Vector2f(pos.x + point2.x * radius, pos.y + point2.y * radius), color);
-			}
-		}
-
-		window.draw(vertex_array);
+		renderer.updateParticles(positions, neighbourhood_count, radius);
+		renderer.render(window);
 	}
 
-	void render_debug(sf::RenderWindow& window, Font& font)
+	void render_debug(sf::RenderWindow& window)
 	{
-		sf::CircleShape p_visual_radius{ visual_radius };
-		p_visual_radius.setFillColor({ 0, 0, 0, 0 });
-		p_visual_radius.setOutlineThickness(8);
-		p_visual_radius.setOutlineColor({ 255 ,255, 255, 100 });
-
-		for (unsigned i = 0; i < population_size; i++)
-		{
-			const float angle = angles[i];
-			const sf::Vector2f position = positions[i];
-			const sf::Vector2f direction = { sin(angle) * radius, cos(angle) * radius };
-
-			draw_thick_line(window, positions[i], positions[i] + direction, 8.f);
-
-			p_visual_radius.setPosition(position - sf::Vector2f{ visual_radius, visual_radius });
-			window.draw(p_visual_radius, sf::BlendAdd);
-
-			// drawing the amount of neighbours the particle has
-			const sf::Vector2f offset = { 0, 30 };
-
-			const auto neighbours = std::to_string(neighbourhood_count[i]);
-			font.draw(position + offset, "nearby: " + neighbours, true);
-
-			// draw the grid cell the particle is in
-			const auto cellX = std::to_string(cell_indexes[i].first);
-			const auto cellY = std::to_string(cell_indexes[i].second);
-			font.draw(position + offset * 2.f, "at cell: (" + cellX + ", " + cellY + ")", true);
-		}
-
+		renderer.renderDebug(window, positions, angles, neighbourhood_count, cell_indexes, visual_radius, radius);
 	}
 
 
 private:
-	inline void update_angles_optimized(const size_t index, const bool paused)
-	{
-		// first fetch the data we need
-		sf::Vector2f& position = positions[index];
-		float& angle = angles[index];
-
-		// then pre-calculate the sin and cos values for the angle
-		const float sin_angle = std::sin(angle);
-		const float cos_angle = std::cos(angle);
-
-		// finds the nearby indexes in each of the 9 neighbouring cells
-		hash_grid.find(position);
-
-		// calculating the cumulative direction, does not need to be average to function the same
-		sf::Vector2f cumulative_dir = {0, 0};
-		int nearby = 0;
-
-
-		for (int i = 0; i < hash_grid.found_array_size; ++i)
-		{
-			const sf::Vector2f other_position = positions[hash_grid.found_array[i]];
-			sf::Vector2f direction_to = other_position - position;
-			if (hash_grid.at_border)
-			{
-				direction_to = toroidal_direction(direction_to);
-			}
-
-			const float dist_sq = direction_to.x * direction_to.x + direction_to.y * direction_to.y;
-
-			const float conditions = (dist_sq > 0 && dist_sq < rad_sq);
-
-			nearby += conditions;
-			cumulative_dir += direction_to * conditions;
-		}
-
-		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
-		const bool is_on_right = (cumulative_dir.x * sin_angle - cumulative_dir.y * cos_angle) < 0;
-		const float resized = 2 * is_on_right - 1;
-
-		neighbourhood_count[index] = nearby;
-
-		// updating the angle
-		angle += (alpha + beta * nearby * resized) * pi_div_180;
-
-		if (paused)
-		{
-			return;
-		}
-
-		// updating the position
-		position += {gamma * cos_angle, gamma * sin_angle};
-
-		position.x = std::fmod(position.x + world_width, world_width);
-		position.y = std::fmod(position.y + world_height, world_height);
-	}
-
 	inline void new_update_angles_optimized(const size_t index, const bool paused)
 	{
 		// first fetch the data we need
 		sf::Vector2f& position = positions[index];
+
 		float& angle = angles[index];
 
 		// then pre-calculate the sin and cos values for the angle
@@ -293,9 +271,6 @@ private:
 
 		// updating the position
 		position += {gamma* cos_angle, gamma* sin_angle};
-
-		position.x = std::fmod(position.x + world_width, world_width);
-		position.y = std::fmod(position.y + world_height, world_height);
 	}
 
 	inline sf::Vector2f toroidal_direction(const sf::Vector2f& direction) const

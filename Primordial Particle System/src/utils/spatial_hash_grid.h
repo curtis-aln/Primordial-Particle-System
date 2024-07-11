@@ -23,7 +23,7 @@ using cell_idx = uint16_t;
 using obj_idx = uint16_t;
 
 // maximum number of objects a cell can hold
-static constexpr uint8_t cell_capacity = 50;
+static constexpr uint8_t cell_capacity = 15;
 
 using cellIndex = std::pair < cell_idx, cell_idx>;
 

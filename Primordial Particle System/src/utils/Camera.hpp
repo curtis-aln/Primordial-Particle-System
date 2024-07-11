@@ -69,8 +69,6 @@ public:
 
 		// Calculate the new zoom level
 		m_currentScroll *= scale;
-		if (m_currentScroll < 0.1f) // Adjust the minimum zoom level as needed
-			m_currentScroll = 0.1f;
 
 		// Set the zoom level of the view
 		m_view_.setSize(m_window_ptr_->getSize().x / m_currentScroll, m_window_ptr_->getSize().y / m_currentScroll);

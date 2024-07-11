@@ -9,7 +9,7 @@ struct SimulationSettings
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 	
-	inline static constexpr unsigned frame_rate = 30;
+	inline static constexpr unsigned frame_rate = 520;
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string window_name = "Primordial Particle Simulation";
 
@@ -19,7 +19,7 @@ struct SimulationSettings
 struct SystemSettings
 {
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 1.f;
+	inline static constexpr float scale_factor = 75;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -27,13 +27,13 @@ struct SystemSettings
 	inline static constexpr auto world_height = static_cast<float>(SimulationSettings::screen_height) * scale_factor;
 
 	// calculating how many spatial hash cells should be on each axis
-	inline static constexpr auto hash_cells_y = static_cast<size_t>(10.f * scale_factor);
-	inline static constexpr auto hash_cells_x = static_cast<size_t>((10.f * scale_factor) * SimulationSettings::aspect_ratio);
+	inline static constexpr auto hash_cells_y = static_cast<size_t>(scale_factor);
+	inline static constexpr auto hash_cells_x = static_cast<size_t>((scale_factor) * SimulationSettings::aspect_ratio);
 
-	inline static constexpr unsigned particle_count = 500;
+	inline static constexpr unsigned particle_count = 20'000;
 
 
-	inline static constexpr float radius = 100.f;
+	inline static constexpr float radius = 80.f;
 	inline static constexpr float visual_radius = 5.f * param_scale_factor;
 	inline static constexpr float gamma = 0.67f * param_scale_factor;
 

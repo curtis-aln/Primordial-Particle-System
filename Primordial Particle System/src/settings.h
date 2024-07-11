@@ -8,7 +8,7 @@ struct SimulationSettings
 	inline static constexpr unsigned screen_width = 1900;
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
-
+	
 	inline static constexpr unsigned frame_rate = 30;
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string window_name = "Primordial Particle Simulation";
@@ -18,35 +18,31 @@ struct SimulationSettings
 
 struct SystemSettings
 {
-	inline static constexpr unsigned world_width = SimulationSettings::screen_width * 10.f;
-	inline static constexpr unsigned world_height = SimulationSettings::screen_height * 10.f;
+	// scale factors determine how intense / large the difference is
+	inline static constexpr float scale_factor = 1.f;
+	inline static constexpr float param_scale_factor = 200.f;
 
-	inline static constexpr float scale = 1.f;
-	//inline static constexpr float scale = 1.3f;
-	//inline static constexpr float scale = .75f;
-	//inline static constexpr float scale = .4f;
+	// world width is the virtual space. screen width is the physical window size
+	inline static constexpr auto world_width  = static_cast<float>(SimulationSettings::screen_width) * scale_factor;
+	inline static constexpr auto world_height = static_cast<float>(SimulationSettings::screen_height) * scale_factor;
+
+	// calculating how many spatial hash cells should be on each axis
+	inline static constexpr auto hash_cells_y = static_cast<size_t>(10.f * scale_factor);
+	inline static constexpr auto hash_cells_x = static_cast<size_t>((10.f * scale_factor) * SimulationSettings::aspect_ratio);
 
 	inline static constexpr unsigned particle_count = 500;
-	//inline static constexpr unsigned particle_count = 10'000;
-	//inline static constexpr unsigned particle_count = 30'000;
-	//inline static constexpr unsigned particle_count = 100'000;
-
-	inline static constexpr auto hash_cells_y = static_cast< size_t>(10.f / scale);
-	inline static constexpr auto hash_cells_x = static_cast<size_t>((10.f / scale) * SimulationSettings::aspect_ratio);
-
-	inline static constexpr float param_scale = 200;
-
-	inline static constexpr float radius = 100 * scale;
-	inline static constexpr float visual_radius = 5.f * param_scale * scale;
-	inline static constexpr float gamma = 0.67f * param_scale * scale;
 
 
+	inline static constexpr float radius = 100.f;
+	inline static constexpr float visual_radius = 5.f * param_scale_factor;
+	inline static constexpr float gamma = 0.67f * param_scale_factor;
+
+	// main simulation rules
 	inline static constexpr float alpha = 180.f;
 	inline static constexpr float beta = 17.f;
 
-
-
-	static const sf::Uint8 transparency = 150;
+	// the colors of each particle density
+	static constexpr sf::Uint8 transparency = 150;
 	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
 	{
 		{0, {10, 255, 10, transparency}},  // green
@@ -57,16 +53,4 @@ struct SystemSettings
 		{40, {255, 0, 255, transparency}},// red
 		
 	};
-
-	//inline static const std::vector <std::pair<unsigned, sf::Color >> colors
-	//{
-	//	{0, {10, 255, 10, 70}},  // green
-	//	{10, {139,69,19, 70}}, // brown
-	//	{28, {0, 0, 255, 70}},  // blue
-	//	{47, {255, 255, 0, 70}}, // yellow
-	//	{59, {200, 0, 0, 70}},// red
-	//	{80, {200, 0, 200, 70}},// magenta
-	//	{100, {200, 200, 200, 70}},// white
-	//
-	//};
 };

@@ -6,7 +6,6 @@
 // screen translations and zooming
 
 // test if the cells act as a wave. see how far particles travel over time
-// the whole particle system is way too small. font looks pixelated.
 
 /*
 	1. Learn how an actual spatial hash grid works

@@ -78,7 +78,7 @@ public:
 		{
 			for (int i = 0; i < 1; ++i)
 			{
-				positions[i] = pos + Random::rand_vector(-50.f, 50.f);
+				positions[i] = pos + Random::rand_vector(-1.f, 1.f);
 			}
 		}
 

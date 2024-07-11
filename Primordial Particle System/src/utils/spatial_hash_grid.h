@@ -156,7 +156,7 @@ private:
 
 	void initFont()
 	{
-		const int char_size = 45;
+		constexpr int char_size = 45;
 		const std::string font_location = "fonts/Calibri.ttf";
 		if (!font.loadFromFile(font_location))
 		{

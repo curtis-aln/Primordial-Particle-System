@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 
 #include "utils/random.h"
+#include "utils/spatial_hash_grid.h"
 
 struct SimulationSettings
 {
@@ -9,7 +10,7 @@ struct SimulationSettings
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 	
-	inline static constexpr unsigned frame_rate = 520;
+	inline static constexpr unsigned frame_rate = 5200;
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string window_name = "Primordial Particle Simulation";
 
@@ -42,15 +43,16 @@ struct SystemSettings
 	inline static constexpr float beta = 17.f;
 
 	// the colors of each particle density
-	static constexpr sf::Uint8 transparency = 197;
+	static constexpr sf::Uint8 transparency = 210;
 	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
 	{
-		{0, {10, 255, 10, transparency}},  // green
+		{0, {10, 255, 50, transparency}},  // green
 		
 		{10, {139,69,19, transparency}}, // brown
 		{15, {0, 0, 255, transparency}},  // blue
 		{35, {255, 255, 0, transparency}}, // yellow
-		{40, {255, 0, 255, transparency}},// red
+		{40, {255, 0, 255, transparency}},// magenta
+		{cell_capacity * 8 , {255, 0, 0, transparency}},// red
 		
 	};
 };

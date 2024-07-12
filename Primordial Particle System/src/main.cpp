@@ -19,7 +19,13 @@
 // cell indexes rendered using an sf::Texture
 
 
+// instead of getting all of the particles. we just get the program to pass in operation(s) we want to preform on each particle. such as is in range
+
 int main()
 {
+	//Random::set_seed(0);
 	Simulation().run();
 }
+
+// 70fps
+//

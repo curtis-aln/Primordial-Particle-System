@@ -121,7 +121,7 @@ public:
 		{
 			poll_events();
 
-			for (int i = 0; i < 5; ++i)
+			for (int i = 0; i < 10; ++i)
 			{
 				particle_system_.add_particles_to_grid();
 				particle_system_.update_particles(paused_);

@@ -21,11 +21,10 @@ template<size_t PopulationSize>
 class ParticlePopulation : SystemSettings
 {
 	// position and angle describes the particle
-	alignas(32) std::array<sf::Vector2f, PopulationSize> positions_;
-	alignas(32) std::array<float, PopulationSize> angles_;
+	std::vector<sf::Vector2f> positions_;
+	std::vector<float> angles_;
+	std::vector<uint16_t> neighbourhood_count_;
 
-	// keeping track of the neighbourhood count allows us to color the particle correctly
-	alignas(32) std::array<uint16_t, PopulationSize> neighbourhood_count_;
 
 	// The Spatial Hash Grid Optimizes finding who is nearby
 	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid_;
@@ -48,10 +47,18 @@ public:
 	  inv_width_(1.f / world_width),
 	  inv_height_(1.f / world_height)
 	{
+
+		positions_.resize(PopulationSize);
+		angles_.resize(PopulationSize);
+		neighbourhood_count_.resize(PopulationSize);
+
 		// initializing particle with random initial states
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
-			positions_[i] = Random::rand_pos_in_rect(sf::FloatRect{0, 0, world_width, world_height});
+			sf::FloatRect bounds = { 0, 0, world_width, world_height };
+			sf::Vector2f center = { world_width / 2, world_height / 2 };
+			//positions_[i] = Random::rand_pos_in_circle(center, 500);
+			positions_[i] = Random::rand_pos_in_rect(bounds);
 			angles_[i] = Random::rand_range(0.f, 2.f * pi); // radians
 		}
 	}
@@ -77,7 +84,7 @@ public:
 		// filling the left and right arrays with data
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
-			update_angles_optimized(i, paused);
+			update_angles(i, paused);
 		}
 	}
 
@@ -104,7 +111,7 @@ public:
 
 
 private:
-	inline void update_angles_optimized(const size_t index, const bool paused)
+	inline void update_angles(const size_t index, const bool paused)
 	{
 		// first fetch the data we need
 		sf::Vector2f& position = positions_[index];
@@ -162,4 +169,5 @@ private:
 		// updating the position
 		position += {gamma* cos_angle, gamma* sin_angle};
 	}
+
 };

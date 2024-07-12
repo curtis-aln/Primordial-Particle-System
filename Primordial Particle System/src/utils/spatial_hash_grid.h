@@ -19,8 +19,8 @@
 // resize these to either
 // - uint32_t (4.2 billion max cells/objects, 65,000 x 65,000 grid)
 // - uint16_t (65,536 max cells/objects, 256 x 256 grid)
-using cell_idx = uint16_t;
-using obj_idx = uint16_t;
+using cell_idx = uint32_t;
+using obj_idx = uint32_t;
 
 // maximum number of objects a cell can hold
 static constexpr uint8_t cell_capacity = 25;
@@ -34,6 +34,9 @@ class SpatialHashGrid
 public:
 	explicit SpatialHashGrid(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
 	{
+		objects_count.resize(CellsX, std::vector<uint8_t>(CellsY));
+		grid.resize(CellsX, std::vector<std::array<cell_idx, cell_capacity>>(CellsY));
+
 		init_graphics();
 		initVertexBuffer();
 		initFont();
@@ -100,7 +103,14 @@ public:
 
 	inline void clear()
 	{
-		memset(objects_count.data(), 0, total_cells * sizeof(uint8_t));
+		for (int x = 0; x < CellsX; ++x)
+		{
+			for (int y = 0; y < CellsY; ++ y)
+			{
+				objects_count[x][y] = 0;
+			}
+		}
+		//memset(objects_count.data(), 0, total_cells * sizeof(uint8_t));
 	}
 
 
@@ -181,7 +191,7 @@ private:
 	}
 
 
-private:
+public:
 	inline static constexpr size_t total_cells = CellsX * CellsY;
 
 	// graphics
@@ -192,12 +202,14 @@ private:
 	sf::Font font;
 	sf::Text text;
 
-	std::array < std::array<std::array<obj_idx, cell_capacity>, CellsY>,CellsX> grid;
-	alignas(32) std::array< std::array<uint8_t, CellsY>, CellsX> objects_count;
+	std::vector<std::vector<std::array<obj_idx, cell_capacity>>> grid{};
+	//std::array < std::array<std::array<obj_idx, cell_capacity>, CellsY>,CellsX> grid;
+	std::vector<std::vector<uint8_t>> objects_count{};
+	//alignas(32) std::array< std::array<uint8_t, CellsY>, CellsX> objects_count;
 
 
 public:
 	bool at_border = false;
 	std::array<obj_idx, cell_capacity * 9> found_array = {};
-	uint16_t found_array_size = 0;
+	uint32_t found_array_size = 0;
 };

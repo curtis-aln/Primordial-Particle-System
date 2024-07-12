@@ -55,8 +55,8 @@ public:
 		debug_lines.setPrimitiveType(sf::Lines);
 	}
 
-	void updateParticles(const std::array<sf::Vector2f, SystemSettings::particle_count>& positions,
-		const std::array<uint16_t, SystemSettings::particle_count>& neighbourhood_count,
+	void updateParticles(const std::vector<sf::Vector2f>& positions,
+		const std::vector<uint16_t>& neighbourhood_count,
 		float particle_size)
 	{
 		for (size_t i = 0; i < positions.size(); ++i) 
@@ -85,10 +85,9 @@ public:
 	}
 
 
-	void renderDebug(sf::RenderWindow& window,
-		const std::array<sf::Vector2f, SystemSettings::particle_count>& positions,
-		const std::array<float, SystemSettings::particle_count>& angles,
-		const std::array<uint16_t, SystemSettings::particle_count>& neighbourhood_count,
+	void renderDebug(sf::RenderWindow& window, const std::vector<sf::Vector2f>& positions,
+		const std::vector<float>& angles,
+		const std::vector<uint16_t>& neighbourhood_count,
 		float visual_radius, float particle_size)
 	{
 		debug_lines.clear();

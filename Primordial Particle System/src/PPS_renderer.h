@@ -4,25 +4,25 @@
 inline sf::Color get_color(const uint16_t total)
 {
 	// Assuming colors is sorted in descending order of first element
-	auto it = std::lower_bound(SystemSettings::colors.rbegin(), SystemSettings::colors.rend(), total,
-		[](const auto& pair, uint16_t value) { return pair.first > value; });
+	const auto it = std::lower_bound(SystemSettings::colors.rbegin(), SystemSettings::colors.rend(), total,
+	                                 [](const auto& pair, uint16_t value) { return pair.first > value; });
 	return it != SystemSettings::colors.rend() ? it->second : SystemSettings::colors.back().second;
 }
 
 class PPS_Renderer
 {
 private:
-	sf::VertexArray vertex_array;
-	sf::Shader particle_shader;
+	sf::VertexArray vertex_array_;
+	sf::Shader particle_shader_;
 
 	// Debug rendering
-	sf::RectangleShape visual_radius_shape;
-	sf::VertexArray debug_lines;
-	Font& debug_font;
+	sf::RectangleShape visual_radius_shape_;
+	sf::VertexArray debug_lines_;
+	Font& debug_font_;
 
 	void initializeShader()
 	{
-		if (!particle_shader.loadFromMemory(
+		if (!particle_shader_.loadFromMemory(
 			"uniform vec2 resolution;"
 			"void main() {"
 			"    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;"
@@ -41,23 +41,23 @@ private:
 	}
 
 public:
-	PPS_Renderer(size_t population_size, float particle_size, Font& font) : debug_font(font)
+	PPS_Renderer(const size_t population_size, float particle_size, Font& font) : debug_font_(font)
 	{
-		vertex_array.setPrimitiveType(sf::Quads);
-		vertex_array.resize(population_size * 4);
+		vertex_array_.setPrimitiveType(sf::Quads);
+		vertex_array_.resize(population_size * 4);
 
 		initializeShader();
 
-		visual_radius_shape.setFillColor(sf::Color::Transparent);
-		visual_radius_shape.setOutlineThickness(1);
-		visual_radius_shape.setOutlineColor(sf::Color(255, 255, 255, 100));
+		visual_radius_shape_.setFillColor(sf::Color::Transparent);
+		visual_radius_shape_.setOutlineThickness(1);
+		visual_radius_shape_.setOutlineColor(sf::Color(255, 255, 255, 100));
 
-		debug_lines.setPrimitiveType(sf::Lines);
+		debug_lines_.setPrimitiveType(sf::Lines);
 	}
 
 	void updateParticles(const std::vector<sf::Vector2f>& positions,
 		const std::vector<uint16_t>& neighbourhood_count,
-		float particle_size)
+		const float particle_size)
 	{
 		for (size_t i = 0; i < positions.size(); ++i) 
 		{
@@ -65,7 +65,7 @@ public:
 			const sf::Color color = get_color(neighbourhood_count[i]);
 			const float half_size = particle_size / 2.f;
 
-			sf::Vertex* quad = &vertex_array[i * 4];
+			sf::Vertex* quad = &vertex_array_[i * 4];
 			quad[0].position = center + sf::Vector2f(-half_size, -half_size);
 			quad[1].position = center + sf::Vector2f(half_size, -half_size);
 			quad[2].position = center + sf::Vector2f(half_size, half_size);
@@ -78,43 +78,43 @@ public:
 	void render(sf::RenderWindow& window)
 	{
 		sf::RenderStates states;
-		states.shader = &particle_shader;
-		particle_shader.setUniform("resolution", sf::Glsl::Vec2(window.getSize()));
+		states.shader = &particle_shader_;
+		particle_shader_.setUniform("resolution", sf::Glsl::Vec2(window.getSize()));
 
-		window.draw(vertex_array, states);
+		window.draw(vertex_array_, states);
 	}
 
 
-	void renderDebug(sf::RenderWindow& window, const std::vector<sf::Vector2f>& positions,
+	void render_debug(sf::RenderWindow& window, const std::vector<sf::Vector2f>& positions,
 		const std::vector<float>& angles,
 		const std::vector<uint16_t>& neighbourhood_count,
-		float visual_radius, float particle_size)
+		const float visual_radius, const float particle_size)
 	{
-		debug_lines.clear();
-		debug_lines.resize(positions.size() * 2);
+		debug_lines_.clear();
+		debug_lines_.resize(positions.size() * 2);
 
 		for (size_t i = 0; i < positions.size(); ++i) 
 		{
 			const sf::Vector2f& position = positions[i];
-			float angle = angles[i];
+			const float angle = angles[i];
 
 			// Draw direction line
 			sf::Vector2f direction = sf::Vector2f(std::sin(angle), std::cos(angle)) * particle_size;
-			debug_lines[i * 2].position = position;
-			debug_lines[i * 2].color = sf::Color::White;
-			debug_lines[i * 2 + 1].position = position + direction;
-			debug_lines[i * 2 + 1].color = sf::Color::White;
+			debug_lines_[i * 2].position = position;
+			debug_lines_[i * 2].color = sf::Color::White;
+			debug_lines_[i * 2 + 1].position = position + direction;
+			debug_lines_[i * 2 + 1].color = sf::Color::White;
 
 			// Draw visual radius
-			visual_radius_shape.setSize(sf::Vector2f(visual_radius * 2, visual_radius * 2));
-			visual_radius_shape.setPosition(position - sf::Vector2f(visual_radius, visual_radius));
-			window.draw(visual_radius_shape, sf::BlendAdd);
+			visual_radius_shape_.setSize(sf::Vector2f(visual_radius * 2, visual_radius * 2));
+			visual_radius_shape_.setPosition(position - sf::Vector2f(visual_radius, visual_radius));
+			window.draw(visual_radius_shape_, sf::BlendAdd);
 
 			// Draw debug text
 			sf::Vector2f text_pos = position + sf::Vector2f(0, 30);
-			debug_font.draw(text_pos, "nearby: " + std::to_string(neighbourhood_count[i]), true);
+			debug_font_.draw(text_pos, "nearby: " + std::to_string(neighbourhood_count[i]), true);
 		}
 
-		window.draw(debug_lines);
+		window.draw(debug_lines_);
 	}
 };

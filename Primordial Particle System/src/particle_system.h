@@ -13,10 +13,6 @@
 #include "PPS_renderer.h"
 
 
-// pre-calculating variables
-inline static constexpr float rad_sq = SystemSettings::visual_radius * SystemSettings::visual_radius;
-
-
 template<size_t PopulationSize>
 class ParticlePopulation : SystemSettings
 {
@@ -89,7 +85,7 @@ public:
 	}
 
 
-	void render(sf::RenderWindow& window, const bool draw_hash_grid = false, sf::Vector2f pos = {0 ,0})
+	void render(sf::RenderWindow& window, const bool draw_hash_grid = false, const sf::Vector2f pos = {0 ,0})
 	{
 		positions_[0] = pos;
 		if (draw_hash_grid)
@@ -106,7 +102,7 @@ public:
 
 	void render_debug(sf::RenderWindow& window)
 	{
-		renderer_.renderDebug(window, positions_, angles_, neighbourhood_count_, visual_radius, radius);
+		renderer_.render_debug(window, positions_, angles_, neighbourhood_count_, visual_radius, radius);
 	}
 
 
@@ -144,7 +140,7 @@ private:
 
 			const float dist_sq = direction_to.x * direction_to.x + direction_to.y * direction_to.y;
 
-			if (dist_sq > 0 && dist_sq < rad_sq)
+			if (dist_sq > 0 && dist_sq < visual_radius * visual_radius)
 			{
 				const bool is_on_right = (direction_to.x * sin_angle - direction_to.y * cos_angle) < 0;
 				right += is_on_right;

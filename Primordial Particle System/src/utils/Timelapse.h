@@ -2,10 +2,12 @@
 
 #include <SFML/Graphics.hpp>
 #include <opencv2/opencv.hpp>
-#include <chrono>
 #include <thread>
 #include <vector>
 
+// A simple OpenCV & SFML program to record timelapses for simulations.
+// capture() will attempt to capture the current window as long as the duration > capture_rate_seconds
+// save_video() will attempt to save the video as a.mp4
 class Timelapse
 {
 private:
@@ -15,9 +17,10 @@ private:
     sf::Clock clock_;
 
 public:
-    Timelapse(sf::RenderWindow& capture_window, const float capture_rate_seconds) : window_(capture_window), capture_rate_(capture_rate_seconds)
+    Timelapse(sf::RenderWindow& capture_window, const float capture_rate_seconds)
+	: window_(capture_window), capture_rate_(capture_rate_seconds)
     {
-	    
+        std::cout << "OpenCV version : " << CV_VERSION << "\n";
     }
 
     void capture()
@@ -52,35 +55,39 @@ public:
 
         // Ensure the file has a proper extension
         std::string actual_filename = filename;
-        if (actual_filename.substr(actual_filename.find_last_of(".") + 1) != "mp4") {
+        if (actual_filename.substr(actual_filename.find_last_of(".") + 1) != "mp4") 
+        {
             actual_filename += ".mp4";
         }
 
         // Try different codecs
-        std::vector<int> codecs = {
+        const std::vector<int> codecs = {
             cv::VideoWriter::fourcc('m', 'p', '4', 'v'),
             cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
             cv::VideoWriter::fourcc('X', 'V', 'I', 'D'),
-            cv::VideoWriter::fourcc('H', '2', '6', '4')
-        };
+            cv::VideoWriter::fourcc('H', '2', '6', '4')};
 
         cv::VideoWriter video;
         bool success = false;
 
-        for (const auto& codec : codecs) {
+        for (const auto& codec : codecs) 
+        {
             video.open(actual_filename, codec, fps, frame_size);
-            if (video.isOpened()) {
+            if (video.isOpened()) 
+            {
                 success = true;
                 break;
             }
         }
 
         if (!success) {
+
             std::cout << "Failed to create video writer. Try installing additional codecs." << "\n";
             return;
         }
 
-        for (const auto& frame : frames_) {
+        for (const auto& frame : frames_) 
+        {
             video.write(frame);
         }
 

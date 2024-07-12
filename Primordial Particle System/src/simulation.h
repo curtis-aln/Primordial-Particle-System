@@ -32,24 +32,21 @@ class Simulation : SystemSettings, SimulationSettings
 			break;
 
 		case sf::Keyboard::Space:
-			paused_ = not paused_;
+			paused_ = !paused_;
 			break;
 
 		case sf::Keyboard::G:
-			render_hash_grid_ = not render_hash_grid_;
+			render_hash_grid_ = !render_hash_grid_;
 			break;
 
 		case sf::Keyboard::R:
-			rendering_ = not rendering_;
-			break;
-
-		case sf::Keyboard::M:
-			mode_ = not mode_;
+			rendering_ = !rendering_;
 			break;
 
 		case sf::Keyboard::D:
-			debug_ = not debug_;
+			debug_ = !debug_;
 			break;
+		default: ;
 		}
 	}
 
@@ -71,22 +68,12 @@ class Simulation : SystemSettings, SimulationSettings
 
 			else if (event.type == sf::Event::MouseWheelScrolled)
 				camera.zoom(event.mouseWheelScroll.delta);
-
-
-			else if (event.type == sf::Event::MouseButtonPressed)
-			{
-				mouse_pressed_event = true;
-			}
-
-
-			else if (event.type == sf::Event::MouseButtonReleased)
-			{
-				mouse_pressed_event = false;
-			}
 		}
 
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
+		{
 			camera.translate();
+		}
 	}
 
 
@@ -104,12 +91,12 @@ class Simulation : SystemSettings, SimulationSettings
 
 		const sf::Vector2f start = { 40.f, 40.f };
 		constexpr float spacing = 20.f;
-		int i = 2;
+		float i = 2;
 
 		title_font.draw(start, window_name);
-		text_font.draw(start + sf::Vector2f{0, spacing * i++}, std::to_string(fps) + " fps");
-		text_font.draw(start + sf::Vector2f{0, spacing * i++}, "particles");
-		text_font.draw(start + sf::Vector2f{0, spacing * i++}, "iterations");
+		text_font.draw(start + sf::Vector2f{0.f, spacing * i++}, std::to_string(fps) + " fps");
+		text_font.draw(start + sf::Vector2f{0.f, spacing * i++}, "particles");
+		text_font.draw(start + sf::Vector2f{0.f, spacing * i}, "iterations");
 
 
 		window_.setTitle(std::to_string(fps));
@@ -159,15 +146,13 @@ private:
 
 	bool paused_ = false;
 	bool running_ = true;
-	bool mode_ = false;
 	bool render_hash_grid_ = false;
 	bool debug_ = false;
 	bool rendering_ = true;
-	bool mouse_pressed_event = false;
 
 	ParticlePopulation<particle_count> particle_system_{ text_font };
 
-	Timelapse timelapse_{ window_, 0.5         };
+	Timelapse timelapse_{ window_, 0.5f};
 
 	int frames = 0;
 };

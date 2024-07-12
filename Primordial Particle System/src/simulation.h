@@ -116,20 +116,24 @@ public:
 
 	void run()
 	{
+
 		while (running_)
 		{
 			poll_events();
 
-
-			particle_system_.add_particles_to_grid();
-			particle_system_.update_particles(paused_);
-			
+			for (int i = 0; i < 5; ++i)
+			{
+				particle_system_.add_particles_to_grid();
+				particle_system_.update_particles(paused_);
+			}
 
 			if (rendering_)
 			{
 				render();
 			}
 			update_caption();
+
+			++frames;
 		}
 	}
 
@@ -137,7 +141,7 @@ public:
 private:
 	sf::RenderWindow window_{};
 	sf::Clock clock_{};
-	FrameRateSmoothing<100> fps_manager{};
+	FrameRateSmoothing<60> fps_manager{};
 
 	Camera camera{&window_, 1.f / scale_factor};
 
@@ -153,4 +157,6 @@ private:
 	bool mouse_pressed_event = false;
 
 	ParticlePopulation<particle_count> particle_system_{ text_font };
+
+	int frames = 0;
 };

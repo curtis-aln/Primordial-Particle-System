@@ -23,7 +23,7 @@ using cell_idx = uint16_t;
 using obj_idx = uint16_t;
 
 // maximum number of objects a cell can hold
-static constexpr uint8_t cell_capacity = 15;
+static constexpr uint8_t cell_capacity = 25;
 
 using cellIndex = std::pair < cell_idx, cell_idx>;
 
@@ -50,7 +50,7 @@ public:
 
 
 	// adding an object to the spatial hash grid by a position and storing its obj_id
-	cellIndex add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
+	cellIndex inline add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
 	{
 		const cellIndex index = hash(obj_pos);
 
@@ -58,7 +58,7 @@ public:
 		uint8_t& count = objects_count[index.first][index.second];
 
 		grid[index.first][index.second][count] = static_cast<obj_idx>(obj_id);
-		count += count < cell_capacity;
+		count += count < cell_capacity - 1; // subtracting one prevents going over the size
 
 		return index;
 	}

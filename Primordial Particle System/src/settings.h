@@ -42,7 +42,7 @@ struct SystemSettings
 	inline static constexpr float beta = 17.f;
 
 	// the colors of each particle density
-	static constexpr sf::Uint8 transparency = 150;
+	static constexpr sf::Uint8 transparency = 197;
 	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
 	{
 		{0, {10, 255, 10, transparency}},  // green

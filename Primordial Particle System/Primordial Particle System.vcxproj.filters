@@ -47,6 +47,9 @@
     <ClInclude Include="src\utils\spatial_hash_grid.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\PPS_renderer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />

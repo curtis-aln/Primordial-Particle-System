@@ -4,6 +4,7 @@
 #include "utils/smooth_frame_rates.h"
 #include "utils/font.h"
 #include "utils/Camera.hpp"
+#include "utils/Timelapse.h"
 
 #include <string>
 
@@ -27,7 +28,7 @@ class Simulation : SystemSettings, SimulationSettings
 		switch (event_key_code)
 		{
 		case sf::Keyboard::Escape:
-			running_ = false;
+			quit();
 			break;
 
 		case sf::Keyboard::Space:
@@ -61,7 +62,7 @@ class Simulation : SystemSettings, SimulationSettings
 		while (window_.pollEvent(event))
 		{
 			if (event.type == sf::Event::Closed)
-				running_ = false;
+				quit();
 
 
 			else if (event.type == sf::Event::KeyPressed)
@@ -86,6 +87,13 @@ class Simulation : SystemSettings, SimulationSettings
 
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 			camera.translate();
+	}
+
+
+	void quit()
+	{
+		timelapse_.save_video("TimeLapse");
+		running_ = false;
 	}
 
 
@@ -130,6 +138,7 @@ public:
 			if (rendering_)
 			{
 				render();
+				timelapse_.capture();
 			}
 			update_caption();
 
@@ -157,6 +166,8 @@ private:
 	bool mouse_pressed_event = false;
 
 	ParticlePopulation<particle_count> particle_system_{ text_font };
+
+	Timelapse timelapse_{ window_, 0.5         };
 
 	int frames = 0;
 };

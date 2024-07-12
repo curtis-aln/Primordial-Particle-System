@@ -1,7 +1,6 @@
 #include "simulation.h"
 
 // Screen Statistics & Title & Key inputs
-// optimize for 10fps at 100,000 particles
 // track number of each particle and store in a file.
 // screen translations and zooming
 
@@ -19,13 +18,8 @@
 // cell indexes rendered using an sf::Texture
 
 
-// instead of getting all of the particles. we just get the program to pass in operation(s) we want to preform on each particle. such as is in range
-
 int main()
 {
 	//Random::set_seed(0);
 	Simulation().run();
 }
-
-// 70fps
-//

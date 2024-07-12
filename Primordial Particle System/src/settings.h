@@ -34,7 +34,7 @@ struct SystemSettings
 	inline static constexpr unsigned particle_count = 20'000;
 
 
-	inline static constexpr float radius = 80.f;
+	inline static constexpr float radius = 110.f;
 	inline static constexpr float visual_radius = 5.f * param_scale_factor;
 	inline static constexpr float gamma = 0.67f * param_scale_factor;
 

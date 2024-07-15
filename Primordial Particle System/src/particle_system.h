@@ -14,7 +14,7 @@
 
 
 template<size_t PopulationSize>
-class ParticlePopulation : SystemSettings
+class ParticlePopulation : PPS_Settings
 {
 	// position and angle describes the particle
 	std::vector<sf::Vector2f> positions_;
@@ -39,7 +39,7 @@ class ParticlePopulation : SystemSettings
 public:
 	ParticlePopulation(Font& debug_font)
 	: hash_grid_({0, 0, world_width, world_height}),
-	  renderer_(PopulationSize, radius, debug_font),
+	  renderer_(PopulationSize, debug_font),
 	  inv_width_(1.f / world_width),
 	  inv_height_(1.f / world_height)
 	{
@@ -82,6 +82,11 @@ public:
 		{
 			update_angles(i, paused);
 		}
+
+		//for (size_t i = 0; i < PopulationSize; ++i)
+		//{
+		//	angles_[i] += 2 * pi * decay;
+		//}
 	}
 
 
@@ -93,16 +98,16 @@ public:
 			hash_grid_.render_grid(window);
 		}
 
-		renderer_.updateParticles(positions_, neighbourhood_count_, radius);
+		renderer_.updateParticles(positions_, neighbourhood_count_);
 		renderer_.render(window);
 
 		draw_rect_outline({ 0, 0 }, {world_width, world_height}, window, 30);
 	}
 
 
-	void render_debug(sf::RenderWindow& window)
+	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
 	{
-		renderer_.render_debug(window, positions_, angles_, neighbourhood_count_, visual_radius, radius);
+		renderer_.render_debug(window, positions_, angles_, neighbourhood_count_, mouse_pos, debug_radius);
 	}
 
 

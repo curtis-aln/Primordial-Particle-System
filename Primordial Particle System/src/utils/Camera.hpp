@@ -19,7 +19,7 @@ private:
 	sf::Vector2f m_mouse_position_before_{};
 	sf::Vector2f m_delta_{};
 
-	float m_zoom_strength_ = 0.04f;
+	float m_zoom_strength_ = 0.08f;
 
 	// for view toggle.
 	sf::FloatRect original_view{};
@@ -58,6 +58,7 @@ public:
 
 		update_window_view();
 	}
+
 
 
 	void zoom(const float delta_scroll)

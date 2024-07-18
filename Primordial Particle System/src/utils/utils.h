@@ -1,9 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
-inline static constexpr float two_pi = 2.f * pi;
-inline static constexpr float pi_div_180 = pi / 180.f;
 
 
 inline float dist_squared(const sf::Vector2f position_a, const sf::Vector2f position_b)
@@ -26,25 +23,6 @@ inline void draw_thick_line(sf::RenderWindow& window, const sf::Vector2f& point,
 
 	// Draw the line
 	window.draw(line);
-}
-
-inline void draw_thick_line(sf::RenderWindow& window, const sf::Vector2f& point1, const sf::Vector2f& point2,
-	const float thickness = {}, const sf::Color& fill_color = { 255, 255, 255 })
-{
-	// Calculate the length and angle of the line
-	const float length = std::sqrt(dist_squared(point1, point2));
-	const float angle = std::atan2(point2.y - point1.y, point2.x - point1.x) * 180 / pi;
-
-	draw_thick_line(window, point1, length, angle, thickness, fill_color);
-}
-
-
-inline void draw_rect_outline(sf::Vector2f top_left, sf::Vector2f bottom_right, sf::RenderWindow& window, const float thickness)
-{
-	draw_thick_line(window, top_left, { bottom_right.x, top_left.y }, thickness);
-	draw_thick_line(window, bottom_right, { top_left.x, bottom_right.y }, thickness);
-	draw_thick_line(window, bottom_right, { bottom_right.x, top_left.y }, thickness);
-	draw_thick_line(window, top_left, { top_left.x, bottom_right.y }, thickness);
 }
 
 

@@ -1,5 +1,6 @@
 #pragma once
 #include "settings.h"
+#include "utils/utils.h"
 
 
 inline sf::Color get_color(const uint16_t total)
@@ -58,12 +59,14 @@ public:
 		debug_lines_.setPrimitiveType(sf::Lines);
 	}
 
-	void updateParticles(const std::vector<sf::Vector2f>& positions,
+	void updateParticles(
+		const std::vector<float>& positions_x_, 
+		const std::vector<float>& positions_y_,
 		const std::vector<uint16_t>& neighbourhood_count)
 	{
-		for (size_t i = 0; i < positions.size(); ++i) 
+		for (size_t i = 0; i < positions_x_.size(); ++i) 
 		{
-			const sf::Vector2f& center = positions[i];
+			const sf::Vector2f center = { positions_x_[i], positions_y_[i] };
 			const sf::Color color = get_color(neighbourhood_count[i]);
 			const float half_size = particle_radius / 2.f;
 
@@ -87,17 +90,17 @@ public:
 	}
 
 
-	void render_debug(sf::RenderWindow& window, const std::vector<sf::Vector2f>& positions, const std::vector<float>& angles,
+	void render_debug(sf::RenderWindow& window, const std::vector<float>& positions_x_, const std::vector<float>& positions_y_, const std::vector<float>& angles,
 		const std::vector<uint16_t>& neighbourhood_count, const sf::Vector2f mouse_pos, const float mouse_radius)
 	{
 		constexpr float visual_radius = PPS_Settings::visual_radius;
 
 		debug_lines_.clear();
-		debug_lines_.resize(positions.size() * 2);
+		debug_lines_.resize(positions_x_.size() * 2);
 
-		for (size_t i = 0; i < positions.size(); ++i) 
+		for (size_t i = 0; i < positions_x_.size(); ++i) 
 		{
-			const sf::Vector2f& position = positions[i];
+			const sf::Vector2f& position = { positions_x_[i], positions_y_[i] };
 
 			if (dist_squared(position, mouse_pos) > mouse_radius * mouse_radius)
 			{

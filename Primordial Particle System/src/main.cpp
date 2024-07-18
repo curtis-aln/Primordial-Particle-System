@@ -27,6 +27,6 @@
 
 int main()
 {
-	//Random::set_seed(0);
+	Random::set_seed(0);
 	Simulation().run();
 }

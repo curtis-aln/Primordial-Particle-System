@@ -8,7 +8,7 @@
 
 #include <string>
 
-inline static constexpr size_t sub_iterations = 5;
+inline static constexpr size_t sub_iterations = 8;
 
 class Simulation : PPS_Settings, SimulationSettings
 {

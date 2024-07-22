@@ -8,19 +8,10 @@
 #include <cmath>
 #include <array>
 
-#include "utils/font.h"
 #include "PPS_renderer.h"
 
-#include <immintrin.h>  // For SSE/AVX intrinsics
-#include <algorithm>    // For std::fill
 #include <vector>
 #include <omp.h>        // For OpenMP parallelization
-
-#ifdef __llvm__
-#define PREFETCH(addr) __builtin_prefetch(addr, 0, 3)
-#else
-#define PREFETCH(addr) // Do nothing for other compilers
-#endif
 
 
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
@@ -37,15 +28,17 @@ class ParticlePopulation : PPS_Settings
 	alignas(32) std::vector<float> angles_;
 	alignas(32) std::vector<uint16_t> neighbourhood_count_;
 
-	// Pre-computed constants
-	alignas(32) float sin_table_[256];
-	alignas(32) float cos_table_[256];
+	// Pre-computed constants for fast lookup
+	static constexpr int ANGLE_TABLE_SIZE = 256;
+	alignas(32) float sin_table_[ANGLE_TABLE_SIZE];
+	alignas(32) float cos_table_[ANGLE_TABLE_SIZE];
 
 
 	// The Spatial Hash Grid Optimizes finding who is nearby
-	SpatialHashGrid<hash_cells_x, hash_cells_y> hash_grid_;
+	SpatialGrid<grid_cells_x, grid_cells_y> spatial_grid;
 
-	PPS_Renderer renderer_;
+	// renders the pps
+	PPS_Renderer pps_renderer_;
 
 	// rendering and graphics
 	sf::RectangleShape render_bounds_{};
@@ -54,14 +47,14 @@ class ParticlePopulation : PPS_Settings
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
-	static constexpr int ANGLE_TABLE_SIZE = 256;
+	std::array<int, cell_capacity * 9> neighbours;
+	int neighbours_size = 0;
 
-	
 
 public:
-	ParticlePopulation(Font& debug_font)
-	: hash_grid_({0, 0, world_width, world_height}),
-	  renderer_(PopulationSize, debug_font),
+	explicit ParticlePopulation(sf::RenderWindow& window)
+	: spatial_grid({0, 0, world_width, world_height}),
+	  pps_renderer_(PopulationSize, window),
 	  inv_width_(1.f / world_width),
 	  inv_height_(1.f / world_height)
 	{
@@ -95,7 +88,7 @@ public:
 	void add_particles_to_grid()
 	{
 		// At the start of every iteration. all the particles need to be removed from the grid and re-added
-		hash_grid_.clear();
+		spatial_grid.clear();
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
 			// positions are fetched and wrapped
@@ -105,16 +98,16 @@ public:
 			x = std::fmod(x + world_width, world_width);
 			y = std::fmod(y + world_height, world_height);
 
-			hash_grid_.add_object({x, y}, i);
+			spatial_grid.add_object({x, y}, i);
 		}
 	}
 
 	void update_particles(const bool paused = false)
 	{
 		// filling the left and right arrays with data
-		for (size_t i = 0; i < PopulationSize; ++i)
+		for (size_t i = 0; i < grid_cells_x * grid_cells_y; ++i)
 		{
-			update_angles(i, paused);
+			process_cell(i);
 		}
 	}
 
@@ -124,22 +117,69 @@ public:
 		//positions_[0] = pos;
 		if (draw_hash_grid)
 		{
-			hash_grid_.render_grid(window);
+			spatial_grid.render_grid(window);
 		}
 
-		renderer_.updateParticles(positions_x_, positions_y_, neighbourhood_count_);
-		renderer_.render(window);
+		pps_renderer_.updateParticles(positions_x_, positions_y_, neighbourhood_count_);
+		pps_renderer_.render();
 	}
 
 
 	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
 	{
-		renderer_.render_debug(window, positions_x_, positions_y_, angles_, neighbourhood_count_, mouse_pos, debug_radius);
+		pps_renderer_.render_debug(positions_x_, positions_y_, angles_, neighbourhood_count_, mouse_pos, debug_radius);
 	}
 
 
 private:
-	inline void update_angles(const size_t index, const bool paused)
+	inline void process_cell(const cell_idx cell_index)
+	{
+		// for a given cell this function will access its particle contents. and for each one of them it will update them based off the information from the
+		// neighbouring 9 cells.
+		neighbours_size = 0;
+
+		const int cell_index_x = cell_index % grid_cells_x;
+		const int cell_index_y = cell_index / grid_cells_x;
+		const bool at_border = cell_index_x == 0 || cell_index_y == 0 || cell_index_x == grid_cells_x - 1 || cell_index_y == grid_cells_y - 1;
+
+		for (int dx = -1; dx <= 1; ++dx)
+		{
+			for (int dy = -1; dy <= 1; ++dy)
+			{
+				// calculating the location of the neighbour
+				int32_t neighbour_index_x = cell_index_x + dx;
+				int32_t neighbour_index_y = cell_index_y + dy;
+
+				if (at_border)
+				{
+					neighbour_index_x = (neighbour_index_x + grid_cells_x) % grid_cells_x;
+					neighbour_index_y = (neighbour_index_y + grid_cells_y) % grid_cells_y;
+				}
+
+				// processing the neighbour
+				const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
+				const auto& contents = spatial_grid.grid[neighbour_index];
+				const auto size = spatial_grid.objects_count[neighbour_index];
+
+				// adding the neighbour data to the array
+				std::copy_n(contents.begin(), size, neighbours.begin() + neighbours_size);
+				neighbours_size += size;
+			}
+		}
+
+		// updating th particles
+		const auto& cell_contents = spatial_grid.grid[cell_index];
+		const uint8_t cell_size = spatial_grid.objects_count[cell_index];
+
+		for (uint8_t idx = 0; idx < cell_size; ++idx)
+		{
+			update_particle(cell_contents[idx], at_border);
+		}
+
+	}
+
+
+	inline void update_particle(const obj_idx index, const bool at_border)
 	{
 		// first fetch the data we need
 		float& x = positions_x_[index];
@@ -147,30 +187,20 @@ private:
 		float& angle = angles_[index];
 
 		// Convert angle to lookup table index
-		int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
-		float sin_angle = sin_table_[angle_index];
-		float cos_angle = cos_table_[angle_index];
+		const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+		const float sin_angle = sin_table_[angle_index];
+		const float cos_angle = cos_table_[angle_index];
 
-		// Prefetch next particle data
-		PREFETCH(&positions_x_[index + 1]);
-		PREFETCH(&positions_y_[index + 1]);
-		PREFETCH(&angles_[index + 1]);
-
-		// finds the nearby indexes in each of the 9 neighbouring cells
-		hash_grid_.find({x, y});
-
-		// calculating the cumulative direction, does not need to be average to function the same
 		int left = 0;
 		int right = 0;
-
-		for (int i = 0; i < hash_grid_.found_array_size; ++i)
+		for (uint32_t i{ 0 }; i < neighbours_size; ++i)
 		{
-			const int other_index = hash_grid_.found_array[i];
+			const uint32_t other_particle = neighbours[i];
 
-			float to_x = positions_x_[other_index] - x;
-			float to_y = positions_y_[other_index] - y;
+			float to_x = positions_x_[other_particle] - x;
+			float to_y = positions_y_[other_particle] - y;
 
-			if (hash_grid_.at_border)
+			if (at_border)
 			{
 				to_x -= world_width * std::round(to_x * inv_width_);
 				to_y -= world_height * std::round(to_y * inv_height_);
@@ -187,21 +217,13 @@ private:
 		}
 
 		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
-		const int r_minus_l = right - left;
-		const auto sign = static_cast<float>(r_minus_l >= 0 ? 1 : -1);
-
+		const auto sign = static_cast<float>((right - left) >= 0 ? 1 : -1);
 		neighbourhood_count_[index] = right + left;
 
-		// updating the 
 		angle += (alpha + beta * (right + left) * sign) * pi_div_180;
 
-
-		if (!paused)
-		{
-			// Update position using the look-up table
-			x += gamma * cos_angle;
-			y += gamma * sin_angle;
-		}
+		// Update position using the look-up table
+		x += gamma * cos_angle;
+		y += gamma * sin_angle;
 	}
-
 };

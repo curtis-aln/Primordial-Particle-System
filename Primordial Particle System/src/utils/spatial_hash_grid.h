@@ -7,7 +7,7 @@
 #include <array>
 
 /*
-	SpatialHashGrid
+	SpatialGrid
 - have no more than 65,536 (2^16) objects
 - if experiencing error make sure your objects don't go out of bounds
 */
@@ -25,92 +25,52 @@ using obj_idx = uint32_t;
 // maximum number of objects a cell can hold
 static constexpr uint8_t cell_capacity = 25;
 
-using cellIndex = std::pair < cell_idx, cell_idx>;
 
 
 template<size_t CellsX, size_t CellsY>
-class SpatialHashGrid
+class SpatialGrid
 {
 public:
-	explicit SpatialHashGrid(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
+	explicit SpatialGrid(const sf::FloatRect screen_size = {}) : m_screenSize(screen_size)
 	{
-		objects_count.resize(CellsX, std::vector<uint8_t>(CellsY));
-		grid.resize(CellsX, std::vector<std::array<cell_idx, cell_capacity>>(CellsY));
+		objects_count.resize(total_cells, 0);
+		grid.resize(total_cells, std::array<cell_idx, cell_capacity>());
 
 		init_graphics();
 		initVertexBuffer();
 		initFont();
 	}
-	~SpatialHashGrid() = default;
+	~SpatialGrid() = default;
 
 
-	cellIndex inline hash(const sf::Vector2f pos) const
+	cell_idx inline hash(const sf::Vector2f pos) const
 	{
 		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
 		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
-		return { cell_x, cell_y };
+		return cell_y * CellsX + cell_x;
 	}
 
 
 	// adding an object to the spatial hash grid by a position and storing its obj_id
-	cellIndex inline add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
+	cell_idx inline add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
 	{
-		const cellIndex index = hash(obj_pos);
+		const cell_idx index = hash(obj_pos);
 
 		// adding the atom and incrementing the size
-		uint8_t& count = objects_count[index.first][index.second];
+		uint8_t& count = objects_count[index];
 
-		grid[index.first][index.second][count] = static_cast<obj_idx>(obj_id);
+		grid[index][count] = static_cast<obj_idx>(obj_id);
 		count += count < cell_capacity - 1; // subtracting one prevents going over the size
 
 		return index;
 	}
 
-
-	void find(const sf::Vector2f& position)
-	{
-		// mapping the position to the grid
-		const cellIndex cell_index = hash(position);
-
-		// resetting the found array
-		found_array_size = 0;
-
-		// at border is calculated so the object can determine whether to use toroidal wrapping or not
-		at_border = cell_index.first == 0 || cell_index.second == 0 || cell_index.first == CellsX - 1 || cell_index.second == CellsY - 1;
-
-		for (int dx = -1; dx <= 1; ++dx)
-		{
-			for (int dy = -1; dy <= 1; ++dy)
-			{
-				int index_x = cell_index.first + dx;
-				int index_y = cell_index.second + dy;
-
-				if (at_border) // todo
-				{
-					index_x = (index_x + CellsX) % CellsX;
-					index_y = (index_y + CellsY) % CellsY;
-				}
-
-				const auto& contents = grid[index_x][index_y];
-				const auto size = objects_count[index_x][index_y];
-
-				std::copy(contents.begin(), contents.begin() + size, found_array.begin() + found_array_size);
-				found_array_size += size;
-			}
-		}
-	}
-
-
 	inline void clear()
 	{
-		for (int x = 0; x < CellsX; ++x)
+		for (int idx = 0; idx < total_cells; ++idx)
 		{
-			for (int y = 0; y < CellsY; ++ y)
-			{
-				objects_count[x][y] = 0;
-			}
+			objects_count[idx] = 0;
 		}
-		//memset(objects_count.data(), 0, total_cells * sizeof(uint8_t));
 	}
 
 
@@ -123,8 +83,9 @@ public:
 		{
 			for (int y = 0; y < CellsY; ++y)
 			{
+				const cell_idx index = y * CellsX + x;
 				const sf::Vector2f topleft = { x * m_cellSize.x, y * m_cellSize.y };
-				text.setString("(" + std::to_string(x) + ", " + std::to_string(y) + ")  obj count: " + std::to_string(objects_count[x][y]));
+				text.setString("(" + std::to_string(x) + ", " + std::to_string(y) + ")  obj count: " + std::to_string(objects_count[index]));
 				text.setPosition(topleft);
 				window.draw(text);
 			}
@@ -202,10 +163,8 @@ public:
 	sf::Font font;
 	sf::Text text;
 
-	std::vector<std::vector<std::array<obj_idx, cell_capacity>>> grid{};
-	//std::array < std::array<std::array<obj_idx, cell_capacity>, CellsY>,CellsX> grid;
-	std::vector<std::vector<uint8_t>> objects_count{};
-	//alignas(32) std::array< std::array<uint8_t, CellsY>, CellsX> objects_count;
+	alignas(32) std::vector<std::array<obj_idx, cell_capacity>> grid{};
+	alignas(32) std::vector<uint8_t> objects_count{};
 
 
 public:

@@ -19,10 +19,10 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-	inline static constexpr unsigned particle_count = 20'000;
+	inline static constexpr unsigned particle_count = 200'000;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 70;
+	inline static constexpr float scale_factor = 250;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -30,8 +30,8 @@ struct PPS_Settings
 	inline static constexpr auto world_height = static_cast<float>(SimulationSettings::screen_height) * scale_factor;
 
 	// calculating how many spatial hash cells should be on each axis
-	inline static constexpr auto hash_cells_y = static_cast<size_t>(scale_factor);
-	inline static constexpr auto hash_cells_x = static_cast<size_t>((scale_factor) * SimulationSettings::aspect_ratio);
+	inline static constexpr auto grid_cells_y = static_cast<size_t>(scale_factor);
+	inline static constexpr auto grid_cells_x = static_cast<size_t>((scale_factor) * SimulationSettings::aspect_ratio);
 
 	// Scale Sensitive Parameters
 	inline static constexpr float visual_radius = 5.f * param_scale_factor;

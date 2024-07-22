@@ -8,7 +8,7 @@
 
 #include <string>
 
-inline static constexpr size_t sub_iterations = 8;
+inline static constexpr size_t sub_iterations = 1;
 
 class Simulation : PPS_Settings, SimulationSettings
 {
@@ -17,7 +17,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	sf::Clock clock_{};
 
 	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<60> fps_manager{};
+	FrameRateSmoothing<2> fps_manager{};
 
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };
@@ -41,11 +41,9 @@ class Simulation : PPS_Settings, SimulationSettings
 	float debug_radius = 8000.f;
 	const float change_in_debug_radius = 500.f;
 
-	//float decay = 1000.f;
-	//const double change_in_decay = 5'000'000'000'000'000.f;
 
 	// The particle system to be displayed
-	ParticlePopulation<particle_count> particle_system_{ text_font };
+	ParticlePopulation<particle_count> particle_system_{ window_ };
 
 
 public:

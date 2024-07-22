@@ -1,6 +1,7 @@
 #pragma once
 #include "settings.h"
 #include "utils/utils.h"
+#include "utils/font.h"
 
 
 inline sf::Color get_color(const uint16_t total)
@@ -21,7 +22,9 @@ private:
 	// Debug rendering
 	sf::CircleShape visual_radius_shape_;
 	sf::VertexArray debug_lines_;
-	Font& debug_font_;
+
+	sf::RenderWindow& window_;
+	Font debug_font_;
 
 	void initializeShader()
 	{
@@ -44,7 +47,8 @@ private:
 	}
 
 public:
-	PPS_Renderer(const size_t population_size, Font& font) : debug_font_(font)
+	PPS_Renderer(const size_t population_size, sf::RenderWindow& window)
+		: window_(window), debug_font_(&window, 90, "fonts/Callibri.ttf")
 	{
 		vertex_array_.setPrimitiveType(sf::Quads);
 		vertex_array_.resize(population_size * 4);
@@ -80,27 +84,32 @@ public:
 		}
 	}
 
-	void render(sf::RenderWindow& window)
+	void render()
 	{
 		sf::RenderStates states;
 		states.shader = &particle_shader_;
-		particle_shader_.setUniform("resolution", sf::Glsl::Vec2(window.getSize()));
+		particle_shader_.setUniform("resolution", sf::Glsl::Vec2(window_.getSize()));
 
-		window.draw(vertex_array_, states);
+		window_.draw(vertex_array_, states);
 	}
 
 
-	void render_debug(sf::RenderWindow& window, const std::vector<float>& positions_x_, const std::vector<float>& positions_y_, const std::vector<float>& angles,
-		const std::vector<uint16_t>& neighbourhood_count, const sf::Vector2f mouse_pos, const float mouse_radius)
+	void render_debug(
+		const std::vector<float>& positions_x, 
+		const std::vector<float>& positions_y, 
+		const std::vector<float>& angles,
+		const std::vector<uint16_t>& neighbourhood_count, 
+		const sf::Vector2f mouse_pos, 
+		const float mouse_radius)
 	{
 		constexpr float visual_radius = PPS_Settings::visual_radius;
 
 		debug_lines_.clear();
-		debug_lines_.resize(positions_x_.size() * 2);
+		debug_lines_.resize(positions_x.size() * 2);
 
-		for (size_t i = 0; i < positions_x_.size(); ++i) 
+		for (size_t i = 0; i < positions_x.size(); ++i) 
 		{
-			const sf::Vector2f& position = { positions_x_[i], positions_y_[i] };
+			const sf::Vector2f& position = { positions_x[i], positions_y[i] };
 
 			if (dist_squared(position, mouse_pos) > mouse_radius * mouse_radius)
 			{
@@ -118,7 +127,7 @@ public:
 
 			// Draw visual radius
 			visual_radius_shape_.setPosition(position - sf::Vector2f(visual_radius, visual_radius));
-			window.draw(visual_radius_shape_, sf::BlendAdd);
+			window_.draw(visual_radius_shape_, sf::BlendAdd);
 
 			// Draw debug text
 			sf::Vector2f text_pos = position + sf::Vector2f(0, particle_radius);
@@ -126,6 +135,6 @@ public:
 			debug_font_.draw(text_pos + sf::Vector2f(0, 30), "angle: " + std::to_string(angles[i]), true);
 		}
 
-		window.draw(debug_lines_);
+		window_.draw(debug_lines_);
 	}
 };

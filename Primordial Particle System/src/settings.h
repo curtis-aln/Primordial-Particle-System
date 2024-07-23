@@ -19,10 +19,10 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-	inline static constexpr unsigned particle_count = 200'000;
+	inline static constexpr unsigned particle_count = 5'000;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 250;
+	inline static constexpr float scale_factor = 34;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size

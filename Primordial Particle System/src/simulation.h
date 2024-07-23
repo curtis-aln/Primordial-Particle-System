@@ -8,7 +8,7 @@
 
 #include <string>
 
-inline static constexpr size_t sub_iterations = 1;
+inline static constexpr size_t sub_iterations = 35;
 
 class Simulation : PPS_Settings, SimulationSettings
 {
@@ -17,7 +17,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	sf::Clock clock_{};
 
 	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<2> fps_manager{};
+	FrameRateSmoothing<60> fps_manager{};
 
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };

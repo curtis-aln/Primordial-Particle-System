@@ -18,6 +18,10 @@ inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float two_pi = 2.f * pi;
 inline static constexpr float pi_div_180 = pi / 180.f;
 
+inline float fast_round(float x) {
+	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
+}
+
 
 template<size_t PopulationSize>
 class ParticlePopulation : PPS_Settings
@@ -47,7 +51,10 @@ class ParticlePopulation : PPS_Settings
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
-	std::array<int, cell_capacity * 9> neighbours;
+
+
+	std::array<float, cell_capacity * 9> neighbour_positions_x;
+	std::array<float, cell_capacity * 9> neighbour_positions_y;
 	int neighbours_size = 0;
 
 
@@ -162,12 +169,17 @@ private:
 				const auto size = spatial_grid.objects_count[neighbour_index];
 
 				// adding the neighbour data to the array
-				std::copy_n(contents.begin(), size, neighbours.begin() + neighbours_size);
-				neighbours_size += size;
+				for (uint8_t idx = 0; idx < size; ++idx)
+				{
+					const obj_idx object_index = contents[idx];
+					neighbour_positions_x[neighbours_size] = positions_x_[object_index];
+					neighbour_positions_y[neighbours_size] = positions_y_[object_index];
+					++neighbours_size;
+				}
 			}
 		}
 
-		// updating th particles
+		// updating the particles
 		const auto& cell_contents = spatial_grid.grid[cell_index];
 		const uint8_t cell_size = spatial_grid.objects_count[cell_index];
 
@@ -191,38 +203,35 @@ private:
 		const float sin_angle = sin_table_[angle_index];
 		const float cos_angle = cos_table_[angle_index];
 
-		int left = 0;
+		int total = 0;
 		int right = 0;
 		for (uint32_t i{ 0 }; i < neighbours_size; ++i)
 		{
-			const uint32_t other_particle = neighbours[i];
+			float to_x = neighbour_positions_x[i] - x;
+			float to_y = neighbour_positions_y[i] - y;
 
-			float to_x = positions_x_[other_particle] - x;
-			float to_y = positions_y_[other_particle] - y;
-
-			if (at_border)
-			{
-				to_x -= world_width * std::round(to_x * inv_width_);
-				to_y -= world_height * std::round(to_y * inv_height_);
-			}
+			float wrap_factor_x = at_border ? world_width : 0.0f;
+			float wrap_factor_y = at_border ? world_height : 0.0f;
+			to_x -= wrap_factor_x * fast_round(to_x * inv_width_);
+			to_y -= wrap_factor_y * fast_round(to_y * inv_height_);
 
 			const float dist_sq = to_x * to_x + to_y * to_y;
 
 			if (dist_sq > 0 && dist_sq < visual_radius * visual_radius)
 			{
-				const bool is_on_right = (to_x * sin_angle - to_y * cos_angle) < 0;
-				right += is_on_right;
-				left += !is_on_right;
+				right += (to_x * sin_angle - to_y * cos_angle) < 0;
+				++total;
 			}
 		}
 
 		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
+		const int left = total - right;
 		const auto sign = static_cast<float>((right - left) >= 0 ? 1 : -1);
 		neighbourhood_count_[index] = right + left;
 
 		angle += (alpha + beta * (right + left) * sign) * pi_div_180;
 
-		// Update position using the look-up table
+		// Update position
 		x += gamma * cos_angle;
 		y += gamma * sin_angle;
 	}

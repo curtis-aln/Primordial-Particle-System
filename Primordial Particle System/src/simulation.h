@@ -9,7 +9,7 @@
 #include <string>
 
 // the amount of iterations of the update loop per frame
-inline static constexpr size_t sub_iterations = 100;
+inline static constexpr size_t sub_iterations = 1;
 
 class Simulation : PPS_Settings, SimulationSettings
 {
@@ -17,7 +17,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	sf::RenderWindow window_{};
 
 	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<20> clock_{};
+	FrameRateSmoothing<10> clock_{};
 
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };

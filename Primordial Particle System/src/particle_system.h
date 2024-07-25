@@ -56,9 +56,12 @@ class ParticlePopulation : PPS_Settings
 	float inv_height_ = 0.f;
 
 	// temporary arrays for calculating particle interactions
-	
+	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_x;
+	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_y;
 
 	tp::ThreadPool thread_pool;
+
+
 
 
 public:
@@ -152,11 +155,11 @@ public:
 
 
 private:
-	void solveCollisionThreaded(uint32_t start, uint32_t end)
+	void solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx)
 	{
 		for (uint32_t idx{ start }; idx < end; ++idx) 
 		{
-			process_cell(idx);
+			process_cell(idx, neighbour_positions_x[thread_idx], neighbour_positions_y[thread_idx]);
 		}
 	}
 
@@ -177,7 +180,7 @@ private:
 			thread_pool.addTask([this, i, slice_size] {
 				uint32_t const start = 2 * i * slice_size;
 				uint32_t const end = start + slice_size;
-				solveCollisionThreaded(start, end);
+				solveCollisionThreaded(start, end, i);
 				});
 		}
 
@@ -186,7 +189,7 @@ private:
 		{
 			thread_pool.addTask([this, last_cell] 
 			{
-				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y);
+				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y, 0);
 			});
 		}
 
@@ -199,7 +202,7 @@ private:
 			{
 				uint32_t const start = (2 * i + 1) * slice_size;
 				uint32_t const end = start + slice_size;
-				solveCollisionThreaded(start, end);
+				solveCollisionThreaded(start, end, i);
 			});
 		}
 
@@ -208,13 +211,13 @@ private:
 
 
 
-	void process_cell(const cell_idx cell_index)
+	void process_cell(
+		const cell_idx cell_index,
+		std::array<float, cell_capacity * 9>& n_positions_x,
+		std::array<float, cell_capacity * 9>& n_positions_y)
 	{
 		// for a given cell this function will access its particle contents. and for each one of them it will update them based off the information from the
 		// neighbouring 9 cells.
-
-		std::array<float, cell_capacity * 9> neighbour_positions_x;
-		std::array<float, cell_capacity * 9> neighbour_positions_y;
 		int neighbours_size = 0;
 
 		const int cell_index_x = cell_index % grid_cells_x;
@@ -244,8 +247,8 @@ private:
 				for (uint8_t idx = 0; idx < size; ++idx)
 				{
 					const obj_idx object_index = contents[idx];
-					neighbour_positions_x[neighbours_size] = positions_x_[object_index];
-					neighbour_positions_y[neighbours_size] = positions_y_[object_index];
+					n_positions_x[neighbours_size] = positions_x_[object_index];
+					n_positions_y[neighbours_size] = positions_y_[object_index];
 					++neighbours_size;
 				}
 			}
@@ -257,15 +260,15 @@ private:
 
 		for (uint8_t idx = 0; idx < cell_size; ++idx)
 		{
-			update_particle(cell_contents[idx], at_border, neighbour_positions_x, neighbour_positions_y, neighbours_size);
+			update_particle(cell_contents[idx], at_border, n_positions_x, n_positions_y, neighbours_size);
 		}
 
 	}
 
 
 	inline void update_particle(const obj_idx index, const bool at_border,
-		std::array<float, cell_capacity * 9>& neighbour_positions_x,
-		std::array<float, cell_capacity * 9>& neighbour_positions_y,
+		std::array<float, cell_capacity * 9>& n_positions_x,
+		std::array<float, cell_capacity * 9>& n_positions_y,
 		const int neighbours_size)
 	{
 		// first fetch the data we need
@@ -287,8 +290,8 @@ private:
 
 		for (uint32_t i{ 0 }; i < neighbours_size; ++i)
 		{
-			float to_x = neighbour_positions_x[i] - x;
-			float to_y = neighbour_positions_y[i] - y;
+			float to_x = n_positions_x[i] - x;
+			float to_y = n_positions_y[i] - y;
 
 			to_x -= wrap_factor_x * fast_round(to_x * inv_width_);
 			to_y -= wrap_factor_y * fast_round(to_y * inv_height_);

@@ -5,7 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <atomic>
-
+#include <condition_variable>
 
 namespace tp
 {
@@ -14,43 +14,52 @@ namespace tp
     {
         std::queue<std::function<void()>> m_tasks;
         std::mutex                        m_mutex;
+        std::condition_variable           m_cv;
         std::atomic<uint32_t>             m_remaining_tasks = 0;
+        bool                              m_stop = false;
 
         template<typename TCallback>
         void addTask(TCallback&& callback)
         {
-            std::lock_guard<std::mutex> lock_guard{ m_mutex };
-            m_tasks.push(std::forward<TCallback>(callback));
-            m_remaining_tasks++;
-        }
-
-        void getTask(std::function<void()>& target_callback)
-        {
             {
                 std::lock_guard<std::mutex> lock_guard{ m_mutex };
-                if (m_tasks.empty()) {
-                    return;
-                }
-                target_callback = std::move(m_tasks.front());
-                m_tasks.pop();
+                m_tasks.push(std::forward<TCallback>(callback));
+                m_remaining_tasks++;
             }
+            m_cv.notify_one();
         }
 
-        static void wait()
+        bool getTask(std::function<void()>& target_callback)
         {
-            std::this_thread::yield();
+            std::unique_lock<std::mutex> lock_guard{ m_mutex };
+            m_cv.wait(lock_guard, [this]() { return !m_tasks.empty() || m_stop; });
+            if (m_tasks.empty()) {
+                return false;
+            }
+            target_callback = std::move(m_tasks.front());
+            m_tasks.pop();
+            return true;
         }
 
         void waitForCompletion() const
         {
             while (m_remaining_tasks > 0) {
-                wait();
+                std::this_thread::yield();
             }
         }
 
         void workDone()
         {
             m_remaining_tasks--;
+        }
+
+        void stop()
+        {
+            {
+                std::lock_guard<std::mutex> lock_guard{ m_mutex };
+                m_stop = true;
+            }
+            m_cv.notify_all();
         }
     };
 
@@ -59,7 +68,6 @@ namespace tp
         uint32_t              m_id = 0;
         std::thread           m_thread;
         std::function<void()> m_task = nullptr;
-        bool                  m_running = true;
         TaskQueue* m_queue = nullptr;
 
         Worker() = default;
@@ -75,13 +83,17 @@ namespace tp
 
         void run()
         {
-            while (m_running) {
-                m_queue->getTask(m_task);
-                if (m_task == nullptr) {
-                    TaskQueue::wait();
+            while (true) {
+                if (!m_queue->getTask(m_task)) {
+                    break;
                 }
-                else {
-                    m_task();
+                if (m_task) {
+                    try {
+                        m_task();
+                    }
+                    catch (...) {
+                        // Handle task exceptions here if needed
+                    }
                     m_queue->workDone();
                     m_task = nullptr;
                 }
@@ -90,8 +102,9 @@ namespace tp
 
         void stop()
         {
-            m_running = false;
-            m_thread.join();
+            if (m_thread.joinable()) {
+                m_thread.join();
+            }
         }
     };
 
@@ -101,8 +114,7 @@ namespace tp
         TaskQueue           m_queue;
         std::vector<Worker> m_workers;
 
-        explicit
-            ThreadPool(uint32_t thread_count)
+        explicit ThreadPool(uint32_t thread_count)
             : m_thread_count{ thread_count }
         {
             m_workers.reserve(thread_count);
@@ -111,8 +123,9 @@ namespace tp
             }
         }
 
-        virtual ~ThreadPool()
+        ~ThreadPool()
         {
+            m_queue.stop();
             for (Worker& worker : m_workers) {
                 worker.stop();
             }

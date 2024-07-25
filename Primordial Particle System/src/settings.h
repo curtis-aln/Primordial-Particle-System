@@ -30,11 +30,11 @@ struct PPS_Settings
 	// 5k          30             2550fps
 	// 1k          15             8500fps
 
-	inline static constexpr unsigned threads = 8;
-	inline static constexpr unsigned particle_count = 1'000;
+	inline static constexpr unsigned threads = 16;
+	inline static constexpr unsigned particle_count = 500'000;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 15;
+	inline static constexpr float scale_factor = 400;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size

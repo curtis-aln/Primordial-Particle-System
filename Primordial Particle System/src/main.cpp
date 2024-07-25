@@ -32,5 +32,5 @@ cos, sin optimization    60fps
 
 /* Performance Testing
 Baseline (500k):         10fps
-
+pre-made neighbour arr   
 */

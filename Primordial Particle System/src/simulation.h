@@ -8,16 +8,16 @@
 
 #include <string>
 
-inline static constexpr size_t sub_iterations = 35;
+// the amount of iterations of the update loop per frame
+inline static constexpr size_t sub_iterations = 100;
 
 class Simulation : PPS_Settings, SimulationSettings
 {
-	// SFML settings
+	// SFML
 	sf::RenderWindow window_{};
-	sf::Clock clock_{};
 
 	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<60> fps_manager{};
+	FrameRateSmoothing<20> clock_{};
 
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };
@@ -29,7 +29,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
 	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
-	// Runtime variables
+	// Runtime variables and statistics
 	size_t iterations_ = 0;
 
 	bool paused_ = false;
@@ -38,11 +38,11 @@ class Simulation : PPS_Settings, SimulationSettings
 	bool debug_ = false;
 	bool rendering_ = true;
 
+	// radius around the mouse in which debug settings are shown
 	float debug_radius = 8000.f;
 	const float change_in_debug_radius = 500.f;
 
-
-	// The particle system to be displayed
+	// The particle system
 	ParticlePopulation<particle_count> particle_system_{ window_ };
 
 
@@ -50,10 +50,7 @@ public:
 	Simulation() : window_(sf::VideoMode(screen_width, screen_height), simulation_title)//, sf::Style::None)
 	{
 		window_.setFramerateLimit(max_frame_rate);
-		window_.setVerticalSyncEnabled(false);
-
-		// translating the camera to the center of the simulation todo
-		//camera.translate({ world_width / 2.f, world_height / 2.f });
+		window_.setVerticalSyncEnabled(Vsync);
 	}
 
 	void run()
@@ -182,8 +179,8 @@ private:
 
 	void update_caption()
 	{
-		fps_manager.update_frame_rate();
-		const auto fps = static_cast<int>(fps_manager.get_average_frame_rate());
+		clock_.update_frame_rate();
+		const auto fps = static_cast<int>(clock_.get_average_frame_rate());
 
 		const sf::Vector2f start = { 40.f, 40.f };
 		constexpr float spacing = 20.f;

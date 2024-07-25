@@ -48,7 +48,7 @@ private:
 
 public:
 	PPS_Renderer(const size_t population_size, sf::RenderWindow& window)
-		: window_(window), debug_font_(&window, 90, "fonts/Callibri.ttf")
+		: window_(window), debug_font_(&window, 80, "fonts/Calibri.ttf")
 	{
 		vertex_array_.setPrimitiveType(sf::Quads);
 		vertex_array_.resize(population_size * 4);

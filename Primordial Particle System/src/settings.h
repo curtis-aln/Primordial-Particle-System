@@ -1,7 +1,7 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-#include "utils/random.h"
+//#include "utils/random.h"
 #include "utils/spatial_hash_grid.h"
 
 struct SimulationSettings
@@ -15,14 +15,26 @@ struct SimulationSettings
 	inline static const std::string simulation_title = "Primordial Particle Simulation";
 
 	inline static constexpr bool record = false; // for recording timelapses
+	inline static constexpr bool Vsync = false;
 };
 
 struct PPS_Settings
 {
-	inline static constexpr unsigned particle_count = 5'000;
+	// particles   world scale    frame rate
+	// 500k        400            10fps
+	// 200k        250            60fps
+	// 100k        155            140fps
+	// 50k         100            300fps
+	// 20k         70             840fps
+	// 10k         50             1230fps
+	// 5k          30             2550fps
+	// 1k          15             8500fps
+
+	inline static constexpr unsigned threads = 8;
+	inline static constexpr unsigned particle_count = 1'000;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 34;
+	inline static constexpr float scale_factor = 15;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size

@@ -7,18 +7,22 @@
 
 #include <cmath>
 #include <array>
+#include <xmmintrin.h>
 
 #include "PPS_renderer.h"
 
 #include <vector>
 #include <omp.h>        // For OpenMP parallelization
 
+#include "utils/thread_pool.h"
+
 
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float two_pi = 2.f * pi;
 inline static constexpr float pi_div_180 = pi / 180.f;
 
-inline float fast_round(float x) {
+inline float fast_round(float x) 
+{
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
 
@@ -51,11 +55,10 @@ class ParticlePopulation : PPS_Settings
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
+	// temporary arrays for calculating particle interactions
+	
 
-
-	std::array<float, cell_capacity * 9> neighbour_positions_x;
-	std::array<float, cell_capacity * 9> neighbour_positions_y;
-	int neighbours_size = 0;
+	tp::ThreadPool thread_pool;
 
 
 public:
@@ -63,9 +66,9 @@ public:
 	: spatial_grid({0, 0, world_width, world_height}),
 	  pps_renderer_(PopulationSize, window),
 	  inv_width_(1.f / world_width),
-	  inv_height_(1.f / world_height)
+	  inv_height_(1.f / world_height),
+		thread_pool(threads)
 	{
-
 		positions_x_.resize(PopulationSize);
 		positions_y_.resize(PopulationSize);
 		angles_.resize(PopulationSize);
@@ -111,10 +114,18 @@ public:
 
 	void update_particles(const bool paused = false)
 	{
-		// filling the left and right arrays with data
-		for (size_t i = 0; i < grid_cells_x * grid_cells_y; ++i)
+		solveCollisions();
+
+		if (paused)
+			return;
+	
+		for (int i = 0; i < particle_count; ++i)
 		{
-			process_cell(i);
+			// Update position
+			const float angle = angles_[i];
+			const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+			positions_x_[i] += gamma * cos_table_[angle_index];
+			positions_y_[i] += gamma * sin_table_[angle_index];
 		}
 	}
 
@@ -138,12 +149,73 @@ public:
 	}
 
 
+
+
 private:
-	inline void process_cell(const cell_idx cell_index)
+	void solveCollisionThreaded(uint32_t start, uint32_t end)
+	{
+		for (uint32_t idx{ start }; idx < end; ++idx) 
+		{
+			process_cell(idx);
+		}
+	}
+
+
+	void solveCollisions()
+	{
+		// Multi-thread grid
+		const uint32_t thread_count = thread_pool.m_thread_count;
+		const uint32_t slice_count = thread_count * 2;
+		const uint32_t slice_size = (grid_cells_x / slice_count) * grid_cells_y;
+		const uint32_t last_cell = (2 * (thread_count - 1) + 2) * slice_size;
+
+		// Find collisions in two passes to avoid data races
+
+		// First collision pass
+		for (uint32_t i = 0; i < thread_count; ++i) 
+		{
+			thread_pool.addTask([this, i, slice_size] {
+				uint32_t const start = 2 * i * slice_size;
+				uint32_t const end = start + slice_size;
+				solveCollisionThreaded(start, end);
+				});
+		}
+
+		// Eventually process rest if the world is not divisible by the thread count
+		if (last_cell < grid_cells_x * grid_cells_y) 
+		{
+			thread_pool.addTask([this, last_cell] 
+			{
+				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y);
+			});
+		}
+
+		thread_pool.waitForCompletion();
+
+		// Second collision pass
+		for (uint32_t i = 0; i < thread_count; ++i) 
+		{
+			thread_pool.addTask([this, i, slice_size] 
+			{
+				uint32_t const start = (2 * i + 1) * slice_size;
+				uint32_t const end = start + slice_size;
+				solveCollisionThreaded(start, end);
+			});
+		}
+
+		thread_pool.waitForCompletion();
+	}
+
+
+
+	void process_cell(const cell_idx cell_index)
 	{
 		// for a given cell this function will access its particle contents. and for each one of them it will update them based off the information from the
 		// neighbouring 9 cells.
-		neighbours_size = 0;
+
+		std::array<float, cell_capacity * 9> neighbour_positions_x;
+		std::array<float, cell_capacity * 9> neighbour_positions_y;
+		int neighbours_size = 0;
 
 		const int cell_index_x = cell_index % grid_cells_x;
 		const int cell_index_y = cell_index / grid_cells_x;
@@ -185,13 +257,16 @@ private:
 
 		for (uint8_t idx = 0; idx < cell_size; ++idx)
 		{
-			update_particle(cell_contents[idx], at_border);
+			update_particle(cell_contents[idx], at_border, neighbour_positions_x, neighbour_positions_y, neighbours_size);
 		}
 
 	}
 
 
-	inline void update_particle(const obj_idx index, const bool at_border)
+	inline void update_particle(const obj_idx index, const bool at_border,
+		std::array<float, cell_capacity * 9>& neighbour_positions_x,
+		std::array<float, cell_capacity * 9>& neighbour_positions_y,
+		const int neighbours_size)
 	{
 		// first fetch the data we need
 		float& x = positions_x_[index];
@@ -203,15 +278,18 @@ private:
 		const float sin_angle = sin_table_[angle_index];
 		const float cos_angle = cos_table_[angle_index];
 
+		// calculating the total and right particle count
 		int total = 0;
 		int right = 0;
+
+		float wrap_factor_x = at_border ? world_width : 0.0f;
+		float wrap_factor_y = at_border ? world_height : 0.0f;
+
 		for (uint32_t i{ 0 }; i < neighbours_size; ++i)
 		{
 			float to_x = neighbour_positions_x[i] - x;
 			float to_y = neighbour_positions_y[i] - y;
 
-			float wrap_factor_x = at_border ? world_width : 0.0f;
-			float wrap_factor_y = at_border ? world_height : 0.0f;
 			to_x -= wrap_factor_x * fast_round(to_x * inv_width_);
 			to_y -= wrap_factor_y * fast_round(to_y * inv_height_);
 
@@ -230,9 +308,5 @@ private:
 		neighbourhood_count_[index] = right + left;
 
 		angle += (alpha + beta * (right + left) * sign) * pi_div_180;
-
-		// Update position
-		x += gamma * cos_angle;
-		y += gamma * sin_angle;
 	}
 };

@@ -53,6 +53,9 @@
     <ClInclude Include="src\utils\Timelapse.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\utils\thread_pool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />

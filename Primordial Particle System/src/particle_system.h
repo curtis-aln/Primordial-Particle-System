@@ -264,8 +264,12 @@ private:
 		for (int i = 0; i < particle_count; ++i)
 		{
 			// Update position
-			const float angle = angles_[i];
+			float& angle = angles_[i];
 			const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+
+			angle = fmod(angle, two_pi);
+			angle += two_pi * (angle < 0.0f);
+
 			positions_x_[i] += gamma * cos_table_[angle_index];
 			positions_y_[i] += gamma * sin_table_[angle_index];
 		}

@@ -1,7 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-//#include "utils/random.h"
 #include "utils/spatial_hash_grid.h"
 
 struct SimulationSettings
@@ -20,39 +19,29 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-	// particles   world scale    frame rate
-	// 500k        400            10fps
-	// 200k        250            60fps
-	// 100k        155            140fps
-	// 50k         100            300fps
-	// 20k         70             840fps
-	// 10k         50             1230fps
-	// 5k          30             2550fps
-	// 1k          15             8500fps
-
-
 	/*
 	particles   world scale    threads   sub_iterations   frame rate
+	1m          600            16        1                20fps
 	500k        400            16        1                52fps
 	200k        250            16        2                112fps
 	100k        160            16        4                320fps
 	50k         105            16        8                540fps
-	20k         70             16        50               1650fps
-	10k         50             16        100              2050fps
-	5k          30             8         200              3300fps
+	20k         70             16        50               1,650fps
+	10k         50             16        100              2,050fps
+	5k          30             8         200              3,300fps
 	1k          15             4         350              18,500fps
 	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 1;
+	inline static constexpr size_t sub_iterations = 8;
 
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 500'000;
+	inline static constexpr unsigned particle_count = 50'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 400;
+	inline static constexpr float scale_factor = 90;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size

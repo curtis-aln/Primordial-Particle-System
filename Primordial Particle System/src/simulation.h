@@ -29,7 +29,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	// Runtime variables and statistics
 	size_t iterations_ = 0;
 
-	bool paused_ = false;
+	bool paused_ = true;
 	bool running_ = true;
 	bool render_hash_grid_ = false;
 	bool debug_ = false;

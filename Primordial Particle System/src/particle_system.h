@@ -92,19 +92,31 @@ public:
 			cos_table_[i] = std::cos(angle);
 		}
 
-		// initializing particle with random initial states
+		// Calculate the number of columns and rows for a nearly square grid
+		int cols = static_cast<int>(std::sqrt(PopulationSize * (world_width / world_height)));
+		int rows = PopulationSize / cols + (PopulationSize % cols > 0);  // Ensure we cover all particles
+
+		// Calculate the spacing between particles
+		const float spacingX = world_width / cols;
+		const float spacingY = world_height / rows;
+
+		int inc = 0;
+		for (int row = 0; row < rows; ++row) 
+		{
+			for (int col = 0; col < cols; ++col) 
+			{
+				if (inc < PopulationSize) 
+				{
+					positions_x_[inc] = col * spacingX;
+					positions_y_[inc] = row * spacingY;
+					inc++;
+				}
+			}
+		}
+
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
-			sf::FloatRect bounds = { 0, 0, world_width, world_height };
-			sf::Vector2f center = { world_width / 2, world_height / 2 };
-			//positions_[i] = Random::rand_pos_in_circle(center, 500);
-			const sf::Vector2f pos = Random::rand_pos_in_rect(bounds);
-			positions_x_[i] = pos.x;
-			positions_y_[i] = pos.y;
-			angles_[i] = Random::rand_range(0.f, 2.f * pi); // radians
-
-			//cell_indexes[i] = -1;
-			//same_index_time[i] = 0;
+			angles_[i] = Random::rand_range(0.f, 2.f * pi);
 		}
 	}
 

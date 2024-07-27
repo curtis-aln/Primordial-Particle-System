@@ -105,10 +105,20 @@ public:
 			float& x = positions_x_[i];
 			float& y = positions_y_[i];
 
-			x = std::fmod(x + world_width, world_width);
-			y = std::fmod(y + world_height, world_height);
+			const bool at_border_x = x < 0.0f || x >= world_width;
+			const bool at_border_y = y < 0.0f || y >= world_height;
 
-			spatial_grid.add_object({x, y}, i);
+			if (at_border_x)
+			{
+				x -= world_width * std::floor(x * inv_width_);
+			}
+
+			if (at_border_y)
+			{
+				y -= world_height * std::floor(y * inv_height_);
+			}
+
+			spatial_grid.add_object(x, y, i);
 		}
 	}
 
@@ -118,7 +128,9 @@ public:
 		solveCollisions();
 
 		if (!paused)
+		{
 			update_positions();
+		}
 
 	}
 
@@ -249,6 +261,7 @@ private:
 				const auto size = spatial_grid.objects_count[neighbour_index];
 
 				// adding the neighbour data to the array
+#pragma omp parallel for
 				for (uint8_t idx = 0; idx < size; ++idx)
 				{
 					const obj_idx object_index = contents[idx];
@@ -263,6 +276,7 @@ private:
 		const auto& cell_contents = spatial_grid.grid[cell_index];
 		const uint8_t cell_size = spatial_grid.objects_count[cell_index];
 
+#pragma omp parallel for
 		for (uint8_t idx = 0; idx < cell_size; ++idx)
 		{
 			update_particle(cell_contents[idx], at_border, n_positions_x, n_positions_y, neighbours_size);

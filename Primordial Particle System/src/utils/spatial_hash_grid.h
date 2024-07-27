@@ -43,18 +43,18 @@ public:
 	~SpatialGrid() = default;
 
 
-	cell_idx inline hash(const sf::Vector2f pos) const
+	cell_idx inline hash(const float x, const float y) const
 	{
-		const auto cell_x = static_cast<cell_idx>(pos.x / m_cellSize.x);
-		const auto cell_y = static_cast<cell_idx>(pos.y / m_cellSize.y);
+		const auto cell_x = static_cast<cell_idx>(x / m_cellSize.x);
+		const auto cell_y = static_cast<cell_idx>(y / m_cellSize.y);
 		return cell_y * CellsX + cell_x;
 	}
 
 
 	// adding an object to the spatial hash grid by a position and storing its obj_id
-	cell_idx inline add_object(const sf::Vector2f& obj_pos, const size_t obj_id)
+	cell_idx inline add_object(const float x, const float y, const size_t obj_id)
 	{
-		const cell_idx index = hash(obj_pos);
+		const cell_idx index = hash(x, y);
 
 		// adding the atom and incrementing the size
 		uint8_t& count = objects_count[index];

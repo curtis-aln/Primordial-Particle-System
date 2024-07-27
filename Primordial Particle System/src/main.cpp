@@ -31,6 +31,8 @@ cos, sin optimization    60fps
 */
 
 /* Performance Testing
-Baseline (500k):         10fps
-pre-made neighbour arr   
+Baseline (500k):               10fps
+pre-made neighbour arr         13fps
+add particles improvements     23fps
+add particles improvements #2  40fps
 */

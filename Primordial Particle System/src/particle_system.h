@@ -34,13 +34,12 @@ class ParticlePopulation : PPS_Settings
 	alignas(32) std::vector<float> positions_x_;
 	alignas(32) std::vector<float> positions_y_;
 	alignas(32) std::vector<float> angles_;
-	alignas(32) std::vector<uint16_t> neighbourhood_count_;
+	alignas(32) std::vector<uint16_t> neighbourhood_count_; // used by the renderer
 
 	// Pre-computed constants for fast lookup
 	static constexpr int ANGLE_TABLE_SIZE = 256;
 	alignas(32) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(32) float cos_table_[ANGLE_TABLE_SIZE];
-
 
 	// The Spatial Hash Grid Optimizes finding who is nearby
 	SpatialGrid<grid_cells_x, grid_cells_y> spatial_grid;
@@ -62,22 +61,20 @@ class ParticlePopulation : PPS_Settings
 	tp::ThreadPool thread_pool;
 
 
-
-
 public:
-	explicit ParticlePopulation(sf::RenderWindow& window)
-	: spatial_grid({0, 0, world_width, world_height}),
-	  pps_renderer_(PopulationSize, window),
-	  inv_width_(1.f / world_width),
-	  inv_height_(1.f / world_height),
-		thread_pool(threads)
+	explicit ParticlePopulation(sf::RenderWindow& window) : spatial_grid({0, 0, world_width, world_height}),
+	  pps_renderer_(PopulationSize, window), thread_pool(threads)
 	{
+		inv_width_ = 1.f / world_width;
+		inv_height_ = 1.f / world_height;
+
+		// resizing vectors to the population size
 		positions_x_.resize(PopulationSize);
 		positions_y_.resize(PopulationSize);
 		angles_.resize(PopulationSize);
 		neighbourhood_count_.resize(PopulationSize);
 
-		// Initialize sin and cos tables
+		// pre-computing values for the sin and cos tables
 		for (int i = 0; i < ANGLE_TABLE_SIZE; ++i) {
 			float angle = (i / static_cast<float>(ANGLE_TABLE_SIZE)) * two_pi;
 			sin_table_[i] = std::sin(angle);
@@ -98,9 +95,9 @@ public:
 	}
 
 
+	// At the start of every iteration. all the particles need to be removed from the grid and re-added
 	void add_particles_to_grid()
 	{
-		// At the start of every iteration. all the particles need to be removed from the grid and re-added
 		spatial_grid.clear();
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
@@ -115,21 +112,14 @@ public:
 		}
 	}
 
+
 	void update_particles(const bool paused = false)
 	{
 		solveCollisions();
 
-		if (paused)
-			return;
-	
-		for (int i = 0; i < particle_count; ++i)
-		{
-			// Update position
-			const float angle = angles_[i];
-			const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
-			positions_x_[i] += gamma * cos_table_[angle_index];
-			positions_y_[i] += gamma * sin_table_[angle_index];
-		}
+		if (!paused)
+			update_positions();
+
 	}
 
 
@@ -155,6 +145,18 @@ public:
 
 
 private:
+	void update_positions()
+	{
+		for (int i = 0; i < particle_count; ++i)
+		{
+			// Update position
+			const float angle = angles_[i];
+			const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+			positions_x_[i] += gamma * cos_table_[angle_index];
+			positions_y_[i] += gamma * sin_table_[angle_index];
+		}
+	}
+
 	void solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx)
 	{
 		for (uint32_t idx{ start }; idx < end; ++idx) 
@@ -232,11 +234,14 @@ private:
 				int32_t neighbour_index_x = cell_index_x + dx;
 				int32_t neighbour_index_y = cell_index_y + dy;
 
-				if (at_border)
-				{
-					neighbour_index_x = (neighbour_index_x + grid_cells_x) % grid_cells_x;
-					neighbour_index_y = (neighbour_index_y + grid_cells_y) % grid_cells_y;
-				}
+				// Fast modulo for positive and negative numbers
+				neighbour_index_x = neighbour_index_x >= 0 ?
+					(neighbour_index_x < grid_cells_x ? neighbour_index_x : neighbour_index_x - grid_cells_x) :
+					(neighbour_index_x + grid_cells_x);
+
+				neighbour_index_y = neighbour_index_y >= 0 ?
+					(neighbour_index_y < grid_cells_y ? neighbour_index_y : neighbour_index_y - grid_cells_y) :
+					(neighbour_index_y + grid_cells_y);
 
 				// processing the neighbour
 				const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
@@ -307,7 +312,7 @@ private:
 
 		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
 		const int left = total - right;
-		const auto sign = static_cast<float>((right - left) >= 0 ? 1 : -1);
+		const auto sign = static_cast<float>(((right - left) >= 0) * 2 - 1);
 		neighbourhood_count_[index] = right + left;
 
 		angle += (alpha + beta * (right + left) * sign) * pi_div_180;

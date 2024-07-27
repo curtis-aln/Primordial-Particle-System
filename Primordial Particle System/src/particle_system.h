@@ -144,29 +144,7 @@ public:
 				y -= world_height * std::floor(y * inv_height_);
 			}
 
-			spatial_grid.add_object(x, y, i);
-			//const cell_idx old_index = cell_indexes[i];
-			//const cell_idx new_index = spatial_grid.add_object(x, y, i);
-			//
-			//if (old_index == -1)
-			//{
-			//	cell_indexes[i] = new_index;
-			//	++same_index_time[i];
-			//	continue;
-			//}
-			//
-			//if (old_index != new_index)
-			//{
-			//	cell_indexes[i] = new_index;
-			//	times_record.push_back(same_index_time[i]);
-			//	same_index_time[i] = 0;
-			//}
-			//else
-			//{
-			//	++same_index_time[i];
-			//}
-
-		
+			spatial_grid.add_object(x, y, i);		
 		}
 	}
 

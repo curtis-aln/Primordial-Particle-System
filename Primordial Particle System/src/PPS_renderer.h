@@ -4,13 +4,57 @@
 #include "utils/font.h"
 
 
-inline sf::Color get_color(const uint16_t total)
+sf::Color getColor(float density)
 {
-	// Assuming colors is sorted in descending order of first element
-	const auto it = std::lower_bound(PPS_Graphics::colors.rbegin(), PPS_Graphics::colors.rend(), total,
-	                                 [](const auto& pair, uint16_t value) { return pair.first > value; });
-	return it != PPS_Graphics::colors.rend() ? it->second : PPS_Graphics::colors.back().second;
+	float range1 = 22;
+	float range2 = 34;
+	float range3 = 40;
+
+	const sf::Uint8 a = 250;
+	const sf::Color Red = { 255, 0, 0, a };
+	const sf::Color Green = { 50, 255, 0, a };
+	const sf::Color Blue = { 0, 0, 255, a };
+	const sf::Color Magenta = { 255, 0, 255, a };
+	const sf::Color Yellow = { 255, 255, 0, a };
+	const sf::Color Pink = { 255, 192, 203, a }; 
+
+	sf::Color first_color = Green;
+	sf::Color second_color = Blue;
+	sf::Color third_color = Pink;
+	sf::Color fourth_color = Red;
+
+	if (density <= 0.0f) return first_color;
+	else if (density <= range1)
+	{
+		float factor = density / range1;
+		return sf::Color(
+			static_cast<sf::Uint8>(first_color.r + factor * (second_color.r - first_color.r)),
+			static_cast<sf::Uint8>(first_color.g + factor * (second_color.g - first_color.g)),
+			static_cast<sf::Uint8>(first_color.b + factor * (second_color.b - first_color.b))
+		);
+	}
+	else if (density <= range2)
+	{
+		float factor = (density - range1) / (range2 - range1);
+		return sf::Color(
+			static_cast<sf::Uint8>(second_color.r + factor * (third_color.r - second_color.r)),
+			static_cast<sf::Uint8>(second_color.g + factor * (third_color.g - second_color.g)),
+			static_cast<sf::Uint8>(second_color.b + factor * (third_color.b - second_color.b))
+		);
+	}
+	else if (density < range3)
+	{
+		float factor = (density - range2) / (range3 - range2);
+		return sf::Color(
+			static_cast<sf::Uint8>(third_color.r + factor * (fourth_color.r - third_color.r)),
+			static_cast<sf::Uint8>(third_color.g + factor * (fourth_color.g - third_color.g)),
+			static_cast<sf::Uint8>(third_color.b + factor * (fourth_color.b - third_color.b))
+		);
+	}
+	else return fourth_color;
 }
+
+
 
 
 class PPS_Renderer : PPS_Graphics
@@ -71,7 +115,7 @@ public:
 		for (size_t i = 0; i < positions_x_.size(); ++i) 
 		{
 			const sf::Vector2f center = { positions_x_[i], positions_y_[i] };
-			const sf::Color color = get_color(neighbourhood_count[i]);
+			const sf::Color color = getColor(neighbourhood_count[i]);
 			const float half_size = particle_radius / 2.f;
 
 			sf::Vertex* quad = &vertex_array_[i * 4];

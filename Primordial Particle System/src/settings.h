@@ -41,7 +41,7 @@ struct PPS_Settings
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 90;
+	inline static constexpr float scale_factor = 100;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -66,19 +66,4 @@ struct PPS_Settings
 struct PPS_Graphics
 {
 	inline static constexpr float particle_radius = 110.f;
-
-
-	// the colors of each particle density
-	static constexpr sf::Uint8 transparency = 210;
-	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
-	{
-		{0, {10, 255, 50, transparency}},  // green
-
-		{10, {139,69,19, transparency}}, // brown
-		{15, {0, 0, 255, transparency}},  // blue
-		{35, {255, 255, 0, transparency}}, // yellow
-		{40, {255, 0, 255, transparency}},// magenta
-		{cell_capacity * 5 , {255, 0, 0, transparency}},// red
-
-	};
 };

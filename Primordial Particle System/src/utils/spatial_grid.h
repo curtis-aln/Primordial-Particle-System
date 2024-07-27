@@ -165,10 +165,4 @@ public:
 
 	alignas(32) std::vector<std::array<obj_idx, cell_capacity>> grid{};
 	alignas(32) std::vector<uint8_t> objects_count{};
-
-
-public:
-	bool at_border = false;
-	std::array<obj_idx, cell_capacity * 9> found_array = {};
-	uint32_t found_array_size = 0;
 };

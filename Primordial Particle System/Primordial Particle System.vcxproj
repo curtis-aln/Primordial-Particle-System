@@ -155,7 +155,7 @@
     <ClInclude Include="src\utils\random.h" />
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\simulation.h" />
-    <ClInclude Include="src\utils\spatial_hash_grid.h" />
+    <ClInclude Include="src\utils\spatial_grid.h" />
     <ClInclude Include="src\utils\thread_pool.h" />
     <ClInclude Include="src\utils\Timelapse.h" />
     <ClInclude Include="src\utils\utils.h" />

@@ -2,7 +2,7 @@
 
 #include <SFML/Graphics.hpp>
 #include "settings.h"
-#include "utils/spatial_hash_grid.h"
+#include "utils/spatial_grid.h"
 #include "utils/random.h"
 
 #include <cmath>
@@ -12,7 +12,7 @@
 #include "PPS_renderer.h"
 
 #include <vector>
-#include <omp.h>        // For OpenMP parallelization
+#include <omp.h> // For OpenMP parallelization
 
 #include "utils/thread_pool.h"
 
@@ -20,6 +20,7 @@
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float two_pi = 2.f * pi;
 inline static constexpr float pi_div_180 = pi / 180.f;
+
 
 inline float fast_round(float x) 
 {
@@ -41,14 +42,11 @@ class ParticlePopulation : PPS_Settings
 	alignas(32) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(32) float cos_table_[ANGLE_TABLE_SIZE];
 
-	// The Spatial Hash Grid Optimizes finding who is nearby
+	// The Spatial Grid Optimizes finding who is nearby
 	SpatialGrid<grid_cells_x, grid_cells_y> spatial_grid;
 
 	// renders the pps
 	PPS_Renderer pps_renderer_;
-
-	// rendering and graphics
-	sf::RectangleShape render_bounds_{};
 
 	// pre-computed variables
 	float inv_width_ = 0.f;
@@ -60,12 +58,9 @@ class ParticlePopulation : PPS_Settings
 
 	tp::ThreadPool thread_pool;
 
-	
-	//std::vector<cell_idx> cell_indexes;
-	//std::vector<int>      same_index_time;
-
 public:
-	//std::vector<int>      times_record;
+	std::array<obj_idx, 200> beacons;
+	int beacons_size = 0;
 
 
 public:
@@ -75,10 +70,6 @@ public:
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
 
-		//cell_indexes.resize(PopulationSize);
-		//same_index_time.resize(PopulationSize);
-		//times_record.reserve(PopulationSize * 10);
-
 		// resizing vectors to the population size
 		positions_x_.resize(PopulationSize);
 		positions_y_.resize(PopulationSize);
@@ -86,7 +77,8 @@ public:
 		neighbourhood_count_.resize(PopulationSize);
 
 		// pre-computing values for the sin and cos tables
-		for (int i = 0; i < ANGLE_TABLE_SIZE; ++i) {
+		for (int i = 0; i < ANGLE_TABLE_SIZE; ++i) 
+		{
 			float angle = (i / static_cast<float>(ANGLE_TABLE_SIZE)) * two_pi;
 			sin_table_[i] = std::sin(angle);
 			cos_table_[i] = std::cos(angle);
@@ -94,11 +86,13 @@ public:
 
 		// Calculate the number of columns and rows for a nearly square grid
 		int cols = static_cast<int>(std::sqrt(PopulationSize * (world_width / world_height)));
-		int rows = PopulationSize / cols + (PopulationSize % cols > 0);  // Ensure we cover all particles
+		int rows = PopulationSize / cols + (PopulationSize % cols > 0); // Ensure we cover all particles
 
 		// Calculate the spacing between particles
 		const float spacingX = world_width / cols;
 		const float spacingY = world_height / rows;
+
+		const float noise = 3000.f;
 
 		int inc = 0;
 		for (int row = 0; row < rows; ++row) 
@@ -107,16 +101,98 @@ public:
 			{
 				if (inc < PopulationSize) 
 				{
-					positions_x_[inc] = col * spacingX;
-					positions_y_[inc] = row * spacingY;
+					positions_x_[inc] = col * spacingX + Random::rand11_float() * noise;
+					positions_y_[inc] = row * spacingY + Random::rand11_float() * noise;
 					inc++;
 				}
 			}
 		}
 
+		// choosing 20 random particles to put at the center
+		const sf::Vector2f center = { world_width / 2.f, world_height / 2.f };
+		create_cell_at(center, 25);
+
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
 			angles_[i] = Random::rand_range(0.f, 2.f * pi);
+		}
+	}
+
+	void create_cell_at(const sf::Vector2f position, const int particle_count)
+	{
+
+		for (int _ = 0; _ < particle_count; ++_)
+		{
+			const int index = Random::rand_range(size_t(0), PopulationSize);
+			positions_x_[index] = position.x;
+			positions_y_[index] = position.y;
+		}
+	}
+
+
+	void add_beacons(const sf::Vector2f& position, const float radius)
+	{
+		beacons_size = 0;
+
+		const float cell_size = spatial_grid.m_cellSize.x;
+		const bool out_of_bounds = position.x <= cell_size || position.y <= cell_size || position.x >= world_width - cell_size || position.y >= world_height - cell_size;
+		
+		if (out_of_bounds)
+			return;
+
+		// getting the cell at position
+		const cell_idx cell_index = spatial_grid.hash(position.x, position.y);
+		const int cell_index_x = cell_index % grid_cells_x;
+		const int cell_index_y = cell_index / grid_cells_x;
+
+		// iterating over every neighbouring cell
+		for (cell_idx neighbour_index_x = cell_index_x - 1; neighbour_index_x <= cell_index_x + 1; ++neighbour_index_x)
+		{
+			for (cell_idx neighbour_index_y = cell_index_y - 1; neighbour_index_y <= cell_index_y + 1; ++neighbour_index_y)
+			{
+				const cell_idx neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
+				const auto& neighbour_contaner = spatial_grid.grid[neighbour_index];
+				const auto neighbour_size = spatial_grid.objects_count[neighbour_index];
+				
+				// iterating over every object per neighbour_cell
+				for (auto container_index = 0; container_index < neighbour_size; ++container_index)
+				{
+					const obj_idx index = neighbour_contaner[container_index];
+					const sf::Vector2f particle_pos = { positions_x_[index], positions_y_[index] };
+					const sf::Vector2f dir = particle_pos - position;
+					const float dist = dir.x * dir.x + dir.y * dir.y;
+
+					if (dist < radius * radius)
+					{
+						beacons[beacons_size++] = index;
+					}
+					
+					if (beacons_size >= beacons.size())
+					{
+						return;
+					}
+				}
+			}
+		}
+
+	}
+
+
+	void render_beacons(sf::RenderWindow& window)
+	{
+		const float rad = PPS_Graphics::particle_radius;
+
+		sf::CircleShape beacon_body;
+		beacon_body.setFillColor({ 255, 255, 255 });
+		beacon_body.setRadius(rad);
+
+		for (int beacon_container_index = 0; beacon_container_index < beacons_size; ++beacon_container_index)
+		{
+			int beacon_index = beacons[beacon_container_index];
+
+			const sf::Vector2f position = { positions_x_[beacon_index] - rad, positions_y_[beacon_index] - rad };
+			beacon_body.setPosition(position);
+			window.draw(beacon_body);
 		}
 	}
 
@@ -161,10 +237,10 @@ public:
 	}
 
 
-	void render(sf::RenderWindow& window, const bool draw_hash_grid = false, const sf::Vector2f pos = {0 ,0})
+	void render(sf::RenderWindow& window, const bool draw_spatial_grid = false, const sf::Vector2f pos = {0 ,0})
 	{
 		//positions_[0] = pos;
-		if (draw_hash_grid)
+		if (draw_spatial_grid)
 		{
 			spatial_grid.render_grid(window);
 		}

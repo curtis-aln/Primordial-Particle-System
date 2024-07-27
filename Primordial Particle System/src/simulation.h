@@ -89,31 +89,6 @@ public:
 			timelapse_.save_video("TimeLapse");
 		}
 		running_ = false;
-
-		//int max = 0;
-		//int min = 0;
-		//float sum = 0.f;
-		//std::vector<int>& times = particle_system_.times_record;
-		//for (int i = 0; i < times.size(); ++i)
-		//{
-		//	const int time = times[i];
-		//	sum += static_cast<float>(time);
-		//
-		//	if (time > max)
-		//	{
-		//		max = time;
-		//	}
-		//
-		//	if (time < min)
-		//	{
-		//		min = time;
-		//	}
-		//}
-		//sum /= times.size();
-		//
-		//std::cout << "average frames per cell: " << sum << "\n";
-		//std::cout << "max frames in cell: " << max << "\n";
-		//std::cout << "min frames in cell: " << min << "\n";
 	}
 
 private:
@@ -127,6 +102,7 @@ private:
 		if (debug_)
 		{
 			particle_system_.render_debug(window_, mouse_pos, debug_radius);
+			particle_system_.render_beacons(window_);
 		}
 		window_.display();
 	}
@@ -199,6 +175,11 @@ private:
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
 			camera.translate();
+		}
+
+		else if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
+		{
+			particle_system_.add_beacons(camera.get_world_mouse_pos(), debug_radius);
 		}
 	}
 

@@ -8,9 +8,6 @@
 
 #include <string>
 
-// the amount of iterations of the update loop per frame
-inline static constexpr size_t sub_iterations = 1;
-
 class Simulation : PPS_Settings, SimulationSettings
 {
 	// SFML
@@ -62,8 +59,12 @@ public:
 
 			for (size_t i = 0; i < sub_iterations; ++i)
 			{
-				particle_system_.add_particles_to_grid();
+				if (iterations_ % add_to_grid_freq == 0)
+				{
+					particle_system_.add_particles_to_grid();
+				}
 				particle_system_.update_particles(paused_);
+				++iterations_;
 			}
 
 			if (rendering_)
@@ -88,6 +89,31 @@ public:
 			timelapse_.save_video("TimeLapse");
 		}
 		running_ = false;
+
+		//int max = 0;
+		//int min = 0;
+		//float sum = 0.f;
+		//std::vector<int>& times = particle_system_.times_record;
+		//for (int i = 0; i < times.size(); ++i)
+		//{
+		//	const int time = times[i];
+		//	sum += static_cast<float>(time);
+		//
+		//	if (time > max)
+		//	{
+		//		max = time;
+		//	}
+		//
+		//	if (time < min)
+		//	{
+		//		min = time;
+		//	}
+		//}
+		//sum /= times.size();
+		//
+		//std::cout << "average frames per cell: " << sum << "\n";
+		//std::cout << "max frames in cell: " << max << "\n";
+		//std::cout << "min frames in cell: " << min << "\n";
 	}
 
 private:

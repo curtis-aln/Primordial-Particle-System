@@ -4,14 +4,16 @@
 todo functionality:
 - beacons
 - more organic coloring
+
+average frames per cell: 5.01142
+max frames in cell: 8236
+min frames in cell: 8236
  */
 
 // instead of using "at_border", use the distance between two particles.
 // fill a new array with the subtraction of one array by a value. this is used to calculate directions
 
-// 200k at 30fps
-// 100k at 74fps
-// 20k at 550fps
+// Test how often particles change what cell they are in to see how frequently we need to preform grid update
 
 
 int main()

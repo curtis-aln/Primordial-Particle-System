@@ -30,8 +30,26 @@ struct PPS_Settings
 	// 5k          30             2550fps
 	// 1k          15             8500fps
 
+
+	/*
+	particles   world scale    threads   sub_iterations   frame rate
+	500k        400            16        1                52fps
+	200k        250            16        2                112fps
+	100k        160            16        4                320fps
+	50k         105            16        8                540fps
+	20k         70             16        50               1650fps
+	10k         50             16        100              2050fps
+	5k          30             8         200              3300fps
+	1k          15             4         350              18,500fps
+	*/
+
+	// the amount of iterations of the update loop per frame
+	inline static constexpr size_t sub_iterations = 1;
+
 	inline static constexpr unsigned threads = 16;
 	inline static constexpr unsigned particle_count = 500'000;
+
+	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
 	inline static constexpr float scale_factor = 400;

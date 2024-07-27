@@ -60,6 +60,13 @@ class ParticlePopulation : PPS_Settings
 
 	tp::ThreadPool thread_pool;
 
+	
+	//std::vector<cell_idx> cell_indexes;
+	//std::vector<int>      same_index_time;
+
+public:
+	//std::vector<int>      times_record;
+
 
 public:
 	explicit ParticlePopulation(sf::RenderWindow& window) : spatial_grid({0, 0, world_width, world_height}),
@@ -67,6 +74,10 @@ public:
 	{
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
+
+		//cell_indexes.resize(PopulationSize);
+		//same_index_time.resize(PopulationSize);
+		//times_record.reserve(PopulationSize * 10);
 
 		// resizing vectors to the population size
 		positions_x_.resize(PopulationSize);
@@ -91,6 +102,9 @@ public:
 			positions_x_[i] = pos.x;
 			positions_y_[i] = pos.y;
 			angles_[i] = Random::rand_range(0.f, 2.f * pi); // radians
+
+			//cell_indexes[i] = -1;
+			//same_index_time[i] = 0;
 		}
 	}
 
@@ -119,6 +133,28 @@ public:
 			}
 
 			spatial_grid.add_object(x, y, i);
+			//const cell_idx old_index = cell_indexes[i];
+			//const cell_idx new_index = spatial_grid.add_object(x, y, i);
+			//
+			//if (old_index == -1)
+			//{
+			//	cell_indexes[i] = new_index;
+			//	++same_index_time[i];
+			//	continue;
+			//}
+			//
+			//if (old_index != new_index)
+			//{
+			//	cell_indexes[i] = new_index;
+			//	times_record.push_back(same_index_time[i]);
+			//	same_index_time[i] = 0;
+			//}
+			//else
+			//{
+			//	++same_index_time[i];
+			//}
+
+		
 		}
 	}
 
@@ -238,39 +274,15 @@ private:
 		const int cell_index_y = cell_index / grid_cells_x;
 		const bool at_border = cell_index_x == 0 || cell_index_y == 0 || cell_index_x == grid_cells_x - 1 || cell_index_y == grid_cells_y - 1;
 
-		for (int dx = -1; dx <= 1; ++dx)
-		{
-			for (int dy = -1; dy <= 1; ++dy)
-			{
-				// calculating the location of the neighbour
-				int32_t neighbour_index_x = cell_index_x + dx;
-				int32_t neighbour_index_y = cell_index_y + dy;
-
-				// Fast modulo for positive and negative numbers
-				neighbour_index_x = neighbour_index_x >= 0 ?
-					(neighbour_index_x < grid_cells_x ? neighbour_index_x : neighbour_index_x - grid_cells_x) :
-					(neighbour_index_x + grid_cells_x);
-
-				neighbour_index_y = neighbour_index_y >= 0 ?
-					(neighbour_index_y < grid_cells_y ? neighbour_index_y : neighbour_index_y - grid_cells_y) :
-					(neighbour_index_y + grid_cells_y);
-
-				// processing the neighbour
-				const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
-				const auto& contents = spatial_grid.grid[neighbour_index];
-				const auto size = spatial_grid.objects_count[neighbour_index];
-
-				// adding the neighbour data to the array
-#pragma omp parallel for
-				for (uint8_t idx = 0; idx < size; ++idx)
-				{
-					const obj_idx object_index = contents[idx];
-					n_positions_x[neighbours_size] = positions_x_[object_index];
-					n_positions_y[neighbours_size] = positions_y_[object_index];
-					++neighbours_size;
-				}
-			}
-		}
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y - 1, true, true);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y - 1, false, true);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y - 1, true, true);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y    , true, false);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y    , false, false);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y    , true, false);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y + 1, true, true);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y + 1, false, true);
+		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y + 1, true, true);
 
 		// updating the particles
 		const auto& cell_contents = spatial_grid.grid[cell_index];
@@ -282,6 +294,45 @@ private:
 			update_particle(cell_contents[idx], at_border, n_positions_x, n_positions_y, neighbours_size);
 		}
 
+	}
+
+	inline void process_neighbouring_cell(
+		std::array<float, cell_capacity * 9>& n_positions_x,
+		std::array<float, cell_capacity * 9>& n_positions_y,
+		int& neighbours_size,
+		int32_t neighbour_index_x, int32_t neighbour_index_y,
+		bool check_x = true,
+		bool check_y = true)
+	{
+		// Fast modulo for positive and negative numbers
+		if (check_x)
+		{
+			neighbour_index_x = neighbour_index_x >= 0 ?
+				(neighbour_index_x < grid_cells_x ? neighbour_index_x : neighbour_index_x - grid_cells_x) :
+				(neighbour_index_x + grid_cells_x);
+		}
+
+		if (check_y)
+		{
+			neighbour_index_y = neighbour_index_y >= 0 ?
+				(neighbour_index_y < grid_cells_y ? neighbour_index_y : neighbour_index_y - grid_cells_y) :
+				(neighbour_index_y + grid_cells_y);
+		}
+
+		// processing the neighbour
+		const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
+		const auto& contents = spatial_grid.grid[neighbour_index];
+		const auto size = spatial_grid.objects_count[neighbour_index];
+
+		// adding the neighbour data to the array
+#pragma omp parallel for
+		for (uint8_t idx = 0; idx < size; ++idx)
+		{
+			const obj_idx object_index = contents[idx];
+			n_positions_x[neighbours_size] = positions_x_[object_index];
+			n_positions_y[neighbours_size] = positions_y_[object_index];
+			++neighbours_size;
+		}
 	}
 
 

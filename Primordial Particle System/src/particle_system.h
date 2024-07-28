@@ -108,19 +108,18 @@ public:
 			}
 		}
 
-		// choosing 20 random particles to put at the center
-		const sf::Vector2f center = { world_width / 2.f, world_height / 2.f };
-		create_cell_at(center, 25);
-
 		for (size_t i = 0; i < PopulationSize; ++i)
 		{
 			angles_[i] = Random::rand_range(0.f, 2.f * pi);
 		}
+
+		// choosing 20 random particles to put at the center
+		const sf::Vector2f center = { world_width / 2.f, world_height / 2.f };
+		create_cell_at(center, 25);
 	}
 
 	void create_cell_at(const sf::Vector2f position, const int particle_count)
 	{
-
 		for (int _ = 0; _ < particle_count; ++_)
 		{
 			const int index = Random::rand_range(size_t(0), PopulationSize);
@@ -288,41 +287,26 @@ private:
 	{
 		// Multi-thread grid
 		const uint32_t thread_count = thread_pool.m_thread_count;
-		const uint32_t slice_count = thread_count * 2;
-		const uint32_t slice_size = (grid_cells_x / slice_count) * grid_cells_y;
-		const uint32_t last_cell = (2 * (thread_count - 1) + 2) * slice_size;
+		const uint32_t slice_size = (grid_cells_x * grid_cells_y) / thread_count;
+		const uint32_t last_cell = thread_count * slice_size;
 
-		// Find collisions in two passes to avoid data races
-
-		// First collision pass
-		for (uint32_t i = 0; i < thread_count; ++i) 
-		{
-			thread_pool.addTask([this, i, slice_size] {
-				uint32_t const start = 2 * i * slice_size;
-				uint32_t const end = start + slice_size;
-				solveCollisionThreaded(start, end, i);
-				});
-		}
-
-		// Eventually process rest if the world is not divisible by the thread count
-		if (last_cell < grid_cells_x * grid_cells_y) 
-		{
-			thread_pool.addTask([this, last_cell] 
-			{
-				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y, 0);
-			});
-		}
-
-		thread_pool.waitForCompletion();
-
-		// Second collision pass
-		for (uint32_t i = 0; i < thread_count; ++i) 
+		// Collision pass
+		for (uint32_t i = 0; i < thread_count; ++i)
 		{
 			thread_pool.addTask([this, i, slice_size] 
 			{
-				uint32_t const start = (2 * i + 1) * slice_size;
+				uint32_t const start = i * slice_size;
 				uint32_t const end = start + slice_size;
 				solveCollisionThreaded(start, end, i);
+			});
+		}
+
+		// process rest if the world is not divisible by the thread count
+		if (last_cell < grid_cells_x * grid_cells_y)
+		{
+			thread_pool.addTask([this, last_cell]
+			{
+				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y, 0);
 			});
 		}
 

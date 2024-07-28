@@ -200,27 +200,42 @@ public:
 	void add_particles_to_grid()
 	{
 		spatial_grid.clear();
-		for (size_t i = 0; i < PopulationSize; ++i)
+
+		const uint32_t thread_count = thread_pool.m_thread_count;
+		const size_t particles_per_thread = PopulationSize / thread_count;
+		const size_t last_thread_particles = PopulationSize - (thread_count - 1) * particles_per_thread;
+
+		for (uint32_t t = 0; t < thread_count; ++t)
 		{
-			// positions are fetched and wrapped
-			float& x = positions_x_[i];
-			float& y = positions_y_[i];
+			thread_pool.addTask([this, t, particles_per_thread, last_thread_particles, thread_count] {
+				const size_t start = t * particles_per_thread;
+				const size_t end = (t == thread_count - 1) ? start + last_thread_particles : start + particles_per_thread;
 
-			const bool at_border_x = x < 0.0f || x >= world_width;
-			const bool at_border_y = y < 0.0f || y >= world_height;
+				for (size_t i = start; i < end; ++i)
+				{
+					// positions are fetched and wrapped
+					float& x = positions_x_[i];
+					float& y = positions_y_[i];
 
-			if (at_border_x)
-			{
-				x -= world_width * std::floor(x * inv_width_);
-			}
+					const bool at_border_x = x < 0.0f || x >= world_width;
+					const bool at_border_y = y < 0.0f || y >= world_height;
 
-			if (at_border_y)
-			{
-				y -= world_height * std::floor(y * inv_height_);
-			}
+					if (at_border_x)
+					{
+						x -= world_width * std::floor(x * inv_width_);
+					}
 
-			spatial_grid.add_object(x, y, i);		
+					if (at_border_y)
+					{
+						y -= world_height * std::floor(y * inv_height_);
+					}
+
+					spatial_grid.add_object(x, y, i);
+				}
+				});
 		}
+
+		thread_pool.waitForCompletion();
 	}
 
 
@@ -230,7 +245,7 @@ public:
 
 		if (!paused)
 		{
-			update_positions();
+			update_particle_positions();
 		}
 
 	}
@@ -258,20 +273,34 @@ public:
 
 
 private:
-	void update_positions()
+	void update_particle_positions()
 	{
-		for (int i = 0; i < particle_count; ++i)
+		const uint32_t thread_count = thread_pool.m_thread_count;
+		const int particles_per_thread = particle_count / thread_count;
+		const int last_thread_particles = particle_count - (thread_count - 1) * particles_per_thread;
+
+		for (uint32_t t = 0; t < thread_count; ++t)
 		{
-			// Update position
-			float& angle = angles_[i];
-			const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+			thread_pool.addTask([this, t, particles_per_thread, last_thread_particles, thread_count] {
+				const int start = t * particles_per_thread;
+				const int end = (t == thread_count - 1) ? start + last_thread_particles : start + particles_per_thread;
 
-			angle = fmod(angle, two_pi);
-			angle += two_pi * (angle < 0.0f);
+				for (int i = start; i < end; ++i)
+				{
+					// Update position
+					float& angle = angles_[i];
+					const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
 
-			positions_x_[i] += gamma * cos_table_[angle_index];
-			positions_y_[i] += gamma * sin_table_[angle_index];
+					angle = fmod(angle, two_pi);
+					angle += two_pi * (angle < 0.0f);
+
+					positions_x_[i] += gamma * cos_table_[angle_index];
+					positions_y_[i] += gamma * sin_table_[angle_index];
+				}
+				});
 		}
+
+		thread_pool.waitForCompletion();
 	}
 
 	void solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx)

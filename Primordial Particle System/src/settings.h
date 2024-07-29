@@ -21,15 +21,15 @@ struct PPS_Settings
 {
 	/*
 	particles   world scale    threads   sub_iterations   frame rate
-	1m          550            16        1                40fps
-	500k        400            16        1                52fps
-	200k        250            16        2                112fps
-	100k        160            16        4                320fps
-	50k         105            16        8                540fps
-	20k         70             16        50               1,650fps
-	10k         50             16        100              2,050fps
-	5k          30             8         200              3,300fps
-	1k          15             4         350              18,500fps
+	1m          550            16        1                60fps
+	500k        400            16        1                ?
+	200k        250            16        2                ?
+	100k        160            16        4                ?
+	50k         105            16        8                ?
+	20k         70             16        50               ?
+	10k         50             16        100              ?
+	5k          30             8         200              ?
+	1k          15             4         350              ?
 	*/
 
 	// the amount of iterations of the update loop per frame
@@ -65,5 +65,5 @@ struct PPS_Settings
 
 struct PPS_Graphics
 {
-	inline static constexpr float particle_radius = 110.f;
+	inline static constexpr float particle_radius = 150.f;
 };

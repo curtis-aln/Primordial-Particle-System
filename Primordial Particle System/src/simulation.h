@@ -97,7 +97,10 @@ private:
 		const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
 
 		window_.clear(screen_color);
-		particle_system_.render(window_, render_hash_grid_, mouse_pos);
+
+		const sf::Vector2f topleft = camera.map_window_position_to_world_position(sf::Vector2f{ 0.f, 0.f });
+		const sf::Vector2f bottomright = camera.map_window_position_to_world_position(sf::Vector2f{ screen_width, screen_height });
+		particle_system_.render(window_, topleft, bottomright, render_hash_grid_, mouse_pos);
 
 		if (debug_)
 		{

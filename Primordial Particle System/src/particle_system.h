@@ -92,7 +92,7 @@ public:
 		const float spacingX = world_width / cols;
 		const float spacingY = world_height / rows;
 
-		const float noise = 3000.f;
+		const float noise = 30.f;
 
 		int inc = 0;
 		for (int row = 0; row < rows; ++row) 
@@ -251,7 +251,7 @@ public:
 	}
 
 
-	void render(sf::RenderWindow& window, const bool draw_spatial_grid = false, const sf::Vector2f pos = {0 ,0})
+	void render(sf::RenderWindow& window, const sf::Vector2f display_top_left, const sf::Vector2f display_bottom_right, const bool draw_spatial_grid = false, const sf::Vector2f pos = {0 ,0})
 	{
 		//positions_[0] = pos;
 		if (draw_spatial_grid)
@@ -259,8 +259,7 @@ public:
 			spatial_grid.render_grid(window);
 		}
 
-		pps_renderer_.updateParticles(positions_x_, positions_y_, neighbourhood_count_);
-		pps_renderer_.render();
+		pps_renderer_.render_particles(positions_x_, positions_y_, neighbourhood_count_);
 	}
 
 
@@ -438,7 +437,7 @@ private:
 		int total = 0;
 		int right = 0;
 
-		float wrap_factor_x = at_border ? world_width : 0.0f;
+		float wrap_factor_x = at_border ? world_width : 0.0f; // todo use at_border_x and at_border_y + if conditions
 		float wrap_factor_y = at_border ? world_height : 0.0f;
 
 		for (uint32_t i{ 0 }; i < neighbours_size; ++i)

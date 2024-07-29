@@ -2,28 +2,34 @@
 #include "settings.h"
 #include "utils/utils.h"
 #include "utils/font.h"
+#include "utils/spatial_grid.h"
 
 
-sf::Color getColor(float density)
+inline static const sf::Uint8 a = 250;
+inline static const sf::Color Red = { 255, 0, 0, a };
+inline static const sf::Color Green = { 50, 255, 0, a };
+inline static const sf::Color Blue = { 0, 0, 255, a };
+inline static const sf::Color Magenta = { 255, 0, 255, a };
+inline static const sf::Color Yellow = { 255, 255, 0, a };
+inline static const sf::Color Pink = { 255, 192, 203, a };
+
+inline static constexpr float range1 = 22;
+inline static constexpr float range2 = 34;
+inline static constexpr float range3 = 40;
+
+inline static const sf::Color first_color = Green;
+inline static const sf::Color second_color = Blue;
+inline static const sf::Color third_color = Pink;
+inline static const sf::Color fourth_color = Red;
+
+
+sf::Color getColor(const float density)
 {
-	float range1 = 22;
-	float range2 = 34;
-	float range3 = 40;
+	if (density <= 0.0f)
+	{
+		return first_color;
+	}
 
-	const sf::Uint8 a = 250;
-	const sf::Color Red = { 255, 0, 0, a };
-	const sf::Color Green = { 50, 255, 0, a };
-	const sf::Color Blue = { 0, 0, 255, a };
-	const sf::Color Magenta = { 255, 0, 255, a };
-	const sf::Color Yellow = { 255, 255, 0, a };
-	const sf::Color Pink = { 255, 192, 203, a }; 
-
-	sf::Color first_color = Green;
-	sf::Color second_color = Blue;
-	sf::Color third_color = Pink;
-	sf::Color fourth_color = Red;
-
-	if (density <= 0.0f) return first_color;
 	else if (density <= range1)
 	{
 		float factor = density / range1;
@@ -33,6 +39,7 @@ sf::Color getColor(float density)
 			static_cast<sf::Uint8>(first_color.b + factor * (second_color.b - first_color.b))
 		);
 	}
+
 	else if (density <= range2)
 	{
 		float factor = (density - range1) / (range2 - range1);
@@ -42,6 +49,7 @@ sf::Color getColor(float density)
 			static_cast<sf::Uint8>(second_color.b + factor * (third_color.b - second_color.b))
 		);
 	}
+
 	else if (density < range3)
 	{
 		float factor = (density - range2) / (range3 - range2);
@@ -51,7 +59,11 @@ sf::Color getColor(float density)
 			static_cast<sf::Uint8>(third_color.b + factor * (fourth_color.b - third_color.b))
 		);
 	}
-	else return fourth_color;
+
+	else
+	{
+		return fourth_color;
+	}
 }
 
 
@@ -61,7 +73,9 @@ class PPS_Renderer : PPS_Graphics
 {
 private:
 	sf::VertexArray vertex_array_;
+
 	sf::Shader particle_shader_;
+	sf::RenderStates states;
 
 	// Debug rendering
 	sf::CircleShape visual_radius_shape_;
@@ -94,10 +108,11 @@ public:
 	PPS_Renderer(const size_t population_size, sf::RenderWindow& window)
 		: window_(window), debug_font_(&window, 80, "fonts/Calibri.ttf")
 	{
+		states.shader = &particle_shader_;
+		initializeShader();
+
 		vertex_array_.setPrimitiveType(sf::Quads);
 		vertex_array_.resize(population_size * 4);
-
-		initializeShader();
 
 		visual_radius_shape_.setFillColor(sf::Color::Transparent);
 		visual_radius_shape_.setOutlineThickness(5);
@@ -107,14 +122,16 @@ public:
 		debug_lines_.setPrimitiveType(sf::Lines);
 	}
 
-	void updateParticles(
-		const std::vector<float>& positions_x_, 
-		const std::vector<float>& positions_y_,
-		const std::vector<uint16_t>& neighbourhood_count)
+	void render_particles(
+		const std::vector<float>& positions_x,
+		const std::vector<float>& positions_y,
+		const std::vector<uint16_t>& neighbourhood_count
+	)
 	{
-		for (size_t i = 0; i < positions_x_.size(); ++i) 
+		for (size_t i = 0; i < positions_x.size(); ++i) 
 		{
-			const sf::Vector2f center = { positions_x_[i], positions_y_[i] };
+			const sf::Vector2f center = { positions_x[i], positions_y[i] };
+	
 			const sf::Color color = getColor(neighbourhood_count[i]);
 			const float half_size = particle_radius / 2.f;
 
@@ -126,18 +143,14 @@ public:
 
 			quad[0].color = quad[1].color = quad[2].color = quad[3].color = color;
 		}
-	}
 
-	void render()
-	{
-		sf::RenderStates states;
-		states.shader = &particle_shader_;
+		
 		particle_shader_.setUniform("resolution", sf::Glsl::Vec2(window_.getSize()));
 
 		window_.draw(vertex_array_, states);
 	}
 
-
+	
 	void render_debug(
 		const std::vector<float>& positions_x, 
 		const std::vector<float>& positions_y, 

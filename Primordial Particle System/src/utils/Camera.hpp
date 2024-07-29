@@ -87,10 +87,13 @@ public:
 
 	sf::Vector2f get_world_mouse_pos() const
 	{
-		const sf::Vector2i mouse_position = sf::Mouse::getPosition(*m_window_ptr_);
-		const sf::Vector2f view_mouse_position = m_window_ptr_->mapPixelToCoords(mouse_position, m_view_);
+		return map_window_position_to_world_position(sf::Mouse::getPosition(*m_window_ptr_));
+	}
 
-		return view_mouse_position;
+	template<typename T>
+	sf::Vector2f map_window_position_to_world_position(const sf::Vector2<T> window_position) const
+	{
+		return m_window_ptr_->mapPixelToCoords(static_cast<sf::Vector2i>(window_position), m_view_);
 	}
 
 

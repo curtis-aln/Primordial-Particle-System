@@ -60,4 +60,8 @@
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\particle.vert" />
+    <None Include="shaders\particle.frag" />
+  </ItemGroup>
 </Project>

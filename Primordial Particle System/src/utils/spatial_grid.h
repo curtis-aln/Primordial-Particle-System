@@ -16,9 +16,7 @@
 // tell objects what index they are in
 // instead of removing and re-adding every frame. only remove and re-add if a object changes its cell
 
-// resize these to either
-// - uint32_t (4.2 billion max cells/objects, 65,000 x 65,000 grid)
-// - uint16_t (65,536 max cells/objects, 256 x 256 grid)
+
 using cell_idx = uint32_t;
 using obj_idx = uint32_t;
 

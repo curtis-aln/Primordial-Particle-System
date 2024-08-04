@@ -151,6 +151,7 @@
     <ClInclude Include="src\PPS_renderer.h" />
     <ClInclude Include="src\utils\Camera.hpp" />
     <ClInclude Include="src\utils\font.h" />
+    <ClInclude Include="src\utils\SFML_grid.h" />
     <ClInclude Include="src\utils\smooth_frame_rates.h" />
     <ClInclude Include="src\utils\random.h" />
     <ClInclude Include="src\settings.h" />

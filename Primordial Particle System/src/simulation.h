@@ -5,6 +5,7 @@
 #include "utils/font.h"
 #include "utils/Camera.hpp"
 #include "utils/Timelapse.h"
+#include "utils/SFML_grid.h"
 
 #include <string>
 
@@ -38,6 +39,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	// radius around the mouse in which debug settings are shown
 	float debug_radius = 8000.f;
 	const float change_in_debug_radius = 500.f;
+	SFML_Grid grid{ window_, sf::FloatRect(0, 0, world_width, world_height), 10 };
 
 	// The particle system
 	ParticlePopulation<particle_count> particle_system_{ window_ };
@@ -107,6 +109,8 @@ private:
 			particle_system_.render_debug(window_, mouse_pos, debug_radius);
 			particle_system_.render_beacons(window_);
 		}
+
+		grid.draw();
 		window_.display();
 	}
 

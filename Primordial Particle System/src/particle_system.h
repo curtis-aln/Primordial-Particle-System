@@ -16,12 +16,13 @@
 
 #include "utils/thread_pool.h"
 
-
+// pre-computing constants
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float two_pi = 2.f * pi;
 inline static constexpr float pi_div_180 = pi / 180.f;
 
 
+// a faster implementation of the round function
 inline float fast_round(float x) 
 {
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);

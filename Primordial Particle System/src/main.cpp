@@ -7,6 +7,6 @@ int main()
 	Simulation().run();
 }
 
-// performance testing - 4 million particles - No rendering
-// benchmark         15fps
+// performance testing - 4 million particles - No rendering - 950 sf
+// benchmark         12fps
 // SPSCQueue usage

@@ -7,10 +7,10 @@
 #include <vector>
 #include <omp.h> // For OpenMP parallelization
 
-
-#include "../settings.h"
 #include "PPS_renderer.h"
 #include "beacons.h"
+
+#include "../settings.h"
 
 #include "../utils/spatial_grid.h"
 #include "../utils/random.h"
@@ -28,7 +28,6 @@ inline float fast_round(float x)
 {
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
-
 
 
 
@@ -73,20 +72,18 @@ public:
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
 
-		// resizing vectors to the population size
-		positions_x_.resize(PopulationSize);
-		positions_y_.resize(PopulationSize);
-		angles_.resize(PopulationSize);
-		neighbourhood_count_.resize(PopulationSize);
+		init_particle_vectors();
+		init_sin_cos_tables();
+		init_grid_positioning();
+		randomize_angles();
+	
+		// choosing 20 random particles to put at the center
+		create_cell_at({ world_width / 2.f, world_height / 2.f }, 35);
+	}
 
-		// pre-computing values for the sin and cos tables
-		for (int i = 0; i < ANGLE_TABLE_SIZE; ++i) 
-		{
-			float angle = (i / static_cast<float>(ANGLE_TABLE_SIZE)) * two_pi;
-			sin_table_[i] = std::sin(angle);
-			cos_table_[i] = std::cos(angle);
-		}
 
+	void init_grid_positioning()
+	{
 		// Calculate the number of columns and rows for a nearly square grid
 		int cols = static_cast<int>(std::sqrt(PopulationSize * (world_width / world_height)));
 		int rows = PopulationSize / cols + (PopulationSize % cols > 0); // Ensure we cover all particles
@@ -95,14 +92,14 @@ public:
 		const float spacingX = world_width / cols;
 		const float spacingY = world_height / rows;
 
-		const float noise = 30.f;
+		const float noise = 125.f; // scattering radius of the positions
 
 		int inc = 0;
-		for (int row = 0; row < rows; ++row) 
+		for (int row = 0; row < rows; ++row)
 		{
-			for (int col = 0; col < cols; ++col) 
+			for (int col = 0; col < cols; ++col)
 			{
-				if (inc < PopulationSize) 
+				if (inc < PopulationSize)
 				{
 					positions_x_[inc] = col * spacingX + Random::rand11_float() * noise;
 					positions_y_[inc] = row * spacingY + Random::rand11_float() * noise;
@@ -110,19 +107,12 @@ public:
 				}
 			}
 		}
-
-		for (size_t i = 0; i < PopulationSize; ++i)
-		{
-			angles_[i] = Random::rand_range(0.f, 2.f * pi);
-		}
-
-		// choosing 20 random particles to put at the center
-		const sf::Vector2f center = { world_width / 2.f, world_height / 2.f };
-		create_cell_at(center, 25);
 	}
 
 	void create_cell_at(const sf::Vector2f position, const int particle_count)
 	{
+		// chooses random particles in the world to concentrate at a certain position.
+		// due to the nature of the simulation, random sampling like this does not affect any of the existing cells
 		for (int _ = 0; _ < particle_count; ++_)
 		{
 			const int index = Random::rand_range(size_t(0), PopulationSize);
@@ -131,11 +121,13 @@ public:
 		}
 	}
 
-	// At the start of every iteration. all the particles need to be removed from the grid and re-added
+	
 	void add_particles_to_grid()
 	{
+		// At the start of every Nth iteration. all the particles need to be removed from the grid and re-added
 		spatial_grid.clear();
 
+		// process is split across multiple threads
 		const uint32_t thread_count = thread_pool.m_thread_count;
 		const size_t particles_per_thread = PopulationSize / thread_count;
 		const size_t last_thread_particles = PopulationSize - (thread_count - 1) * particles_per_thread;
@@ -152,15 +144,13 @@ public:
 					float& x = positions_x_[i];
 					float& y = positions_y_[i];
 
-					const bool at_border_x = x < 0.0f || x >= world_width;
-					const bool at_border_y = y < 0.0f || y >= world_height;
-
-					if (at_border_x)
+					// wrapping positions
+					if (x < 0.0f || x >= world_width)
 					{
 						x -= world_width * std::floor(x * inv_width_);
 					}
 
-					if (at_border_y)
+					if (y < 0.0f || y >= world_height)
 					{
 						y -= world_height * std::floor(y * inv_height_);
 					}
@@ -170,6 +160,7 @@ public:
 				});
 		}
 
+		// syncing threads
 		thread_pool.waitForCompletion();
 	}
 
@@ -207,8 +198,38 @@ public:
 
 
 private:
+	void init_sin_cos_tables()
+	{
+		// pre-computing values for the sin and cos tables
+		for (int i = 0; i < ANGLE_TABLE_SIZE; ++i)
+		{
+			float angle = (i / static_cast<float>(ANGLE_TABLE_SIZE)) * two_pi;
+			sin_table_[i] = std::sin(angle);
+			cos_table_[i] = std::cos(angle);
+		}
+	}
+
+	void init_particle_vectors()
+	{
+		// resizing vectors to the population size
+		positions_x_.resize(PopulationSize);
+		positions_y_.resize(PopulationSize);
+		angles_.resize(PopulationSize);
+		neighbourhood_count_.resize(PopulationSize);
+	}
+
+	void randomize_angles()
+	{
+		for (size_t i = 0; i < PopulationSize; ++i)
+		{
+			angles_[i] = Random::rand_range(0.f, 2.f * pi);
+		}
+	}
+
+
 	void update_particle_positions()
 	{
+		// updating the positions of each particles in the direction of their angle by step size `gamma`
 		const uint32_t thread_count = thread_pool.m_thread_count;
 		const int particles_per_thread = particle_count / thread_count;
 		const int last_thread_particles = particle_count - (thread_count - 1) * particles_per_thread;
@@ -236,6 +257,7 @@ private:
 
 		thread_pool.waitForCompletion();
 	}
+
 
 	void solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx)
 	{
@@ -289,17 +311,19 @@ private:
 
 		const int cell_index_x = cell_index % grid_cells_x;
 		const int cell_index_y = cell_index / grid_cells_x;
-		const bool at_border = cell_index_x == 0 || cell_index_y == 0 || cell_index_x == grid_cells_x - 1 || cell_index_y == grid_cells_y - 1;
+		const bool at_border_x = cell_index_x == 0 || cell_index_x == grid_cells_x - 1;
+		const bool at_border_y = cell_index_y == 0 || cell_index_y == grid_cells_y - 1;
 
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y - 1, true, true);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y - 1, false, true);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y - 1, true, true);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y    , true, false);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y    , false, false);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y    , true, false);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y + 1, true, true);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y + 1, false, true);
-		process_neighbouring_cell(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y + 1, true, true);
+		// each possible neighbour in the 3x3 area
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y - 1, true, true);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y - 1, false, true);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y - 1, true, true);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y    , true, false);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y    , false, false);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y    , true, false);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y + 1, true, true);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x    , cell_index_y + 1, false, true);
+		add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y + 1, true, true);
 
 		// updating the particles
 		const auto& cell_contents = spatial_grid.grid[cell_index];
@@ -308,12 +332,13 @@ private:
 #pragma omp parallel for
 		for (uint8_t idx = 0; idx < cell_size; ++idx)
 		{
-			update_particle(cell_contents[idx], at_border, n_positions_x, n_positions_y, neighbours_size);
+			update_particle(cell_contents[idx], at_border_x, at_border_y, n_positions_x, n_positions_y, neighbours_size);
 		}
 
 	}
 
-	inline void process_neighbouring_cell(
+
+	inline void add_neighbour_cells_particles(
 		std::array<float, cell_capacity * 9>& n_positions_x,
 		std::array<float, cell_capacity * 9>& n_positions_y,
 		int& neighbours_size,
@@ -336,7 +361,7 @@ private:
 				(neighbour_index_y + grid_cells_y);
 		}
 
-		// processing the neighbour
+		// fetching data for copying
 		const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
 		const auto& contents = spatial_grid.grid[neighbour_index];
 		const auto size = spatial_grid.objects_count[neighbour_index];
@@ -353,7 +378,7 @@ private:
 	}
 
 
-	inline void update_particle(const obj_idx index, const bool at_border,
+	inline void update_particle(const obj_idx index, const bool at_border_x, const bool at_border_y,
 		std::array<float, cell_capacity * 9>& n_positions_x,
 		std::array<float, cell_capacity * 9>& n_positions_y,
 		const int neighbours_size)
@@ -369,34 +394,38 @@ private:
 		const float cos_angle = cos_table_[angle_index];
 
 		// calculating the total and right particle count
-		int total = 0;
-		int right = 0;
-
-		float wrap_factor_x = at_border ? world_width : 0.0f; // todo use at_border_x and at_border_y + if conditions
-		float wrap_factor_y = at_border ? world_height : 0.0f;
+		int total_neighbours = 0;
+		int on_right_hemisphere = 0;
 
 		for (uint32_t i{ 0 }; i < neighbours_size; ++i)
 		{
-			float to_x = n_positions_x[i] - x;
-			float to_y = n_positions_y[i] - y;
+			float direction_x = n_positions_x[i] - x;
+			float direction_y = n_positions_y[i] - y;
 
-			to_x -= wrap_factor_x * fast_round(to_x * inv_width_);
-			to_y -= wrap_factor_y * fast_round(to_y * inv_height_);
+			if (at_border_x)
+			{
+				direction_x -= world_width * fast_round(direction_x * inv_width_);
+			}
 
-			const float dist_sq = to_x * to_x + to_y * to_y;
+			if (at_border_y)
+			{
+				direction_y -= world_width * fast_round(direction_y * inv_height_);
+			}
+
+			const float dist_sq = direction_x * direction_x + direction_y * direction_y;
 
 			if (dist_sq > 0 && dist_sq < visual_radius * visual_radius)
 			{
-				right += (to_x * sin_angle - to_y * cos_angle) < 0;
-				++total;
+				on_right_hemisphere += (direction_x * sin_angle - direction_y * cos_angle) < 0;
+				++total_neighbours;
 			}
 		}
 
 		// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
-		const int left = total - right;
-		const auto sign = static_cast<float>(((right - left) >= 0) * 2 - 1);
-		neighbourhood_count_[index] = right + left;
+		const int left = total_neighbours - on_right_hemisphere;
+		const auto sign = static_cast<float>(((on_right_hemisphere - left) >= 0) * 2 - 1);
+		neighbourhood_count_[index] = on_right_hemisphere + left;
 
-		angle += (alpha + beta * (right + left) * sign) * pi_div_180;
+		angle += (alpha + beta * (on_right_hemisphere + left) * sign) * pi_div_180;
 	}
 };

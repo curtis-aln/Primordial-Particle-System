@@ -21,6 +21,7 @@ struct PPS_Settings
 {
 	/*
 	particles   world scale    threads   sub_iterations   frame rate
+	4m          650            16        1                11fps
 	1m          550            16        1                60fps
 	500k        400            16        1                ?
 	200k        250            16        2                ?
@@ -33,20 +34,20 @@ struct PPS_Settings
 	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 16;
+	inline static constexpr size_t sub_iterations = 1;
 
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 50'000;
+	inline static constexpr unsigned particle_count = 800'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 130;
+	inline static constexpr float scale_factor = 470;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
-	inline static constexpr auto world_width  = static_cast<float>(SimulationSettings::screen_width) * scale_factor;
-	inline static constexpr auto world_height = static_cast<float>(SimulationSettings::screen_height) * scale_factor;
+	inline static constexpr auto world_width  = SimulationSettings::screen_width * scale_factor;
+	inline static constexpr auto world_height = SimulationSettings::screen_height * scale_factor;
 
 	// calculating how many spatial hash cells should be on each axis
 	inline static constexpr auto grid_cells_y = static_cast<size_t>(scale_factor);

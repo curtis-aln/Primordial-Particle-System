@@ -1,6 +1,6 @@
 #pragma once
 #include "settings.h"
-#include "particle_system.h"
+#include "particle_system/particle_system.h"
 #include "utils/smooth_frame_rates.h"
 #include "utils/font.h"
 #include "utils/Camera.hpp"
@@ -107,10 +107,10 @@ private:
 		if (debug_)
 		{
 			particle_system_.render_debug(window_, mouse_pos, debug_radius);
-			particle_system_.render_beacons(window_);
+			particle_system_.beacons.render(window_);
 		}
 
-		grid.draw();
+		//grid.draw();
 		window_.display();
 	}
 
@@ -167,11 +167,6 @@ private:
 					const int sign = delta < 0 ? -1 : 1;
 					debug_radius += change_in_debug_radius * sign;
 				}
-				//else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LControl))
-				//{
-					//const int sign = delta < 0 ? -1 : 1;
-					//decay += change_in_decay * sign;
-				//}
 				else
 				{
 					camera.zoom(delta);
@@ -186,7 +181,7 @@ private:
 
 		else if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
 		{
-			particle_system_.add_beacons(camera.get_world_mouse_pos(), debug_radius);
+			particle_system_.beacons.add_beacons(camera.get_world_mouse_pos(), debug_radius);
 		}
 	}
 

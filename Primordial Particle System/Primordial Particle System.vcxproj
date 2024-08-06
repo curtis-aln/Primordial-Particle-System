@@ -147,8 +147,9 @@
     <ClCompile Include="src\main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\particle_system.h" />
-    <ClInclude Include="src\PPS_renderer.h" />
+    <ClInclude Include="src\particle_system\beacons.h" />
+    <ClInclude Include="src\particle_system\particle_system.h" />
+    <ClInclude Include="src\particle_system\PPS_renderer.h" />
     <ClInclude Include="src\utils\Camera.hpp" />
     <ClInclude Include="src\utils\font.h" />
     <ClInclude Include="src\utils\SFML_grid.h" />
@@ -157,6 +158,7 @@
     <ClInclude Include="src\settings.h" />
     <ClInclude Include="src\simulation.h" />
     <ClInclude Include="src\utils\spatial_grid.h" />
+    <ClInclude Include="src\utils\SPSCQueue.h" />
     <ClInclude Include="src\utils\thread_pool.h" />
     <ClInclude Include="src\utils\Timelapse.h" />
     <ClInclude Include="src\utils\utils.h" />

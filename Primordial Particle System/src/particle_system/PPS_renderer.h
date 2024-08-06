@@ -1,8 +1,8 @@
 #pragma once
-#include "settings.h"
-#include "utils/utils.h"
-#include "utils/font.h"
-#include "utils/spatial_grid.h"
+#include "../settings.h"
+#include "../utils/utils.h"
+#include "../utils/font.h"
+#include "../utils/spatial_grid.h"
 
 
 inline static const sf::Uint8 a = 250;

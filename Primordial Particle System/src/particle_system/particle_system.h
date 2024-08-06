@@ -1,20 +1,21 @@
 ﻿#pragma once
 
 #include <SFML/Graphics.hpp>
-#include "settings.h"
-#include "utils/spatial_grid.h"
-#include "utils/random.h"
-
 #include <cmath>
 #include <array>
 #include <xmmintrin.h>
-
-#include "PPS_renderer.h"
-
 #include <vector>
 #include <omp.h> // For OpenMP parallelization
 
-#include "utils/thread_pool.h"
+
+#include "../settings.h"
+#include "PPS_renderer.h"
+#include "beacons.h"
+
+#include "../utils/spatial_grid.h"
+#include "../utils/random.h"
+#include "../utils/thread_pool.h"
+
 
 // pre-computing constants
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
@@ -27,6 +28,8 @@ inline float fast_round(float x)
 {
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
+
+
 
 
 template<size_t PopulationSize>
@@ -46,22 +49,21 @@ class ParticlePopulation : PPS_Settings
 	// The Spatial Grid Optimizes finding who is nearby
 	SpatialGrid<grid_cells_x, grid_cells_y> spatial_grid;
 
-	// renders the pps
+	// renders the particle system
 	PPS_Renderer pps_renderer_;
 
-	// pre-computed variables
+	// pre-computed
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
-	// temporary arrays for calculating particle interactions
+	// temporary arrays for calculating particle interactions. One array needed for each thread to avoid issues with data writing.
 	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_x;
 	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_y;
 
 	tp::ThreadPool thread_pool;
 
 public:
-	std::array<obj_idx, 200> beacons;
-	int beacons_size = 0;
+	Beacons<size_t(100), grid_cells_x, grid_cells_y> beacons{ spatial_grid, positions_x_, positions_y_, spatial_grid.m_cellSize.x, world_width, world_height };
 
 
 public:
@@ -128,74 +130,6 @@ public:
 			positions_y_[index] = position.y;
 		}
 	}
-
-
-	void add_beacons(const sf::Vector2f& position, const float radius)
-	{
-		beacons_size = 0;
-
-		const float cell_size = spatial_grid.m_cellSize.x;
-		const bool out_of_bounds = position.x <= cell_size || position.y <= cell_size || position.x >= world_width - cell_size || position.y >= world_height - cell_size;
-		
-		if (out_of_bounds)
-			return;
-
-		// getting the cell at position
-		const cell_idx cell_index = spatial_grid.hash(position.x, position.y);
-		const int cell_index_x = cell_index % grid_cells_x;
-		const int cell_index_y = cell_index / grid_cells_x;
-
-		// iterating over every neighbouring cell
-		for (cell_idx neighbour_index_x = cell_index_x - 1; neighbour_index_x <= cell_index_x + 1; ++neighbour_index_x)
-		{
-			for (cell_idx neighbour_index_y = cell_index_y - 1; neighbour_index_y <= cell_index_y + 1; ++neighbour_index_y)
-			{
-				const cell_idx neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
-				const auto& neighbour_contaner = spatial_grid.grid[neighbour_index];
-				const auto neighbour_size = spatial_grid.objects_count[neighbour_index];
-				
-				// iterating over every object per neighbour_cell
-				for (auto container_index = 0; container_index < neighbour_size; ++container_index)
-				{
-					const obj_idx index = neighbour_contaner[container_index];
-					const sf::Vector2f particle_pos = { positions_x_[index], positions_y_[index] };
-					const sf::Vector2f dir = particle_pos - position;
-					const float dist = dir.x * dir.x + dir.y * dir.y;
-
-					if (dist < radius * radius)
-					{
-						beacons[beacons_size++] = index;
-					}
-					
-					if (beacons_size >= beacons.size())
-					{
-						return;
-					}
-				}
-			}
-		}
-
-	}
-
-
-	void render_beacons(sf::RenderWindow& window)
-	{
-		const float rad = PPS_Graphics::particle_radius;
-
-		sf::CircleShape beacon_body;
-		beacon_body.setFillColor({ 255, 255, 255 });
-		beacon_body.setRadius(rad);
-
-		for (int beacon_container_index = 0; beacon_container_index < beacons_size; ++beacon_container_index)
-		{
-			int beacon_index = beacons[beacon_container_index];
-
-			const sf::Vector2f position = { positions_x_[beacon_index] - rad, positions_y_[beacon_index] - rad };
-			beacon_body.setPosition(position);
-			window.draw(beacon_body);
-		}
-	}
-
 
 	// At the start of every iteration. all the particles need to be removed from the grid and re-added
 	void add_particles_to_grid()

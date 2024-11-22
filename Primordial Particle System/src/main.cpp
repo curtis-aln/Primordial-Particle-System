@@ -4,7 +4,8 @@
 int main()
 {
 	Random::set_seed(0);
-	Simulation().run();
+	Simulation simulation;
+	simulation.run();
 }
 
 // performance testing - 4 million particles - No rendering - 950 sf

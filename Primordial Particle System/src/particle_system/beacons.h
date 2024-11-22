@@ -74,7 +74,7 @@ public:
 
 	void render(sf::RenderWindow& window)
 	{
-		const float rad = PPS_Graphics::particle_radius;
+		const float rad = PPS_Settings::particle_radius;
 
 		sf::CircleShape beacon_body;
 		beacon_body.setFillColor({ 255, 255, 255 });

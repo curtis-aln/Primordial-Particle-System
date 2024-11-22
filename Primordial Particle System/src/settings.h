@@ -37,12 +37,12 @@ struct PPS_Settings
 	inline static constexpr size_t sub_iterations = 1;
 
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 4'000'000;
+	inline static constexpr unsigned particle_count = 100'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 950;
+	inline static constexpr float scale_factor = 170;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -60,11 +60,8 @@ struct PPS_Settings
 	// main simulation rules
 	inline static constexpr float alpha = 180.f;
 	inline static constexpr float beta = 17.f;
-};
 
 
-
-struct PPS_Graphics
-{
+	// graphical settings
 	inline static constexpr float particle_radius = 150.f;
 };

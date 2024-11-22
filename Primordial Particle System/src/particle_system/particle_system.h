@@ -29,7 +29,8 @@ inline float fast_round(float x)
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
 
-
+inline static constexpr size_t max_beacon_count = 100;
+inline static constexpr float init_position_scatter = 125.f; // scattering radius of the positions
 
 template<size_t PopulationSize>
 class ParticlePopulation : PPS_Settings
@@ -48,9 +49,6 @@ class ParticlePopulation : PPS_Settings
 	// The Spatial Grid Optimizes finding who is nearby
 	SpatialGrid<grid_cells_x, grid_cells_y> spatial_grid;
 
-	// renders the particle system
-	PPS_Renderer pps_renderer_;
-
 	// pre-computed
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
@@ -62,12 +60,15 @@ class ParticlePopulation : PPS_Settings
 	tp::ThreadPool thread_pool;
 
 public:
-	Beacons<size_t(100), grid_cells_x, grid_cells_y> beacons{ spatial_grid, positions_x_, positions_y_, spatial_grid.m_cellSize.x, world_width, world_height };
+	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ spatial_grid, 
+		positions_x_, positions_y_, spatial_grid.m_cellSize.x, world_width, world_height };
+
+	PPS_Renderer pps_renderer_;
 
 
 public:
 	explicit ParticlePopulation(sf::RenderWindow& window) : spatial_grid({0, 0, world_width, world_height}),
-	  pps_renderer_(PopulationSize, window), thread_pool(threads)
+	  pps_renderer_(window, positions_x_, positions_y_, angles_, neighbourhood_count_), thread_pool(threads)
 	{
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
@@ -76,6 +77,8 @@ public:
 		init_sin_cos_tables();
 		init_grid_positioning();
 		randomize_angles();
+
+		pps_renderer_.init_vertex_array();
 	
 		// choosing 20 random particles to put at the center
 		create_cell_at({ world_width / 2.f, world_height / 2.f }, 35);
@@ -92,8 +95,6 @@ public:
 		const float spacingX = world_width / cols;
 		const float spacingY = world_height / rows;
 
-		const float noise = 125.f; // scattering radius of the positions
-
 		int inc = 0;
 		for (int row = 0; row < rows; ++row)
 		{
@@ -101,8 +102,8 @@ public:
 			{
 				if (inc < PopulationSize)
 				{
-					positions_x_[inc] = col * spacingX + Random::rand11_float() * noise;
-					positions_y_[inc] = row * spacingY + Random::rand11_float() * noise;
+					positions_x_[inc] = col * spacingX + Random::rand11_float() * init_position_scatter;
+					positions_y_[inc] = row * spacingY + Random::rand11_float() * init_position_scatter;
 					inc++;
 				}
 			}
@@ -185,13 +186,13 @@ public:
 			spatial_grid.render_grid(window);
 		}
 
-		pps_renderer_.render_particles(positions_x_, positions_y_, neighbourhood_count_);
+		pps_renderer_.render_particles(display_top_left, display_bottom_right);
 	}
 
 
 	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
 	{
-		pps_renderer_.render_debug(positions_x_, positions_y_, angles_, neighbourhood_count_, mouse_pos, debug_radius);
+		pps_renderer_.render_debug(mouse_pos, debug_radius);
 	}
 
 

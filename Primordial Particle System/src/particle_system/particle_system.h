@@ -17,6 +17,27 @@
 #include "../utils/thread_pool.h"
 
 
+inline float weighted_distance(const float distance, float max_influence_radius, float falloff_exponent, float weight_coefficient = 1.0f)
+{
+	// distance within bounds
+	if (distance <= 0.0f) 
+	{
+		return weight_coefficient; // Max influence
+	}
+	if (distance > max_influence_radius) 
+	{
+		return 0.0f; // No influence
+	}
+
+	// falloff function
+	float normalized_distance = distance / max_influence_radius;
+	float weight = weight_coefficient * std::pow(1.0f - normalized_distance, falloff_exponent);
+
+	// Clamp for non-negative output
+	return std::max(0.0f, weight);
+}
+
+
 // pre-computing constants
 inline static constexpr float pi = 3.141592653589793238462643383279502884197f;
 inline static constexpr float two_pi = 2.f * pi;
@@ -30,7 +51,7 @@ inline float fast_round(float x)
 }
 
 inline static constexpr size_t max_beacon_count = 100;
-inline static constexpr float init_position_scatter = 125.f; // scattering radius of the positions
+inline static constexpr float init_position_scatter = 0.f; // scattering radius of the positions
 
 template<size_t PopulationSize>
 class ParticlePopulation : PPS_Settings
@@ -178,7 +199,7 @@ public:
 	}
 
 
-	void render(sf::RenderWindow& window, const sf::Vector2f display_top_left, const sf::Vector2f display_bottom_right, const bool draw_spatial_grid = false, const sf::Vector2f pos = {0 ,0})
+	void render(sf::RenderWindow& window, const bool draw_spatial_grid = false, const sf::Vector2f pos = {0 ,0})
 	{
 		//positions_[0] = pos;
 		if (draw_spatial_grid)
@@ -186,7 +207,7 @@ public:
 			spatial_grid.render_grid(window);
 		}
 
-		pps_renderer_.render_particles(display_top_left, display_bottom_right);
+		pps_renderer_.render_particles();
 	}
 
 
@@ -427,6 +448,6 @@ private:
 		const auto sign = static_cast<float>(((on_right_hemisphere - left) >= 0) * 2 - 1);
 		neighbourhood_count_[index] = on_right_hemisphere + left;
 
-		angle += (alpha + beta * (on_right_hemisphere + left) * sign) * pi_div_180;
+		angle += (UpdateRules::alpha + UpdateRules::beta * (on_right_hemisphere + left) * sign) * pi_div_180;
 	}
 };

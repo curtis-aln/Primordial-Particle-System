@@ -3,6 +3,10 @@
 
 #include "utils/spatial_grid.h"
 
+#include <array>
+#include <string>
+
+
 struct SimulationSettings
 {
 	inline static constexpr unsigned screen_width = 1900;
@@ -42,8 +46,8 @@ struct PPS_Settings
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 170;
-	inline static constexpr float param_scale_factor = 200.f;
+	inline static constexpr float scale_factor = 100;
+	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size
 	inline static constexpr auto world_width  = SimulationSettings::screen_width * scale_factor;
@@ -57,11 +61,48 @@ struct PPS_Settings
 	inline static constexpr float visual_radius = 5.f * param_scale_factor;
 	inline static constexpr float gamma = 0.67f * param_scale_factor;
 
-	// main simulation rules
-	inline static constexpr float alpha = 180.f;
-	inline static constexpr float beta = 17.f;
-
 
 	// graphical settings
-	inline static constexpr float particle_radius = 150.f;
+	inline static constexpr float particle_radius = 180.f;
+};
+
+
+struct Setting
+{
+	float alpha;
+	float beta;
+};
+
+struct UpdateRules
+{
+	// Array of settings with inline comments for descriptive names
+	// see https://nagualdesign.github.io/
+	inline static const std::array<Setting, 19> settings = { {
+		{180.0f, 17.0f},   // 0:  Cell-like behaviour (original)
+		{5.0f, 31.0f},     // 1:  Sprites
+		{-23.0f, 2.0f},    // 2:  Donuts
+		{114.0f, -4.0f},   // 3:  Goblins
+		{173.0f, -8.0f},   // 4:  Puff balls
+		{22.f, -29.f},     // 5:  Lava Lamp
+		{174.0f, 15.0f},   // 6:  Thick cell walls
+		{-90.0f, -90.0f},  // 7:  Liquid crystal
+		{-20.0f, -25.0f},  // 8:  Gradual evolution
+		{146.0f, 8.0f},    // 9:  Thermophiles
+		{117.0f, -4.0f},   // 10: Amoebas merging and evolving
+		{35.0f, -5.0f},    // 11: Extreme density
+		{-70.0f, 5.0f},    // 12: Nascent organelles
+		{-177.0f, 3.0f},   // 13: Shockwave
+		{-69.0f, -1.0f},   // 14: Rainbow juice
+		{42.0f, 9.0f},     // 15: Cell nucleus
+		{0.0f, 13.0f},     // 16: Exchanging particles
+		{139.0f, -28.0f},  // 17: Silly string
+		{79.6f, -0.8f}     // 18: Swirling mass
+	} };
+
+	// Default update rule (can be changed dynamically)
+	static constexpr int default_rule_index = 17;
+	inline static const Setting& update_rules = settings[default_rule_index];
+
+	inline static const float alpha = update_rules.alpha;
+	inline static const float beta = update_rules.beta;
 };

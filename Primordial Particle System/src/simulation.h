@@ -36,6 +36,10 @@ class Simulation : PPS_Settings, SimulationSettings
 	bool debug_ = false;
 	bool rendering_ = true;
 
+	// display mode makes the particle movement less jittery by substepping, it makes the organisms displayed circular,
+	// and the colours more vibrant and bloomish.
+	bool display_mode_ = false;
+
 	// radius around the mouse in which debug settings are shown
 	float debug_radius = 8000.f;
 	const float change_in_debug_radius = 500.f;
@@ -100,9 +104,7 @@ private:
 
 		window_.clear(screen_color);
 
-		const sf::Vector2f topleft = camera.map_window_position_to_world_position(sf::Vector2f{ 0.f, 0.f });
-		const sf::Vector2f bottomright = camera.map_window_position_to_world_position(sf::Vector2f{ screen_width, screen_height });
-		particle_system_.render(window_, topleft, bottomright, render_hash_grid_, mouse_pos);
+		particle_system_.render(window_, render_hash_grid_, mouse_pos);
 
 		if (debug_)
 		{

@@ -10,11 +10,11 @@ class Camera
 {
 public:
 	float m_currentScroll = 1.f;
+	sf::View m_view_{};
 
 
 private:
 	sf::RenderWindow* m_window_ptr_ = nullptr;
-	sf::View m_view_{};
 
 	sf::Vector2f m_mouse_position_before_{};
 	sf::Vector2f m_delta_{};

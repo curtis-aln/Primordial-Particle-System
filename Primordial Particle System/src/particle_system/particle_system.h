@@ -213,7 +213,7 @@ public:
 
 	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
 	{
-		pps_renderer_.render_debug(mouse_pos, debug_radius);
+		
 	}
 
 

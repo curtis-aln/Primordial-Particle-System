@@ -6,6 +6,29 @@
 #include <array>
 #include <string>
 
+struct ColorSettings
+{
+	// colors
+	inline static const sf::Uint8 alpha_col = 200;
+	inline static const sf::Color Red = { 255, 0, 0, alpha_col };
+	inline static const sf::Color Green = { 0, 255, 0, alpha_col };
+	inline static const sf::Color Blue = { 0, 0, 255, alpha_col };
+	inline static const sf::Color Magenta = { 255, 0, 255, alpha_col };
+	inline static const sf::Color Yellow = { 255, 255, 0, alpha_col };
+	inline static const sf::Color Pink = { 255, 192, 203, alpha_col };
+
+	// transition thresholds - determined by nearby particles
+	inline static constexpr float range1 = 22;
+	inline static constexpr float range2 = 34;
+	inline static constexpr float range3 = 40;
+};
+
+struct FontSettings
+{
+	inline static std::string font_path = "fonts/Calibri.ttf";
+	inline static int font_size_debug = 80;
+};
+
 
 struct SimulationSettings
 {

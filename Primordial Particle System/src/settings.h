@@ -39,14 +39,14 @@ struct PPS_Settings
 
 	// the amount of iterations of the update loop per frame
 	inline static constexpr size_t sub_iterations = 1;
-
+	
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 100'000;
+	inline static constexpr unsigned particle_count = 400000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 100;
+	inline static constexpr float scale_factor = 230;
 	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size

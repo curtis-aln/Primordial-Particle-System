@@ -166,10 +166,6 @@
   <ItemGroup>
     <Font Include="fonts\Calibri.ttf" />
   </ItemGroup>
-  <ItemGroup>
-    <None Include="shaders\particle.frag" />
-    <None Include="shaders\particle.vert" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

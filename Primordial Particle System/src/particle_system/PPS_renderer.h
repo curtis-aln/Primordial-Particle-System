@@ -173,7 +173,6 @@ class PPS_Renderer
 private:
 	sf::VertexArray vertex_array_{};
 
-	sf::Shader particle_shader_;
 	sf::RenderStates states;
 
 	// Debug rendering
@@ -199,8 +198,6 @@ public:
 		positions_x_(positions_x), positions_y_(positions_y), angles_(angles),
 		neighbourhood_count_(neighbourhood_count)
 	{
-		states.shader = &particle_shader_;
-		initializeShader();
 
 		visual_radius_shape_.setFillColor(sf::Color::Transparent);
 		visual_radius_shape_.setOutlineThickness(5);
@@ -239,8 +236,6 @@ public:
 		}
 
 		
-		particle_shader_.setUniform("resolution", sf::Glsl::Vec2(window_.getSize()));
-
 		window_.draw(vertex_array_, states);
 	}
 
@@ -283,24 +278,4 @@ public:
 		window_.draw(debug_lines_);
 	}
 
-private:
-	void initializeShader()
-	{
-		if (!particle_shader_.loadFromMemory(
-			"uniform vec2 resolution;"
-			"void main() {"
-			"    gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex;"
-			"    gl_TexCoord[0] = gl_TextureMatrix[0] * gl_MultiTexCoord0;"
-			"    gl_FrontColor = gl_Color;"
-			"}",
-			"uniform vec2 resolution;"
-			"void main() {"
-			"    vec2 coord = gl_FragCoord.xy / resolution - vec2(0.5);"
-			"    if (abs(coord.x) > 0.55 || abs(coord.y) > 0.55) discard;"
-			"    gl_FragColor = gl_Color;"
-			"}"
-		)) {
-			throw std::runtime_error("Failed to load particle shader");
-		}
-	}
 };

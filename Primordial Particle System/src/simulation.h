@@ -9,6 +9,12 @@
 
 #include <string>
 
+inline float interpolateZoom(float currentZoom, float targetZoom, float deltaTime, float speed = 5.0f)
+{
+	// Smooth interpolation
+	return currentZoom + (targetZoom - currentZoom) * (speed * deltaTime);
+}
+
 class Simulation : PPS_Settings, SimulationSettings
 {
 	// SFML
@@ -50,7 +56,12 @@ class Simulation : PPS_Settings, SimulationSettings
 
 
 public:
-	Simulation() : window_(sf::VideoMode(screen_width, screen_height), simulation_title)//, sf::Style::None)
+	Simulation() : window_(
+		sf::VideoMode(screen_width, screen_height),
+		simulation_title,
+		sf::Style::Default,
+		sf::ContextSettings{ 0, 0, 8 } // Anti-aliasing level set to 8
+	)
 	{
 		window_.setFramerateLimit(max_frame_rate);
 		window_.setVerticalSyncEnabled(Vsync);
@@ -146,7 +157,8 @@ private:
 
 	void poll_events()
 	{
-		camera.update();
+		float deltaTime = clock_.get_delta_time();
+		camera.update(deltaTime);
 
 		sf::Event event{};
 		while (window_.pollEvent(event))

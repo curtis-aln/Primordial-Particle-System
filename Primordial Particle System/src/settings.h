@@ -16,11 +16,18 @@ struct ColorSettings
 	inline static const sf::Color Magenta = { 255, 0, 255, alpha_col };
 	inline static const sf::Color Yellow = { 255, 255, 0, alpha_col };
 	inline static const sf::Color Pink = { 255, 192, 203, alpha_col };
+	inline static const sf::Color White = { 255, 255, 255, alpha_col };
 
 	// transition thresholds - determined by nearby particles
-	inline static constexpr float range1 = 22;
-	inline static constexpr float range2 = 34;
-	inline static constexpr float range3 = 40;
+	inline static constexpr float range1 = 10;
+	inline static constexpr float range2 = 20;
+	inline static constexpr float range3 = 30;
+
+	// colors to be mapped to the ranges
+	const sf::Color first_color = Green;
+	const sf::Color second_color = Blue;
+	const sf::Color third_color = Yellow;
+	const sf::Color fourth_color = Magenta;
 };
 
 struct FontSettings
@@ -61,15 +68,15 @@ struct PPS_Settings
 	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 1;
+	inline static constexpr size_t sub_iterations = 5;
 	
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 400000;
+	inline static constexpr unsigned particle_count = 50'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 230;
+	inline static constexpr float scale_factor = 60;
 	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -86,7 +93,7 @@ struct PPS_Settings
 
 
 	// graphical settings
-	inline static constexpr float particle_radius = 180.f;
+	inline static constexpr float particle_radius = 100.f;
 };
 
 
@@ -123,7 +130,7 @@ struct UpdateRules
 	} };
 
 	// Default update rule (can be changed dynamically)
-	static constexpr int default_rule_index = 17;
+	static constexpr int default_rule_index = 13;
 	inline static const Setting& update_rules = settings[default_rule_index];
 
 	inline static const float alpha = update_rules.alpha;

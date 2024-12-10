@@ -51,7 +51,7 @@ inline float fast_round(float x)
 }
 
 inline static constexpr size_t max_beacon_count = 100;
-inline static constexpr float init_position_scatter = 0.f; // scattering radius of the positions
+inline static constexpr float init_position_scatter = 150.f; // scattering radius of the positions
 
 template<size_t PopulationSize>
 class ParticlePopulation : PPS_Settings
@@ -125,6 +125,7 @@ public:
 				{
 					positions_x_[inc] = col * spacingX + Random::rand11_float() * init_position_scatter;
 					positions_y_[inc] = row * spacingY + Random::rand11_float() * init_position_scatter;
+					angles_[inc] = Random::rand01_float() * pi;
 					inc++;
 				}
 			}

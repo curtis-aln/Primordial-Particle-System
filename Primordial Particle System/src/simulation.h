@@ -8,6 +8,9 @@
 
 #include <string>
 
+#include "../IMGUI/imgui.h"
+#include "../IMGUI/imgui-SFML.h"
+
 inline float interpolateZoom(float currentZoom, float targetZoom, float deltaTime, float speed = 5.0f)
 {
 	// Smooth interpolation
@@ -51,6 +54,8 @@ class Simulation : PPS_Settings, SimulationSettings
 	// The particle system
 	ParticlePopulation<particle_count> particle_system_{ window_ };
 
+	sf::Clock delta_clock{}; // for imgui
+
 
 public:
 	Simulation() : window_(
@@ -60,6 +65,8 @@ public:
 		sf::ContextSettings{ 0, 0, 8 } // Anti-aliasing level set to 8
 	)
 	{
+		ImGui::SFML::Init(window_);
+
 		window_.setFramerateLimit(max_frame_rate);
 		window_.setVerticalSyncEnabled(Vsync);
 	}
@@ -70,6 +77,7 @@ public:
 		while (running_)
 		{
 			poll_events();
+			process_imgui();
 
 			for (size_t i = 0; i < sub_iterations; ++i)
 			{
@@ -94,6 +102,7 @@ public:
 	void quit()
 	{
 		running_ = false;
+		ImGui::SFML::Shutdown();
 	}
 
 private:
@@ -111,10 +120,29 @@ private:
 			particle_system_.beacons.render(window_);
 		}
 
+		ImGui::SFML::Render(window_);
+
 		//grid.draw();
 		window_.display();
 	}
 
+	void process_imgui()
+	{
+		// Start a new ImGui frame
+		ImGui::SFML::Update(window_, delta_clock.restart());
+
+		// ImGui UI for customizing the circle
+		ImGui::Begin("Circle Properties");
+
+		// sliders
+		ImGui::SliderFloat("Alpha", &UpdateRules::alpha, -180.f, 180.0f);
+		ImGui::SliderFloat("Beta", &UpdateRules::beta, -180.f, 180.0f);
+
+		// Color picker
+		//ImGui::ColorEdit3("Color", color);
+
+		ImGui::End();
+	}
 	void key_press_events(const sf::Keyboard::Key& event_key_code)
 	{
 		switch (event_key_code)
@@ -151,6 +179,8 @@ private:
 		sf::Event event{};
 		while (window_.pollEvent(event))
 		{
+			ImGui::SFML::ProcessEvent(event);
+
 			if (event.type == sf::Event::Closed)
 				quit();
 
@@ -174,6 +204,11 @@ private:
 					camera.zoom(delta);
 				}
 			}
+		}
+		
+		if (ImGui::GetIO().WantCaptureMouse)
+		{
+			return;
 		}
 
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))

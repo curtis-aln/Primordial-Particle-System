@@ -93,7 +93,7 @@ struct PPS_Settings
 
 
 	// graphical settings
-	inline static constexpr float particle_radius = 100.f;
+	inline static float particle_radius = 100.f;
 };
 
 
@@ -133,6 +133,6 @@ struct UpdateRules
 	static constexpr int default_rule_index = 13;
 	inline static const Setting& update_rules = settings[default_rule_index];
 
-	inline static const float alpha = update_rules.alpha;
-	inline static const float beta = update_rules.beta;
+	inline static float alpha = update_rules.alpha;
+	inline static float beta = update_rules.beta;
 };

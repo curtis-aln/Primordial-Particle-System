@@ -28,6 +28,7 @@ private:
     unsigned verticies_per_particle = CIRCLE_SIDES * 3;  // Triangles for each circle (center + two adjacent points)
 
 
+
 public:
     PPS_Renderer(sf::RenderWindow& window,
         std::vector<float>& positions_x, std::vector<float>& positions_y,

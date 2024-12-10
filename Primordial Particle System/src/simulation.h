@@ -4,7 +4,6 @@
 #include "utils/smooth_frame_rates.h"
 #include "utils/font.h"
 #include "utils/Camera.hpp"
-#include "utils/Timelapse.h"
 #include "utils/SFML_grid.h"
 
 #include <string>
@@ -26,8 +25,6 @@ class Simulation : PPS_Settings, SimulationSettings
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };
 
-	// Recording
-	Timelapse timelapse_{ window_, 0.5f };
 
 	// Two separate font sizes. allows rendering of text on-screen
 	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
@@ -87,11 +84,6 @@ public:
 			if (rendering_)
 			{
 				render();
-
-				if (record)
-				{
-					timelapse_.capture();
-				}
 			}
 			update_caption();
 
@@ -101,10 +93,6 @@ public:
 
 	void quit()
 	{
-		if (record)
-		{
-			timelapse_.save_video("TimeLapse");
-		}
 		running_ = false;
 	}
 

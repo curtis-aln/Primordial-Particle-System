@@ -8,26 +8,16 @@
 
 struct ColorSettings
 {
-	// colors
-	inline static const sf::Uint8 alpha_col = 200;
-	inline static const sf::Color Red = { 255, 0, 0, alpha_col };
-	inline static const sf::Color Green = { 0, 255, 0, alpha_col };
-	inline static const sf::Color Blue = { 0, 0, 255, alpha_col };
-	inline static const sf::Color Magenta = { 255, 0, 255, alpha_col };
-	inline static const sf::Color Yellow = { 255, 255, 0, alpha_col };
-	inline static const sf::Color Pink = { 255, 192, 203, alpha_col };
-	inline static const sf::Color White = { 255, 255, 255, alpha_col };
+	// Transition thresholds
+	inline static float range1 = 10.0f;
+	inline static float range2 = 20.0f;
+	inline static float range3 = 30.0f;
 
-	// transition thresholds - determined by nearby particles
-	inline static constexpr float range1 = 10;
-	inline static constexpr float range2 = 20;
-	inline static constexpr float range3 = 30;
-
-	// colors to be mapped to the ranges
-	const sf::Color first_color = Green;
-	const sf::Color second_color = Blue;
-	const sf::Color third_color = Yellow;
-	const sf::Color fourth_color = Magenta;
+	// Colors to be mapped to the ranges
+	inline static float first_color[3] = { 0.0f, 1.0f, 0.0f };  // Initially Green
+	inline static float second_color[3] = { 0.0f, 0.0f, 1.0f }; // Initially Blue
+	inline static float third_color[3] = { 1.0f, 1.0f, 0.0f };  // Initially Yellow
+	inline static float fourth_color[3] = { 1.0f, 0.0f, 1.0f }; // Initially Magenta
 };
 
 struct FontSettings
@@ -76,7 +66,7 @@ struct PPS_Settings
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 60;
+	inline static constexpr float scale_factor = 70;
 	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size

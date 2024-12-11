@@ -134,9 +134,15 @@ private:
 	{
 		// Start a new ImGui frame
 		ImGui::SFML::Update(window_, delta_clock.restart());
+		
+		imgui_update_rules();
+		imgui_color_picker();
+		
+	}
 
-		// ImGui UI for customizing the circle
-		ImGui::Begin("Circle Properties");
+	void imgui_update_rules()
+	{
+		ImGui::Begin("Update Rules");
 
 		// sliders
 		const char* one_dp = "%.0f";
@@ -144,11 +150,26 @@ private:
 		ImGui::SliderFloat("Alpha", &UpdateRules::alpha, -range, range, one_dp);
 		ImGui::SliderFloat("Beta", &UpdateRules::beta, -range, range, one_dp);
 
-		// Color picker
-		//ImGui::ColorEdit3("Color", color);
+		ImGui::End();
+	}
+
+	void imgui_color_picker()
+	{
+		ImGui::Begin("Color picker");
+
+		const char* one_dp = "%.0f";
+		ImGui::SliderFloat("range 1", &ColorSettings::range1, 0, 20, one_dp);
+		ImGui::SliderFloat("range 2", &ColorSettings::range2, 0, 40, one_dp);
+		ImGui::SliderFloat("range 3", &ColorSettings::range3, 0, 60, one_dp);
+
+		ImGui::ColorEdit3("First Color", ColorSettings::first_color);
+		ImGui::ColorEdit3("Second Color", ColorSettings::second_color);
+		ImGui::ColorEdit3("Third Color", ColorSettings::third_color);
+		ImGui::ColorEdit3("Fourth Color", ColorSettings::fourth_color);
 
 		ImGui::End();
 	}
+
 	void key_press_events(const sf::Keyboard::Key& event_key_code)
 	{
 		switch (event_key_code)

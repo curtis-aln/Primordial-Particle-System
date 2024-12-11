@@ -5,6 +5,15 @@
 #include "../utils/spatial_grid.h"
 #include "../utils/Camera.hpp"
 
+inline sf::Color convertToSFColor(const float color[3])
+{
+    return sf::Color(
+        static_cast<sf::Uint8>(color[0] * 255), // Red component
+        static_cast<sf::Uint8>(color[1] * 255), // Green component
+        static_cast<sf::Uint8>(color[2] * 255)  // Blue component
+    );
+}
+
 class PPS_Renderer : ColorSettings
 {
 private:
@@ -119,21 +128,40 @@ public:
     }
 
     // turning a nearby count into a color which is smoothed
-    sf::Color interpolate(const sf::Color& a, const sf::Color& b, float factor)
+    sf::Color interpolate(const float color1[3], const float color2[3], float t)
     {
+        t = std::clamp(t, 0.0f, 1.0f); // Clamp t to the range [0, 1]
+
+        float interpolated[3] = {
+            color1[0] + t * (color2[0] - color1[0]),
+            color1[1] + t * (color2[1] - color1[1]),
+            color1[2] + t * (color2[2] - color1[2])
+        };
+
         return sf::Color(
-            static_cast<sf::Uint8>(a.r + factor * (b.r - a.r)),
-            static_cast<sf::Uint8>(a.g + factor * (b.g - a.g)),
-            static_cast<sf::Uint8>(a.b + factor * (b.b - a.b))
+            static_cast<sf::Uint8>(interpolated[0] * 255),
+            static_cast<sf::Uint8>(interpolated[1] * 255),
+            static_cast<sf::Uint8>(interpolated[2] * 255)
         );
     }
 
     sf::Color get_color(const float nearby_count)
     {
-        if (nearby_count <= 0.0f) return first_color;
+        // Retrieve color settings from your ColorSettings struct
+        const float* first_color = ColorSettings::first_color;
+        const float* second_color = ColorSettings::second_color;
+        const float* third_color = ColorSettings::third_color;
+        const float* fourth_color = ColorSettings::fourth_color;
+
+        const float range1 = ColorSettings::range1;
+        const float range2 = ColorSettings::range2;
+        const float range3 = ColorSettings::range3;
+
+        if (nearby_count <= 0.0f) return convertToSFColor(first_color);
         if (nearby_count <= range1) return interpolate(first_color, second_color, nearby_count / range1);
         if (nearby_count <= range2) return interpolate(second_color, third_color, (nearby_count - range1) / (range2 - range1));
         if (nearby_count < range3) return interpolate(third_color, fourth_color, (nearby_count - range2) / (range3 - range2));
-        return fourth_color;
+        return convertToSFColor(fourth_color);
     }
+
 };

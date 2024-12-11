@@ -69,11 +69,14 @@ public:
 
 		window_.setFramerateLimit(max_frame_rate);
 		window_.setVerticalSyncEnabled(Vsync);
+
+		// setting the camera pos to the center by defualt
+		camera.set_camera_position({ world_width / 2, world_height / 2 });
+		camera.update(0.f);
 	}
 
 	void run()
 	{
-
 		while (running_)
 		{
 			poll_events();
@@ -136,8 +139,10 @@ private:
 		ImGui::Begin("Circle Properties");
 
 		// sliders
-		ImGui::SliderFloat("Alpha", &UpdateRules::alpha, -180.f, 180.0f);
-		ImGui::SliderFloat("Beta", &UpdateRules::beta, -180.f, 180.0f);
+		const char* one_dp = "%.0f";
+		const float range = 180;
+		ImGui::SliderFloat("Alpha", &UpdateRules::alpha, -range, range, one_dp);
+		ImGui::SliderFloat("Beta", &UpdateRules::beta, -range, range, one_dp);
 
 		// Color picker
 		//ImGui::ColorEdit3("Color", color);

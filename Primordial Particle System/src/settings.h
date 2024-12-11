@@ -39,7 +39,7 @@ struct FontSettings
 
 struct SimulationSettings
 {
-	inline static constexpr unsigned screen_width = 1900;
+	inline static constexpr unsigned screen_width = 1700;
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 	

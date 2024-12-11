@@ -51,10 +51,15 @@ public:
         smooth_translate(deltaTime);
     }
 
-    void translate()
+    void translate(sf::Vector2f delta = {0.f, 0.f})
     {
+        if (delta.x == 0.f && delta.y == 0.f)
+        {
+            delta = m_delta_;
+        }
+           
         // Invert the signs of the components to move in the correct direction
-        const sf::Vector2f final_translation = { -m_delta_.x / m_currentScroll, -m_delta_.y / m_currentScroll };
+        const sf::Vector2f final_translation = { -delta.x / m_currentScroll, -delta.y / m_currentScroll };
         m_view_.move(final_translation);
         new_view = m_view_.getViewport();
 
@@ -114,6 +119,12 @@ public:
     sf::Vector2f map_window_position_to_world_position(const sf::Vector2<T> window_position) const
     {
         return m_window_ptr_->mapPixelToCoords(static_cast<sf::Vector2i>(window_position), m_view_);
+    }
+
+    void set_camera_position(const sf::Vector2f& position)
+    {
+        m_view_.setCenter(position);
+        update_window_view();
     }
 
 private:

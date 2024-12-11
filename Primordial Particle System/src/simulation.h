@@ -97,12 +97,13 @@ public:
 
 			iterations_ += sub_iterations;
 		}
+
+		ImGui::SFML::Shutdown();
 	}
 
 	void quit()
 	{
 		running_ = false;
-		ImGui::SFML::Shutdown();
 	}
 
 private:

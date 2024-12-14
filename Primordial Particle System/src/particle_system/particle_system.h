@@ -89,7 +89,7 @@ public:
 
 public:
 	explicit ParticlePopulation(sf::RenderWindow& window) : spatial_grid({0, 0, world_width, world_height}),
-	  pps_renderer_(window, positions_x_, positions_y_, angles_, neighbourhood_count_), thread_pool(threads)
+	  pps_renderer_(window, positions_x_, positions_y_, angles, neighbourhood_count_), thread_pool(threads) // , angles_, neighbourhood_count_
 	{
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
@@ -99,7 +99,7 @@ public:
 		init_grid_positioning();
 		randomize_angles();
 
-		pps_renderer_.init_vertex_array();
+		pps_renderer_.init();
 	
 		// choosing 20 random particles to put at the center
 		create_cell_at({ world_width / 2.f, world_height / 2.f }, 35);
@@ -208,7 +208,7 @@ public:
 			spatial_grid.render_grid(window);
 		}
 
-		pps_renderer_.render_particles();
+		pps_renderer_.render();
 	}
 
 

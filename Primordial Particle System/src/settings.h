@@ -29,8 +29,8 @@ struct FontSettings
 
 struct SimulationSettings
 {
-	inline static constexpr unsigned screen_width = 1700;
-	inline static constexpr unsigned screen_height = 1000;
+	inline static constexpr unsigned screen_width = 1720;
+	inline static constexpr unsigned screen_height = 880;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 	
 	inline static constexpr unsigned max_frame_rate = 5200;
@@ -58,15 +58,15 @@ struct PPS_Settings
 	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 5;
+	inline static constexpr size_t sub_iterations = 1;
 	
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 50'000;
+	inline static constexpr unsigned particle_count = 100'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 70;
+	inline static constexpr float scale_factor = 120;
 	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size

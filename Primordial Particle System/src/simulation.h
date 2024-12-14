@@ -92,10 +92,14 @@ public:
 				++iterations_;
 			}
 
+			window_.clear(screen_color);
 			if (rendering_)
 			{
 				render();
 			}
+			ImGui::SFML::Render(window_);
+			window_.display();
+			
 			update_caption();
 
 			iterations_ += sub_iterations;
@@ -114,7 +118,6 @@ private:
 	{
 		const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
 
-		window_.clear(screen_color);
 
 		particle_system_.render(window_, render_hash_grid_, mouse_pos);
 
@@ -124,10 +127,7 @@ private:
 			particle_system_.beacons.render(window_);
 		}
 
-		ImGui::SFML::Render(window_);
-
 		//grid.draw();
-		window_.display();
 	}
 
 	void process_imgui()

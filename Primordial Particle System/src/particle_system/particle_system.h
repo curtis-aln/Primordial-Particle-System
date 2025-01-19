@@ -89,7 +89,7 @@ public:
 
 public:
 	explicit ParticlePopulation(sf::RenderWindow& window) : spatial_grid({0, 0, world_width, world_height}),
-	  pps_renderer_(window, positions_x_, positions_y_, angles, neighbourhood_count_), thread_pool(threads) // , angles_, neighbourhood_count_
+	  pps_renderer_(window, positions_x_, positions_y_, angles_, neighbourhood_count_), thread_pool(threads) // , angles_, neighbourhood_count_
 	{
 		inv_width_ = 1.f / world_width;
 		inv_height_ = 1.f / world_height;
@@ -108,7 +108,7 @@ public:
 
 	void init_grid_positioning()
 	{
-		// Calculate the number of columns and rows for a nearly square grid
+		// Calculate the number of columns and rows for a nearly square render_grid_
 		int cols = static_cast<int>(std::sqrt(PopulationSize * (world_width / world_height)));
 		int rows = PopulationSize / cols + (PopulationSize % cols > 0); // Ensure we cover all particles
 
@@ -147,7 +147,7 @@ public:
 	
 	void add_particles_to_grid()
 	{
-		// At the start of every Nth iteration. all the particles need to be removed from the grid and re-added
+		// At the start of every Nth iteration. all the particles need to be removed from the render_grid_ and re-added
 		spatial_grid.clear();
 
 		// process is split across multiple threads
@@ -212,7 +212,7 @@ public:
 	}
 
 
-	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
+	static void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
 	{
 		
 	}
@@ -293,7 +293,7 @@ private:
 
 	void solveCollisions()
 	{
-		// Multi-thread grid
+		// Multi-thread render_grid_
 		const uint32_t thread_count = thread_pool.m_thread_count;
 		const uint32_t slice_size = (grid_cells_x * grid_cells_y) / thread_count;
 		const uint32_t last_cell = thread_count * slice_size;

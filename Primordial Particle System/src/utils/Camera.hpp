@@ -47,7 +47,7 @@ public:
         m_delta_ = mouse_pos - m_mouse_position_before_;
         m_mouse_position_before_ = mouse_pos;
 
-        // Smooth translate the camera
+        // Smooth translate the camera_
         smooth_translate(deltaTime);
     }
 
@@ -141,7 +141,7 @@ private:
     }
 
     // Lerp for smooth interpolation between two values
-    float lerp(float start, float end, float t)
+    static float lerp(float start, float end, float t)
     {
         return start + t * (end - start);
     }

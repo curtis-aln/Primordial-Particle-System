@@ -250,12 +250,12 @@ Index of this file:
 //-----------------------------------------------------------------------------
 
 // Configuration
-static const int TABLE_DRAW_CHANNEL_BG0 = 0;
-static const int TABLE_DRAW_CHANNEL_BG2_FROZEN = 1;
-static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip (this becomes the last visible channel)
-static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
-static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
-static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
+static constexpr int TABLE_DRAW_CHANNEL_BG0 = 0;
+static constexpr int TABLE_DRAW_CHANNEL_BG2_FROZEN = 1;
+static constexpr int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip (this becomes the last visible channel)
+static constexpr float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
+static constexpr float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
+static constexpr float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
 
 // Helper
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
@@ -2492,7 +2492,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     if (merge_group_mask != 0)
     {
         // We skip channel 0 (Bg0/Bg1) and 1 (Bg2 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
-        const int LEADING_DRAW_CHANNELS = 2;
+        constexpr int LEADING_DRAW_CHANNELS = 2;
         g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
         ImBitArraySetBitRange(remaining_mask, LEADING_DRAW_CHANNELS, splitter->_Count);
@@ -2957,7 +2957,7 @@ void ImGui::TableHeader(const char* label)
     float w_arrow = 0.0f;
     float w_sort_text = 0.0f;
     char sort_order_suf[4] = "";
-    const float ARROW_SCALE = 0.65f;
+    constexpr float ARROW_SCALE = 0.65f;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
         w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);
@@ -3750,7 +3750,7 @@ float ImGui::GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offse
     return offset / (columns->OffMaxX - columns->OffMinX);
 }
 
-static const float COLUMNS_HIT_RECT_HALF_WIDTH = 4.0f;
+static constexpr float COLUMNS_HIT_RECT_HALF_WIDTH = 4.0f;
 
 static float GetDraggedColumnOffset(ImGuiOldColumns* columns, int column_index)
 {

@@ -3,7 +3,7 @@
 #include <SFML/Graphics.hpp>
 #include<iostream>
 
-// Creates a grid of nested level N to give a frame of reference when navigating 2d space
+// Creates a render_grid_ of nested level N to give a frame of reference when navigating 2d space
 
 // todo use recursion to sort the max nest level
 class SFML_Grid

@@ -12,7 +12,7 @@
 - if experiencing error make sure your objects don't go out of bounds
 */
 
-// make cell grid 2d
+// make cell render_grid_ 2d
 // tell objects what index they are in
 // instead of removing and re-adding every frame. only remove and re-add if a object changes its cell
 
@@ -49,7 +49,7 @@ public:
 	}
 
 
-	// adding an object to the spatial hash grid by a position and storing its obj_id
+	// adding an object to the spatial hash render_grid_ by a position and storing its obj_id
 	cell_idx inline add_object(const float x, const float y, const size_t obj_id)
 	{
 		const cell_idx index = hash(x, y);

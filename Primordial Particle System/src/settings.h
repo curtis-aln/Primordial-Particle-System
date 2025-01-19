@@ -1,8 +1,6 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-#include "utils/spatial_grid.h"
-
 #include <array>
 #include <string>
 

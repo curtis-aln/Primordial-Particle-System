@@ -25,8 +25,8 @@ Advanced Window
 
 
 --- graphics ---
-- smooth camera zooming
-- render the particles on the gpu (finally)
+- smooth camera_ zooming
+- render_particles the particles on the gpu (finally)
 
 
 --- misc ---

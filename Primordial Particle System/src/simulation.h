@@ -26,12 +26,12 @@ class Simulation : PPS_Settings, SimulationSettings
 	FrameRateSmoothing<10> clock_{};
 
 	// Allows for translation & Zooming
-	Camera camera{ &window_, 1.f / scale_factor };
+	Camera camera_{ &window_, 1.f / scale_factor };
 
 
 	// Two separate font sizes. allows rendering of text on-screen
-	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
-	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
+	Font title_font_ = { &window_, 60, FontSettings::font_path };
+	Font text_font_ = { &window_, 35, FontSettings::font_path };
 
 	// Runtime variables and statistics
 	size_t iterations_ = 0;
@@ -42,19 +42,19 @@ class Simulation : PPS_Settings, SimulationSettings
 	bool debug_ = false;
 	bool rendering_ = true;
 
-	// display mode makes the particle movement less jittery by substepping, it makes the organisms displayed circular,
-	// and the colours more vibrant and bloomish.
-	bool display_mode_ = false;
+	// display mode makes the particle movement less jittery by sub-stepping, it makes the organisms displayed circular,
+	// and the colours more vibrant and have bloom. todo 
+	//bool display_mode_ = false;
 
 	// radius around the mouse in which debug settings are shown
-	float debug_radius = 8000.f;
-	const float change_in_debug_radius = 500.f;
-	SFML_Grid grid{ window_, sf::FloatRect(0, 0, world_width, world_height), 10 };
+	float debug_radius_ = 8000.f;
+	const float change_in_debug_radius_ = 500.f;
+	SFML_Grid render_grid_{ window_, sf::FloatRect(0, 0, world_width, world_height), 10 };
 
 	// The particle system
 	ParticlePopulation<particle_count> particle_system_{ window_ };
 
-	sf::Clock delta_clock{}; // for imgui
+	sf::Clock delta_clock_{}; // for ImGui
 
 
 public:
@@ -62,17 +62,20 @@ public:
 		sf::VideoMode(screen_width, screen_height),
 		simulation_title,
 		sf::Style::Default,
-		sf::ContextSettings{ 0, 0, 8 } // Anti-aliasing level set to 8
+		sf::ContextSettings{ 0, 0, 8 }
 	)
 	{
-		ImGui::SFML::Init(window_);
+		if (!ImGui::SFML::Init(window_))
+		{
+			std::cout << "ImGUI failed to init\n";
+		}
 
 		window_.setFramerateLimit(max_frame_rate);
 		window_.setVerticalSyncEnabled(Vsync);
 
-		// setting the camera pos to the center by defualt
-		camera.set_camera_position({ world_width / 2, world_height / 2 });
-		camera.update(0.f);
+		// setting the camera_ pos to the center by default
+		camera_.set_camera_position({ world_width / 2, world_height / 2 });
+		camera_.update(0.f);
 	}
 
 	void run()
@@ -80,73 +83,92 @@ public:
 		while (running_)
 		{
 			poll_events();
-			process_imgui();
+			process_im_gui();
 
-			for (size_t i = 0; i < sub_iterations; ++i)
-			{
-				if (iterations_ % add_to_grid_freq == 0)
-				{
-					particle_system_.add_particles_to_grid();
-				}
-				particle_system_.update_particles(paused_);
-				++iterations_;
-			}
-
-			window_.clear(screen_color);
-			if (rendering_)
-			{
-				render();
-			}
-			ImGui::SFML::Render(window_);
-			window_.display();
+			update();
+			render();
 			
 			update_caption();
-
-			iterations_ += sub_iterations;
 		}
 
-		ImGui::SFML::Shutdown();
+		exit();
 	}
 
 	void quit()
 	{
 		running_ = false;
+		
 	}
 
 private:
+	static void exit()
+	{
+		std::cout << "exiting program\n";
+		ImGui::SFML::Shutdown();
+	}
+
+	void update()
+	{
+		// sub-iterations are used to have more updates between rendering, can be used to speed up the simulation or make a smoother simulation
+		for (size_t i = 0; i < sub_iterations; ++i)
+		{
+			// particles don't move very much and take many time steps to cross grid spaces, so updating their grid location happens every nth frame
+			if (iterations_ % add_to_grid_freq == 0)
+			{
+				particle_system_.add_particles_to_grid();
+			}
+
+			particle_system_.update_particles(paused_);
+		}
+		iterations_ += sub_iterations; // accounting for sub-iterations
+	}
+
 	void render()
 	{
-		const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
+		// even with rendering 'off' the sfml window still needs to be cleared and displayed for ImGUI
+		window_.clear(screen_color);
 
+		if (rendering_)
+		{
+			render_particles();
+		}
+
+		ImGui::SFML::Render(window_);
+		window_.display();
+	}
+
+	void render_particles()
+	{
+		const sf::Vector2f mouse_pos = camera_.get_world_mouse_pos();
 
 		particle_system_.render(window_, render_hash_grid_, mouse_pos);
 
 		if (debug_)
 		{
-			particle_system_.render_debug(window_, mouse_pos, debug_radius);
-			particle_system_.beacons.render(window_);
+			particle_system_.render_debug(window_, mouse_pos, debug_radius_);
+			particle_system_.beacons.render(window_); // todo
 		}
 
-		//grid.draw();
+		//render_grid_.draw(); todo 
 	}
 
-	void process_imgui()
+	void process_im_gui()
 	{
 		// Start a new ImGui frame
-		ImGui::SFML::Update(window_, delta_clock.restart());
+		ImGui::SFML::Update(window_, delta_clock_.restart());
 		
 		imgui_update_rules();
 		imgui_color_picker();
 		
 	}
 
-	void imgui_update_rules()
+	static void imgui_update_rules()
 	{
 		ImGui::Begin("Update Rules");
 
 		// sliders
 		const char* one_dp = "%.0f";
-		const float range = 180;
+		constexpr float range = 180;
 		ImGui::SliderFloat("Alpha", &UpdateRules::alpha, -range, range, one_dp);
 		ImGui::SliderFloat("Beta", &UpdateRules::beta, -range, range, one_dp);
 
@@ -201,7 +223,7 @@ private:
 	void poll_events()
 	{
 		float deltaTime = clock_.get_delta_time();
-		camera.update(deltaTime);
+		camera_.update(deltaTime);
 
 		sf::Event event{};
 		while (window_.pollEvent(event))
@@ -224,11 +246,11 @@ private:
 				if (sf::Keyboard::isKeyPressed(sf::Keyboard::Key::LShift))
 				{
 					const int sign = delta < 0 ? -1 : 1;
-					debug_radius += change_in_debug_radius * sign;
+					debug_radius_ += change_in_debug_radius_ * sign;
 				}
 				else
 				{
-					camera.zoom(delta);
+					camera_.zoom(delta);
 				}
 			}
 		}
@@ -240,12 +262,12 @@ private:
 
 		if (sf::Mouse::isButtonPressed(sf::Mouse::Left))
 		{
-			camera.translate();
+			camera_.translate();
 		}
 
 		else if (sf::Mouse::isButtonPressed(sf::Mouse::Right))
 		{
-			particle_system_.beacons.add_beacons(camera.get_world_mouse_pos(), debug_radius);
+			particle_system_.beacons.add_beacons(camera_.get_world_mouse_pos(), debug_radius_);
 		}
 	}
 
@@ -259,10 +281,10 @@ private:
 		constexpr float spacing = 20.f;
 		float i = 2;
 
-		title_font.draw(start, simulation_title);
-		text_font.draw(start + sf::Vector2f{0.f, spacing * i++}, std::to_string(fps) + " fps");
-		text_font.draw(start + sf::Vector2f{0.f, spacing * i++}, "particles");
-		text_font.draw(start + sf::Vector2f{0.f, spacing * i}, "iterations");
+		title_font_.draw(start, simulation_title);
+		text_font_.draw(start + sf::Vector2f{0.f, spacing * i++}, std::to_string(fps) + " fps");
+		text_font_.draw(start + sf::Vector2f{0.f, spacing * i++}, "particles");
+		text_font_.draw(start + sf::Vector2f{0.f, spacing * i}, "iterations");
 
 
 		window_.setTitle(std::to_string(fps));

@@ -29,6 +29,11 @@ inline float fast_round(float x)
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
 
+// Temporary arrays for calculating particle interactions. One array needed for each thread to avoid issues with data writing.
+using TL_NeighbourPositions = std::array<float, PPS_Settings::cell_capacity * 9>;
+extern thread_local TL_NeighbourPositions neighbour_positions_x;
+extern thread_local TL_NeighbourPositions neighbour_positions_y;
+
 
 class ParticlePopulation : PPS_Settings
 {
@@ -50,11 +55,11 @@ class ParticlePopulation : PPS_Settings
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
-	// temporary arrays for calculating particle interactions. One array needed for each thread to avoid issues with data writing.
-	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_x;
-	std::array<std::array<float, cell_capacity * 9>, threads> neighbour_positions_y;
-
 	tp::ThreadPool thread_pool;
+
+	struct CellRange { uint32_t start, end; };
+	std::vector<CellRange> collision_ranges_; // computed once, reused every frame
+	std::vector<CellRange> grid_insert_ranges_;
 
 public:
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
@@ -86,9 +91,6 @@ private:
 
 	void update_particle_positions();
 
-
-	void solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx);
-
 	void solveCollisions();
 
 	void process_cell(
@@ -109,4 +111,7 @@ private:
 		std::array<float, cell_capacity * 9>& n_positions_x,
 		std::array<float, cell_capacity * 9>& n_positions_y,
 		const int neighbours_size);
+
+
+	void precompute_thread_ranges();
 };

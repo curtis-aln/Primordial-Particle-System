@@ -1,10 +1,16 @@
 #include "particle_system.h"
 
 
+thread_local TL_NeighbourPositions neighbour_positions_x;
+thread_local TL_NeighbourPositions neighbour_positions_y;
+
+
 ParticlePopulation::ParticlePopulation(sf::RenderWindow& window) :
 	thread_pool(threads), pps_renderer_(&window, &positions_x_, &positions_y_, &angles_, &neighbourhood_count_, particle_radius),
 	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height)
 {
+	precompute_thread_ranges();
+
 	inv_width_ = 1.f / world_width;
 	inv_height_ = 1.f / world_height;
 
@@ -45,10 +51,9 @@ void ParticlePopulation::init_grid_positioning()
 void ParticlePopulation::create_cell_at(const sf::Vector2f position, const int particle_count)
 {
 	// chooses random particles in the world to concentrate at a certain position.
-	// due to the nature of the simulation, random sampling like this does not affect any of the existing cells
 	for (int _ = 0; _ < particle_count; ++_)
 	{
-		const int index = Random::rand_range(0, particle_count);
+		const int index = Random::rand_range(0u, PPS_Settings::particle_count - 1);
 		positions_x_[index] = position.x;
 		positions_y_[index] = position.y;
 	}
@@ -57,43 +62,21 @@ void ParticlePopulation::create_cell_at(const sf::Vector2f position, const int p
 
 void ParticlePopulation::add_particles_to_grid()
 {
-	// At the start of every Nth iteration. all the particles need to be removed from the grid and re-added
 	spatial_grid.clear();
 
-	// process is split across multiple threads
-	const uint32_t thread_count = thread_pool.m_thread_count;
-	const size_t particles_per_thread = particle_count / thread_count;
-	const size_t last_thread_particles = particle_count - (thread_count - 1) * particles_per_thread;
-
-	for (uint32_t t = 0; t < thread_count; ++t)
+	for (const auto& [start, end] : grid_insert_ranges_)
 	{
-		thread_pool.addTask([this, t, particles_per_thread, last_thread_particles, thread_count] {
-			const size_t start = t * particles_per_thread;
-			const size_t end = (t == thread_count - 1) ? start + last_thread_particles : start + particles_per_thread;
-
+		thread_pool.addTask([this, start, end] {
 			for (size_t i = start; i < end; ++i)
 			{
-				// positions are fetched and wrapped
 				float& x = positions_x_[i];
 				float& y = positions_y_[i];
-
-				// wrapping positions
-				if (x < 0.0f || x >= world_width)
-				{
-					x -= world_width * std::floor(x * inv_width_);
-				}
-
-				if (y < 0.0f || y >= world_height)
-				{
-					y -= world_height * std::floor(y * inv_height_);
-				}
-
-				spatial_grid.add_object(x, y, i);
+				if (x < 0.0f || x >= world_width)  x -= world_width * std::floor(x * inv_width_);
+				if (y < 0.0f || y >= world_height)  y -= world_height * std::floor(y * inv_height_);
+				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
 			}
 			});
 	}
-
-	// syncing threads
 	thread_pool.waitForCompletion();
 }
 
@@ -187,42 +170,15 @@ void ParticlePopulation::update_particle_positions()
 }
 
 
-void ParticlePopulation::solveCollisionThreaded(uint32_t start, uint32_t end, int thread_idx)
-{
-	for (uint32_t idx{ start }; idx < end; ++idx)
-	{
-		process_cell(idx, neighbour_positions_x[thread_idx], neighbour_positions_y[thread_idx]);
-	}
-}
-
-
 void ParticlePopulation::solveCollisions()
 {
-	// Multi-thread grid
-	const uint32_t thread_count = thread_pool.m_thread_count;
-	const uint32_t slice_size = (grid_cells_x * grid_cells_y) / thread_count;
-	const uint32_t last_cell = thread_count * slice_size;
-
-	// Collision pass
-	for (uint32_t i = 0; i < thread_count; ++i)
+	for (const auto& [start, end] : collision_ranges_)
 	{
-		thread_pool.addTask([this, i, slice_size]
-			{
-				uint32_t const start = i * slice_size;
-				uint32_t const end = start + slice_size;
-				solveCollisionThreaded(start, end, i);
-			});
+		thread_pool.addTask([this, start, end] {
+			for (uint32_t idx{ start }; idx < end; ++idx)
+				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
+		});
 	}
-
-	// process rest if the world is not divisible by the thread count
-	if (last_cell < grid_cells_x * grid_cells_y)
-	{
-		thread_pool.addTask([this, last_cell]
-			{
-				solveCollisionThreaded(last_cell, grid_cells_x * grid_cells_y, 0);
-			});
-	}
-
 	thread_pool.waitForCompletion();
 }
 
@@ -256,7 +212,6 @@ void ParticlePopulation::process_cell(
 	const auto* contents = &spatial_grid.grid[cell_index * spatial_grid.cell_max_capacity];
 	const uint8_t cell_size = spatial_grid.cell_capacities[cell_index];
 
-#pragma omp parallel for
 	for (uint8_t idx = 0; idx < cell_size; ++idx)
 	{
 		update_particle(contents[idx], at_border_x, at_border_y, n_positions_x, n_positions_y, neighbours_size);
@@ -296,7 +251,6 @@ inline void ParticlePopulation::add_neighbour_cells_particles(
 	const auto size = spatial_grid.cell_capacities[neighbour_index];
 
 	// adding the neighbour data to the array
-#pragma omp parallel for
 	for (uint8_t idx = 0; idx < size; ++idx)
 	{
 		const obj_idx object_index = contents[idx];
@@ -338,7 +292,7 @@ inline void ParticlePopulation::update_particle(const obj_idx index, const bool 
 
 		if (at_border_y)
 		{
-			direction_y -= world_width * fast_round(direction_y * inv_height_);
+			direction_y -= world_height * fast_round(direction_y * inv_height_);
 		}
 
 		const float dist_sq = direction_x * direction_x + direction_y * direction_y;
@@ -356,4 +310,28 @@ inline void ParticlePopulation::update_particle(const obj_idx index, const bool 
 	neighbourhood_count_[index] = on_right_hemisphere + left;
 
 	angle += (alpha + beta * (on_right_hemisphere + left) * sign) * pi_div_180;
+}
+
+void ParticlePopulation::precompute_thread_ranges()
+{
+	const uint32_t thread_count = thread_pool.m_thread_count;
+	const uint32_t total_cells = grid_cells_x * grid_cells_y;
+	const uint32_t slice_size = total_cells / thread_count;
+
+	collision_ranges_.resize(thread_count);
+	for (uint32_t i = 0; i < thread_count; ++i)
+	{
+		collision_ranges_[i].start = i * slice_size;
+		// Last thread absorbs the remainder — no separate task needed
+		collision_ranges_[i].end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size;
+	}
+
+	// Same for particle grid insertion
+	const uint32_t particles_per_thread = particle_count / thread_count;
+	grid_insert_ranges_.resize(thread_count);
+	for (uint32_t i = 0; i < thread_count; ++i)
+	{
+		grid_insert_ranges_[i].start = i * particles_per_thread;
+		grid_insert_ranges_[i].end = (i == thread_count - 1) ? particle_count : (i + 1) * particles_per_thread;
+	}
 }

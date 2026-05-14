@@ -33,7 +33,7 @@ struct PPS_Settings
 	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 1;
+	inline static constexpr size_t sub_iterations = 2;
 
 	inline static constexpr unsigned threads = 16;
 	inline static constexpr unsigned particle_count = 100'000;

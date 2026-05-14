@@ -67,7 +67,13 @@ set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 add_executable(PrimordialParticleSystem
     # ── Entry point
     src/main.cpp
-  "src/particle_system/particle_system.cpp")
+  "src/particle_system/particle_system.cpp" "src/simulation/simulation.cpp" "src/particle_system/state.h" 
+  "src/simulation/events.cpp" "src/utils/stop_watch.h"
+
+  # ── ImPlot (header-only library — sources must be compiled as part of our target)
+   ${implot_SOURCE_DIR}/implot.cpp
+   ${implot_SOURCE_DIR}/implot_items.cpp
+)
 
 
 # ── Include directories ───────────────────────────────────────────────────────

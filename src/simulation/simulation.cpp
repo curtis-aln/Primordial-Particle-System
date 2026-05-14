@@ -1,0 +1,134 @@
+#include "simulation.h"
+
+#include "imgui-SFML.h"
+#include "imgui.h"
+#include "implot.h"
+
+Simulation::Simulation() : window_(sf::VideoMode({ screen_width, screen_height }), simulation_title)//, sf::Style::None)
+{
+	window_.setFramerateLimit(max_frame_rate);
+	window_.setVerticalSyncEnabled(Vsync);
+
+	if (set_Random_seed)
+	{
+		Random::set_seed(0);
+	}
+
+	init_imGUI();
+}
+
+void Simulation::init_imGUI()
+{
+	if (!ImGui::SFML::Init(window_))
+		std::cerr << "[ERROR]: Failed to initialize ImGui-SFML\n";
+
+	const int ui_scale_percent = 100.f;
+	ImGui::GetIO().FontGlobalScale = ui_scale_percent / 100.f;
+
+	ImPlot::CreateContext();
+}
+
+
+void Simulation::run()
+{
+	m_sim_thread_ = std::thread([this]
+		{
+			while (running)
+				update();
+		});
+
+	while (running)
+	{
+		handle_events();
+		manage_frame_rate();
+		render();
+	}
+
+	m_sim_thread_.join();
+	ImGui::SFML::Shutdown();
+	ImPlot::DestroyContext();
+}
+
+void Simulation::quit()
+{
+	running_ = false;
+}
+
+void Simulation::update()
+{
+	resolve_modifications();
+
+	for (size_t i = 0; i < sub_iterations; ++i)
+	{
+		if (iterations_ % add_to_grid_freq == 0)
+		{
+			particle_system_.add_particles_to_grid();
+		}
+		particle_system_.update_particles();
+	}
+
+	iterations_ += sub_iterations;
+
+
+	// Package results into the triple buffer
+	SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
+
+	// Filling the snapshot with information
+	particle_system_.fill_snapshot(snap);
+	snap.stats.fps = fps_;
+	snap.stats.m_total_time_elapsed_ = m_total_time_elapsed_;
+
+	m_sim_buffer_.publish();
+}
+
+void Simulation::render()
+{
+	if (!m_sim_buffer_.has_new_frame())
+	{
+		return;
+	}
+
+	// Always grab the freshest completed simulation frame
+	const SimSnapshot& snap = m_sim_buffer_.begin_read();
+	float dt = static_cast<float>(m_delta_time_.get_delta());
+	m_total_time_elapsed_ += dt;
+
+	const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
+
+	window_.clear(screen_color);
+
+	pps_renderer_.render(snap);
+
+	if (debug_)
+	{
+		pps_renderer_.render_debug(snap, mouse_pos, debug_radius);
+		particle_system_.beacons.render(window_);
+	}
+
+	handle_imGUI(snap, dt);
+
+	m_sim_buffer_.end_read();
+
+	ImGui::SFML::Render(window_);
+	window_.display();
+}
+
+
+void Simulation::manage_frame_rate()
+{
+	fps_ = static_cast<float>(clock_.get_average_frame_rate());
+	clock_.update_frame_rate();
+
+	std::ostringstream title;
+	title << "Primordial Particle System"
+		<< " | FPS: " << std::fixed << std::setprecision(1) << fps_;
+
+	window_.setTitle(title.str());
+}
+
+
+void Simulation::handle_imGUI(const SimSnapshot& snap, float dt)
+{
+	sf::Time delta_time = sf::seconds(static_cast<float>(dt));
+	ImGui::SFML::Update(window_, delta_time);
+}

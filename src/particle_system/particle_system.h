@@ -9,6 +9,7 @@
 
 #include "PPS_renderer.h"
 #include "beacons.h"
+#include "state.h"
 
 #include "../settings.h"
 
@@ -37,16 +38,17 @@ extern thread_local TL_NeighbourPositions neighbour_positions_y;
 
 class ParticlePopulation : PPS_Settings
 {
+public:
 	// Aligned memory allocation for better vectorization
-	alignas(32) std::vector<float> positions_x_;
-	alignas(32) std::vector<float> positions_y_;
-	alignas(32) std::vector<float> angles_;
-	alignas(32) std::vector<uint16_t> neighbourhood_count_; // used by the renderer
+	RenderData render_data{};
+	WorldToggles toggles{};
+
+private:
 
 	// Pre-computed constants for fast lookup
 	static constexpr int ANGLE_TABLE_SIZE = 256;
-	alignas(32) float sin_table_[ANGLE_TABLE_SIZE];
-	alignas(32) float cos_table_[ANGLE_TABLE_SIZE];
+	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
+	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 
 	// The Spatial Grid Optimizes finding who is nearby
 	SimpleSpatialGrid spatial_grid;
@@ -63,9 +65,9 @@ class ParticlePopulation : PPS_Settings
 
 public:
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
-		&positions_x_, &positions_y_, spatial_grid.cell_width, world_width, world_height };
-
-	PPS_Renderer pps_renderer_;
+		& render_data.positions_x, & render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
+	void fill_snapshot(SimSnapshot& snapshot);
+	
 
 
 public:
@@ -77,10 +79,7 @@ public:
 	
 	void add_particles_to_grid();
 
-	void update_particles(const bool paused = false);
-	void render(sf::RenderWindow& window, const bool draw_spatial_grid = false, const sf::Vector2f pos = { 0 ,0 });
-	void render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius);
-
+	void update_particles();
 
 
 private:
@@ -114,4 +113,5 @@ private:
 
 
 	void precompute_thread_ranges();
+	
 };

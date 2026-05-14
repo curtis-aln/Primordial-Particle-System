@@ -6,7 +6,7 @@ thread_local TL_NeighbourPositions neighbour_positions_y;
 
 
 ParticlePopulation::ParticlePopulation(sf::RenderWindow& window) :
-	thread_pool(threads), pps_renderer_(&window, &positions_x_, &positions_y_, &angles_, &neighbourhood_count_, particle_radius),
+	thread_pool(threads),
 	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height)
 {
 	precompute_thread_ranges();
@@ -40,8 +40,8 @@ void ParticlePopulation::init_grid_positioning()
 		{
 			if (inc < particle_count)
 			{
-				positions_x_[inc] = col * spacingX + Random::rand11_float() * init_position_scatter;
-				positions_y_[inc] = row * spacingY + Random::rand11_float() * init_position_scatter;
+				render_data.positions_x[inc] = col * spacingX + Random::rand11_float() * init_position_scatter;
+				render_data.positions_y[inc] = row * spacingY + Random::rand11_float() * init_position_scatter;
 				inc++;
 			}
 		}
@@ -54,8 +54,8 @@ void ParticlePopulation::create_cell_at(const sf::Vector2f position, const int p
 	for (int _ = 0; _ < particle_count; ++_)
 	{
 		const int index = Random::rand_range(0u, PPS_Settings::particle_count - 1);
-		positions_x_[index] = position.x;
-		positions_y_[index] = position.y;
+		render_data.positions_x[index] = position.x;
+		render_data.positions_y[index] = position.y;
 	}
 }
 
@@ -69,8 +69,8 @@ void ParticlePopulation::add_particles_to_grid()
 		thread_pool.addTask([this, start, end] {
 			for (size_t i = start; i < end; ++i)
 			{
-				float& x = positions_x_[i];
-				float& y = positions_y_[i];
+				float& x = render_data.positions_x[i];
+				float& y = render_data.positions_y[i];
 				if (x < 0.0f || x >= world_width)  x -= world_width * std::floor(x * inv_width_);
 				if (y < 0.0f || y >= world_height)  y -= world_height * std::floor(y * inv_height_);
 				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
@@ -80,34 +80,17 @@ void ParticlePopulation::add_particles_to_grid()
 	thread_pool.waitForCompletion();
 }
 
-void ParticlePopulation::update_particles(const bool paused)
+void ParticlePopulation::update_particles()
 {
 	solveCollisions();
 
-	if (!paused)
+	if (!toggles.paused)
 	{
 		update_particle_positions();
 	}
 
 }
 
-
-void ParticlePopulation::render(sf::RenderWindow& window, const bool draw_spatial_grid, const sf::Vector2f pos)
-{
-	//positions_[0] = pos;
-	if (draw_spatial_grid)
-	{
-		//spatial_grid.render_grid(window); todo
-	}
-
-	pps_renderer_.render();
-}
-
-
-void ParticlePopulation::render_debug(sf::RenderWindow& window, const sf::Vector2f mouse_pos, const float debug_radius)
-{
-	pps_renderer_.render_debug(mouse_pos, debug_radius);
-}
 
 void ParticlePopulation::init_sin_cos_tables()
 {
@@ -123,17 +106,17 @@ void ParticlePopulation::init_sin_cos_tables()
 void ParticlePopulation::init_particle_vectors()
 {
 	// resizing vectors to the population size
-	positions_x_.resize(particle_count);
-	positions_y_.resize(particle_count);
-	angles_.resize(particle_count);
-	neighbourhood_count_.resize(particle_count);
+	render_data.positions_x.resize(particle_count);
+	render_data.positions_y.resize(particle_count);
+	render_data.angles_.resize(particle_count);
+	render_data.neighbourhood_count_.resize(particle_count);
 }
 
 void ParticlePopulation::randomize_angles()
 {
 	for (size_t i = 0; i < particle_count; ++i)
 	{
-		angles_[i] = Random::rand_range(0.f, 2.f * pi);
+		render_data.angles_[i] = Random::rand_range(0.f, 2.f * pi);
 	}
 }
 
@@ -154,14 +137,14 @@ void ParticlePopulation::update_particle_positions()
 			for (int i = start; i < end; ++i)
 			{
 				// Update position
-				float& angle = angles_[i];
+				float& angle = render_data.angles_[i];
 				const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
 
 				angle = fmod(angle, two_pi);
 				angle += two_pi * (angle < 0.0f);
 
-				positions_x_[i] += gamma * cos_table_[angle_index];
-				positions_y_[i] += gamma * sin_table_[angle_index];
+				render_data.positions_x[i] += gamma * cos_table_[angle_index];
+				render_data.positions_y[i] += gamma * sin_table_[angle_index];
 			}
 			});
 	}
@@ -254,8 +237,8 @@ inline void ParticlePopulation::add_neighbour_cells_particles(
 	for (uint8_t idx = 0; idx < size; ++idx)
 	{
 		const obj_idx object_index = contents[idx];
-		n_positions_x[neighbours_size] = positions_x_[object_index];
-		n_positions_y[neighbours_size] = positions_y_[object_index];
+		n_positions_x[neighbours_size] = render_data.positions_x[object_index];
+		n_positions_y[neighbours_size] = render_data.positions_y[object_index];
 		++neighbours_size;
 	}
 }
@@ -267,9 +250,9 @@ inline void ParticlePopulation::update_particle(const obj_idx index, const bool 
 	const int neighbours_size)
 {
 	// first fetch the data we need
-	float& x = positions_x_[index];
-	float& y = positions_y_[index];
-	float& angle = angles_[index];
+	float& x = render_data.positions_x[index];
+	float& y = render_data.positions_y[index];
+	float& angle = render_data.angles_[index];
 
 	// Convert angle to lookup table index
 	const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
@@ -307,7 +290,7 @@ inline void ParticlePopulation::update_particle(const obj_idx index, const bool 
 	// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
 	const int left = total_neighbours - on_right_hemisphere;
 	const auto sign = static_cast<float>(((on_right_hemisphere - left) >= 0) * 2 - 1);
-	neighbourhood_count_[index] = on_right_hemisphere + left;
+	render_data.neighbourhood_count_[index] = on_right_hemisphere + left;
 
 	angle += (alpha + beta * (on_right_hemisphere + left) * sign) * pi_div_180;
 }
@@ -334,4 +317,14 @@ void ParticlePopulation::precompute_thread_ranges()
 		grid_insert_ranges_[i].start = i * particles_per_thread;
 		grid_insert_ranges_[i].end = (i == thread_count - 1) ? particle_count : (i + 1) * particles_per_thread;
 	}
+}
+
+
+void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
+{
+	const int n = particle_count;
+	std::memcpy(snapshot.render.positions_x.data(), render_data.positions_x.data(), n * sizeof(float));
+	std::memcpy(snapshot.render.positions_y.data(), render_data.positions_y.data(), n * sizeof(float));
+	std::memcpy(snapshot.render.neighbourhood_count_.data(), render_data.neighbourhood_count_.data(), n * sizeof(uint16_t));
+	std::memcpy(snapshot.render.angles_.data(), render_data.angles_.data(), n * sizeof(float));
 }

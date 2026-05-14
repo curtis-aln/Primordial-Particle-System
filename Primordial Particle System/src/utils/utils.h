@@ -57,5 +57,30 @@ inline sf::VertexArray createLine(const sf::Vector2f& pos1, const sf::Vector2f& 
 }
 
 
+inline sf::Color convertToSFColor(const float color[3])
+{
+	return sf::Color(
+		static_cast<sf::Uint8>(color[0] * 255), // Red component
+		static_cast<sf::Uint8>(color[1] * 255), // Green component
+		static_cast<sf::Uint8>(color[2] * 255)  // Blue component
+	);
+}
 
+// turning a nearby count into a color which is smoothed
+inline sf::Color interpolate(const float color1[3], const float color2[3], float t)
+{
+	t = std::clamp(t, 0.0f, 1.0f); // Clamp t to the range [0, 1]
+
+	float interpolated[3] = {
+		color1[0] + t * (color2[0] - color1[0]),
+		color1[1] + t * (color2[1] - color1[1]),
+		color1[2] + t * (color2[2] - color1[2])
+	};
+
+	return sf::Color(
+		static_cast<sf::Uint8>(interpolated[0] * 255),
+		static_cast<sf::Uint8>(interpolated[1] * 255),
+		static_cast<sf::Uint8>(interpolated[2] * 255)
+	);
+}
 

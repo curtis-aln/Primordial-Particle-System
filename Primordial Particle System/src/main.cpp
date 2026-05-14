@@ -1,40 +1,43 @@
 #include "simulation.h"
 
-/*
-todo functionality:
-- beacons
-- more organic coloring
-
-average frames per cell: 5.01142
-max frames in cell: 8236
-min frames in cell: 8236
- */
-
-// instead of using "at_border", use the distance between two particles.
-// fill a new array with the subtraction of one array by a value. this is used to calculate directions
-
-// Test how often particles change what cell they are in to see how frequently we need to preform grid update
-
 
 int main()
 {
-	Random::set_seed(0);
-	Simulation().run();
+	Simulation simulation;
+	simulation.run();
 }
 
+/*
+==== Feature TO-DO List ====
 
-/* Performance Testing
-Baseline (200k):         11fps
-SHG 2d arr -> 1d arr     14fps
-cells update particles   28fps
-storing local positions  34fps
-multithreading           50fps
-cos, sin optimization    60fps
-*/
+--- imgui todo ---
+Ability to change particle radius
+Ability to change polygon surfaces
+Ability to change particle scale
 
-/* Performance Testing
-Baseline (500k):               10fps
-pre-made neighbour arr         13fps
-add particles improvements     23fps
-add particles improvements #2  40fps
+- Ability to change simulation speed - implement delta time
+- Add all particle update rule presets
+- Set defualt color settings
+
+Advanced Window
+- ability to change Hash Grid Cells
+- ability to change anti analizing mode
+
+
+--- graphics ---
+- smooth camera_ zooming
+- render_particles the particles on the gpu (finally)
+
+
+--- misc ---
+> Use CMake to create project
+
+
+
+RENDERING OPTIMIZATION
+      "A vertex buffer is a modern GPU feature that allows you to store 
+	         vertex data directly in the GPU’s memory (VRAM)."
+ - The vertex data resides in GPU memory, eliminating the need to resend data every frame. 
+
+ // baseline 25fps
 */

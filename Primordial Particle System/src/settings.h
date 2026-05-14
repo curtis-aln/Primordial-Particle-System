@@ -1,13 +1,34 @@
 #pragma once
 #include <SFML/Graphics.hpp>
 
-//#include "utils/random.h"
-#include "utils/spatial_hash_grid.h"
+#include <array>
+#include <string>
+
+struct ColorSettings
+{
+	// Transition thresholds
+	inline static float range1 = 10.0f;
+	inline static float range2 = 20.0f;
+	inline static float range3 = 30.0f;
+
+	// Colors to be mapped to the ranges
+	inline static float first_color[3] = { 0.0f, 1.0f, 0.0f };  // Initially Green
+	inline static float second_color[3] = { 0.0f, 0.0f, 1.0f }; // Initially Blue
+	inline static float third_color[3] = { 1.0f, 1.0f, 0.0f };  // Initially Yellow
+	inline static float fourth_color[3] = { 1.0f, 0.0f, 1.0f }; // Initially Magenta
+};
+
+struct FontSettings
+{
+	inline static std::string font_path = "fonts/Calibri.ttf";
+	inline static int font_size_debug = 80;
+};
+
 
 struct SimulationSettings
 {
-	inline static constexpr unsigned screen_width = 1900;
-	inline static constexpr unsigned screen_height = 1000;
+	inline static constexpr unsigned screen_width = 1720;
+	inline static constexpr unsigned screen_height = 880;
 	inline static constexpr auto aspect_ratio = static_cast<float>(screen_width) / static_cast<float>(screen_height);
 	
 	inline static constexpr unsigned max_frame_rate = 5200;
@@ -20,44 +41,35 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-	// particles   world scale    frame rate
-	// 500k        400            10fps
-	// 200k        250            60fps
-	// 100k        155            140fps
-	// 50k         100            300fps
-	// 20k         70             840fps
-	// 10k         50             1230fps
-	// 5k          30             2550fps
-	// 1k          15             8500fps
-
-
 	/*
 	particles   world scale    threads   sub_iterations   frame rate
-	500k        400            16        1                52fps
-	200k        250            16        2                112fps
-	100k        160            16        4                320fps
-	50k         105            16        8                540fps
-	20k         70             16        50               1650fps
-	10k         50             16        100              2050fps
-	5k          30             8         200              3300fps
-	1k          15             4         350              18,500fps
+	4m          650            16        1                11fps
+	1m          550            16        1                60fps
+	500k        400            16        1                ?
+	200k        250            16        2                ?
+	100k        160            16        4                ?
+	50k         105            16        8                ?
+	20k         70             16        50               ?
+	10k         50             16        100              ?
+	5k          30             8         200              ?
+	1k          15             4         350              ?
 	*/
 
 	// the amount of iterations of the update loop per frame
 	inline static constexpr size_t sub_iterations = 1;
-
+	
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 500'000;
+	inline static constexpr unsigned particle_count = 100'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 400;
-	inline static constexpr float param_scale_factor = 200.f;
+	inline static constexpr float scale_factor = 120;
+	inline static constexpr float param_scale_factor = 180.f;
 
 	// world width is the virtual space. screen width is the physical window size
-	inline static constexpr auto world_width  = static_cast<float>(SimulationSettings::screen_width) * scale_factor;
-	inline static constexpr auto world_height = static_cast<float>(SimulationSettings::screen_height) * scale_factor;
+	inline static constexpr auto world_width  = SimulationSettings::screen_width * scale_factor;
+	inline static constexpr auto world_height = SimulationSettings::screen_height * scale_factor;
 
 	// calculating how many spatial hash cells should be on each axis
 	inline static constexpr auto grid_cells_y = static_cast<size_t>(scale_factor);
@@ -67,29 +79,48 @@ struct PPS_Settings
 	inline static constexpr float visual_radius = 5.f * param_scale_factor;
 	inline static constexpr float gamma = 0.67f * param_scale_factor;
 
-	// main simulation rules
-	inline static constexpr float alpha = 180.f;
-	inline static constexpr float beta = 17.f;
+
+	// graphical settings
+	inline static float particle_radius = 100.f;
 };
 
 
-
-struct PPS_Graphics
+struct Setting
 {
-	inline static constexpr float particle_radius = 110.f;
+	float alpha;
+	float beta;
+};
 
+struct UpdateRules
+{
+	// Array of settings with inline comments for descriptive names
+	// see https://nagualdesign.github.io/
+	inline static const std::array<Setting, 19> settings = { {
+		{180.0f, 17.0f},   // 0:  Cell-like behaviour (original)
+		{5.0f, 31.0f},     // 1:  Sprites
+		{-23.0f, 2.0f},    // 2:  Donuts
+		{114.0f, -4.0f},   // 3:  Goblins
+		{173.0f, -8.0f},   // 4:  Puff balls
+		{22.f, -29.f},     // 5:  Lava Lamp
+		{174.0f, 15.0f},   // 6:  Thick cell walls
+		{-90.0f, -90.0f},  // 7:  Liquid crystal
+		{-20.0f, -25.0f},  // 8:  Gradual evolution
+		{146.0f, 8.0f},    // 9:  Thermophiles
+		{117.0f, -4.0f},   // 10: Amoebas merging and evolving
+		{35.0f, -5.0f},    // 11: Extreme density
+		{-70.0f, 5.0f},    // 12: Nascent organelles
+		{-177.0f, 3.0f},   // 13: Shockwave
+		{-69.0f, -1.0f},   // 14: Rainbow juice
+		{42.0f, 9.0f},     // 15: Cell nucleus
+		{0.0f, 13.0f},     // 16: Exchanging particles
+		{139.0f, -28.0f},  // 17: Silly string
+		{79.6f, -0.8f}     // 18: Swirling mass
+	} };
 
-	// the colors of each particle density
-	static constexpr sf::Uint8 transparency = 210;
-	inline static const std::vector <std::pair<unsigned, sf::Color >> colors
-	{
-		{0, {10, 255, 50, transparency}},  // green
+	// Default update rule (can be changed dynamically)
+	static constexpr int default_rule_index = 13;
+	inline static const Setting& update_rules = settings[default_rule_index];
 
-		{10, {139,69,19, transparency}}, // brown
-		{15, {0, 0, 255, transparency}},  // blue
-		{35, {255, 255, 0, transparency}}, // yellow
-		{40, {255, 0, 255, transparency}},// magenta
-		{cell_capacity * 5 , {255, 0, 0, transparency}},// red
-
-	};
+	inline static float alpha = update_rules.alpha;
+	inline static float beta = update_rules.beta;
 };

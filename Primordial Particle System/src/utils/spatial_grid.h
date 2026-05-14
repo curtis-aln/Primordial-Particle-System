@@ -12,13 +12,11 @@
 - if experiencing error make sure your objects don't go out of bounds
 */
 
-// make cell grid 2d
+// make cell render_grid_ 2d
 // tell objects what index they are in
 // instead of removing and re-adding every frame. only remove and re-add if a object changes its cell
 
-// resize these to either
-// - uint32_t (4.2 billion max cells/objects, 65,000 x 65,000 grid)
-// - uint16_t (65,536 max cells/objects, 256 x 256 grid)
+
 using cell_idx = uint32_t;
 using obj_idx = uint32_t;
 
@@ -51,7 +49,7 @@ public:
 	}
 
 
-	// adding an object to the spatial hash grid by a position and storing its obj_id
+	// adding an object to the spatial hash render_grid_ by a position and storing its obj_id
 	cell_idx inline add_object(const float x, const float y, const size_t obj_id)
 	{
 		const cell_idx index = hash(x, y);
@@ -165,10 +163,4 @@ public:
 
 	alignas(32) std::vector<std::array<obj_idx, cell_capacity>> grid{};
 	alignas(32) std::vector<uint8_t> objects_count{};
-
-
-public:
-	bool at_border = false;
-	std::array<obj_idx, cell_capacity * 9> found_array = {};
-	uint32_t found_array_size = 0;
 };

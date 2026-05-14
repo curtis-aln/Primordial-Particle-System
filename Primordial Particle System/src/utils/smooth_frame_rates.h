@@ -63,6 +63,13 @@ public:
         return current_size_ == 0 ? 0.0 : frame_rates_array_[(current_index_ + Resolution - 1) % Resolution];
     }
 
+    float get_delta_time() const
+    {
+        return std::chrono::duration<float>(std::chrono::steady_clock::now() - last_frame_time_).count();
+    }
+
+
+
     [[nodiscard]] double get_min_frame_rate() const { return min_frame_rate_; }
     [[nodiscard]] double get_max_frame_rate() const { return max_frame_rate_; }
 

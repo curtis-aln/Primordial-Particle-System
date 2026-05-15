@@ -25,3 +25,51 @@
 
 
 // graphics is buggy even though it says 1000 fps
+
+------ graphics todo on the train ------
+3 Tabs - World, Particle, Simulation, help
+
+World:
+TITLE
+time elapsed
+
+Catagory 1 (graphics):
+-> Checkboxes for each of the grid rendering, particle rendering, debug mode
+-> rendering fps
+-> auto interpolate option (if unchecked add a new checkbox called interpolate)
+-> auto heatmap render option (if unchecked add a new checkbox called heatmap)
+
+Catagory 2 (statistics):
+- updating fps
+- iterations
+- count for each type of particle
+
+Catagory 3 (Interaction):
+Left click is always to pan
+Right click is determined by one of the following checkboxes (only one can be selected)
+- create cell
+- destroy
+- turn into beacons
+a slider to control the effect radius (the scroll wheel also has the same effect)
+- reset simulation
+- randomize simulation
+- clear beacons
+a slider to control Simulation speed (0.1x -> maximum)
+
+
+Particle:
+- An editor of sorts to modify the colors of the particles that they go through, the n values required, and all the
+blending settings
+- alpha value modification
+- beta value modification
+- gamma value modification
+
+
+Simulation:
+- control the amount of threads used for updating
+- control the spatial hash grid dimensions
+
+
+help:
+- keybinds
+- information on how the simulation works

@@ -182,7 +182,7 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
         sf::Color col = m_cached_colors_[i];
         col.a = static_cast<uint8_t>(alpha);
 
-        vertex_array.append({ .position = { px_v - r, py_v - r }, .color = col, .texCoords = { 0.f, 0.f } });
+        vertex_array.append({ .position = { px_v - r, py_v - r }, .color = col, .texCoords = { -1.f, 0.f } });
         vertex_array.append({ .position = { px_v + r, py_v - r }, .color = col, .texCoords = { u1,  0.f } });
         vertex_array.append({ .position = { px_v + r, py_v + r }, .color = col, .texCoords = { u1,  v1  } });
         vertex_array.append({ .position = { px_v - r, py_v - r }, .color = col, .texCoords = { 0.f, 0.f } });
@@ -190,6 +190,7 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
         vertex_array.append({ .position = { px_v - r, py_v + r }, .color = col, .texCoords = { 0.f, v1  } });
     }
 
+    states.texture = &texture;
     window_->draw(vertex_array, states);
 }
 

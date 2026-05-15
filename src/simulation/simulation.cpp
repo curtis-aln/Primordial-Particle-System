@@ -15,6 +15,12 @@ Simulation::Simulation() : window_(sf::VideoMode({ screen_width, screen_height }
 	}
 
 	init_imGUI();
+
+	// Translating the camera to be in the middle of the screen and zooming it in
+	camera.m_view_.move({ world_width / 2.f, world_height / 2.f });
+
+	const float zoom_factor = 1 / (particle_radius * 200.f);
+	// todo
 }
 
 void Simulation::init_imGUI()
@@ -22,7 +28,7 @@ void Simulation::init_imGUI()
 	if (!ImGui::SFML::Init(window_))
 		std::cerr << "[ERROR]: Failed to initialize ImGui-SFML\n";
 
-	const int ui_scale_percent = 100.f;
+	constexpr int ui_scale_percent = 100.f;
 	ImGui::GetIO().FontGlobalScale = ui_scale_percent / 100.f;
 
 	ImPlot::CreateContext();
@@ -58,17 +64,11 @@ void Simulation::update()
 {
 	resolve_modifications();
 
-	for (size_t i = 0; i < sub_iterations; ++i)
+	if (particle_system_.iterations_ % add_to_grid_freq == 0)
 	{
-		if (iterations_ % add_to_grid_freq == 0)
-		{
-			particle_system_.add_particles_to_grid();
-		}
-		particle_system_.update_particles();
+		particle_system_.add_particles_to_grid();
 	}
-
-	iterations_ += sub_iterations;
-
+	particle_system_.update_particles();
 
 	// Package results into the triple buffer
 	SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
@@ -97,7 +97,7 @@ void Simulation::render()
 
 	window_.clear(screen_color);
 
-	pps_renderer_.render(snap, camera.get_current_zoom(), camera);
+	pps_renderer_.render(snap, camera, false);
 
 	if (debug_)
 	{

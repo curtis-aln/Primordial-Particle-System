@@ -31,7 +31,6 @@ class Simulation : PPS_Settings, SimulationSettings
 
 	// Runtime variables and statistics
 	StopWatch m_delta_time_{};
-	size_t iterations_ = 0;
 	float    m_total_time_elapsed_ = 0.f;
 
 	bool running_ = true;

@@ -13,11 +13,13 @@ public:
     float m_pan_friction_ = 8.0f;   // lower = slides longer after release
     float m_pan_lerp_ = 10.0f;  // lower = more lag when starting/changing direction
 
+    float m_current_zoom_ = 1.f;
+
 private:
     sf::RenderWindow* m_window_ = nullptr;
 
     // zoom
-    float m_current_zoom_ = 1.f;
+    
     float m_target_zoom_ = 1.f;
     float m_zoom_strength_ = 0.08f;
     float m_smooth_zoom_speed_ = 8.0f;
@@ -81,6 +83,11 @@ public:
     sf::Vector2f get_world_mouse_pos() const
     {
         return m_window_->mapPixelToCoords(sf::Mouse::getPosition(*m_window_), m_view_);
+    }
+
+    sf::Vector2f mapPixelToCoords(const sf::Vector2i screen_pos) const
+    {
+        return m_window_->mapPixelToCoords(screen_pos, m_view_);
     }
 
     template<typename T>

@@ -94,6 +94,7 @@ void ParticlePopulation::update_particles()
 		update_particle_positions();
 	}
 
+	iterations_++;
 }
 
 
@@ -339,12 +340,16 @@ void ParticlePopulation::precompute_thread_ranges()
 
 void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 {
+	// First all the data directly related to displaying the cells are copied
 	const int n = particle_count;
 	std::memcpy(snapshot.render.positions_x.data(), render_data.positions_x.data(), n * sizeof(float));
 	std::memcpy(snapshot.render.positions_y.data(), render_data.positions_y.data(), n * sizeof(float));
 	std::memcpy(snapshot.render.neighbourhood_count_.data(), render_data.neighbourhood_count_.data(), n * sizeof(uint16_t));
 	std::memcpy(snapshot.render.angles_.data(), render_data.angles_.data(), n * sizeof(float));
 
+	// statistics are calculated
 	frame_rate_smoothing_.update_frame_rate();
 	snapshot.stats.updating_fps = frame_rate_smoothing_.get_average_frame_rate();
+	snapshot.stats.cell_particle_count = PPS_Settings::particle_count;
+	snapshot.stats.iterations_ = iterations_;
 }

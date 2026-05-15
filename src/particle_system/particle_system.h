@@ -70,6 +70,8 @@ private:
 	FrameRateSmoothing<100> frame_rate_smoothing_{};
 
 public:
+	size_t iterations_ = 0;
+
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
 		& render_data.positions_x, & render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
 	

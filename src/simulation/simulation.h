@@ -47,7 +47,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	SFML_Grid grid{ window_, sf::FloatRect({0, 0}, {world_width, world_height}), 10 };
 
 	// The particle system
-	ParticlePopulation particle_system_{ window_ };
+	ParticlePopulation particle_system_{};
 	PPS_Renderer pps_renderer_{&window_};
 
 	// the render-update seperated multithreadding

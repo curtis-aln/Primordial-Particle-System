@@ -1,13 +1,13 @@
 #include "particle_system.h"
 
-
+// Each thread gets their own container of neighbour positions to avoid race conditions
 thread_local TL_NeighbourPositions neighbour_positions_x;
 thread_local TL_NeighbourPositions neighbour_positions_y;
 
 
-ParticlePopulation::ParticlePopulation(sf::RenderWindow& window) :
-	thread_pool(threads),
-	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height)
+ParticlePopulation::ParticlePopulation() :
+	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height),
+	thread_pool(threads)
 {
 	precompute_thread_ranges();
 
@@ -71,8 +71,12 @@ void ParticlePopulation::add_particles_to_grid()
 			{
 				float& x = render_data.positions_x[i];
 				float& y = render_data.positions_y[i];
-				if (x < 0.0f || x >= world_width)  x -= world_width * std::floor(x * inv_width_);
-				if (y < 0.0f || y >= world_height)  y -= world_height * std::floor(y * inv_height_);
+
+				// Wrapping the position to stay within the world
+				if (x < 0.0f || x >= world_width)  
+					x -= world_width * std::floor(x * inv_width_);
+				if (y < 0.0f || y >= world_height)  
+					y -= world_height * std::floor(y * inv_height_);
 				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
 			}
 			});
@@ -247,8 +251,8 @@ inline void ParticlePopulation::add_neighbour_cells_particles(
 
 inline void ParticlePopulation::update_particle(
 	const obj_idx index, const bool at_border_x, const bool at_border_y,
-	std::array<float, cell_capacity * 9>& n_positions_x,
-	std::array<float, cell_capacity * 9>& n_positions_y,
+	const std::array<float, cell_capacity * 9>& n_positions_x,
+	const std::array<float, cell_capacity * 9>& n_positions_y,
 	const int neighbours_size)
 {
 	const float x = render_data.positions_x[index];

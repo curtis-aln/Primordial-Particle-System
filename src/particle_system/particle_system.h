@@ -4,6 +4,7 @@
 #include <cmath>
 #include <array>
 #include <xmmintrin.h>
+#include <numbers>
 #include <vector>
 #include <omp.h> // For OpenMP parallelization
 
@@ -20,7 +21,7 @@
 
 
 // pre-computing constants
-inline static constexpr float pi = 3.1415f;
+inline static constexpr float pi = std::numbers::pi_v<float>;
 inline static constexpr float two_pi = 2.f * pi;
 inline static constexpr float pi_div_180 = pi / 180.f;
 
@@ -46,37 +47,40 @@ public:
 
 private:
 
-	// Pre-computed constants for fast lookup
+	// Pre-computed constants for fast lookup when calculating the direction particles must go
 	static constexpr int ANGLE_TABLE_SIZE = 256;
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 
-	// The Spatial Grid Optimizes finding who is nearby
+	// The Spatial Grid Optimizes finding what particles are nearby
 	SimpleSpatialGrid spatial_grid;
 
-	// pre-computed
+	// pre-computed values for wrapping the particles in the world
 	float inv_width_ = 0.f;
 	float inv_height_ = 0.f;
 
+	// Multi-threading adding to the spatial grid and updating neighbourhood positions
 	tp::ThreadPool thread_pool;
 
 	struct CellRange { uint32_t start, end; };
 	std::vector<CellRange> collision_ranges_; // computed once, reused every frame
 	std::vector<CellRange> grid_insert_ranges_;
 
+	// Statistics
+	FrameRateSmoothing<100> frame_rate_smoothing_{};
+
 public:
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
 		& render_data.positions_x, & render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
 	
-	FrameRateSmoothing<30> frame_rate_smoothing_{};
 	
-	
+
 	void fill_snapshot(SimSnapshot& snapshot);
 	
 
 
 public:
-	explicit ParticlePopulation(sf::RenderWindow& window);
+	explicit ParticlePopulation();
 
 
 	void init_grid_positioning();
@@ -112,8 +116,8 @@ private:
 		bool check_y = true);
 
 	inline void update_particle(const obj_idx index, const bool at_border_x, const bool at_border_y,
-		std::array<float, cell_capacity * 9>& n_positions_x,
-		std::array<float, cell_capacity * 9>& n_positions_y,
+		const std::array<float, cell_capacity * 9>& n_positions_x,
+		const std::array<float, cell_capacity * 9>& n_positions_y,
 		const int neighbours_size);
 
 

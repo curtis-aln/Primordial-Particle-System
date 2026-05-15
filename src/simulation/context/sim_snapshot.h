@@ -9,6 +9,8 @@ struct SimSnapshot
     WorldStatistics stats;
     RenderData render;
 
+    float           sim_tick_seconds = 0.f; // how long one sim tick took
+
 	SimSnapshot() = default;
 
     SimSnapshot(int cell_render_reserve)

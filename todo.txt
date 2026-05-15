@@ -22,3 +22,6 @@
 
 // add_object in spatial hash grid may not be thread safe when a used to add the particles to the grid.
 // see if removing multithreadding for that part makes it any faster
+
+
+// graphics is buggy even though it says 1000 fps

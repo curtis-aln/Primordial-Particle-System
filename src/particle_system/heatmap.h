@@ -65,7 +65,7 @@ public:
             for (float& v : m_counts) v *= m_trail_decay;
     }
 
-    void scatter(const std::vector<float>& px, const std::vector<float>& py,
+    void scatter(const float* px, const float* py,
         int n, const sf::View& view)
     {
         const sf::Vector2f view_center = view.getCenter();

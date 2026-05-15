@@ -20,7 +20,7 @@ class Simulation : PPS_Settings, SimulationSettings
 	sf::RenderWindow window_{};
 
 	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<10> clock_{};
+	FrameRateSmoothing<100> clock_{};
 
 	// Allows for translation & Zooming
 	Camera camera{ &window_, 1.f / scale_factor };
@@ -77,6 +77,7 @@ public:
 
 private:
 	void render();
+	//bool render_particle_system(float dt);
 	void manage_frame_rate();
 	void handle_imGUI(const SimSnapshot& snap, float dt);
 	void draw_tab(const SimSnapshot& snap, float dt);

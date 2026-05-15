@@ -77,6 +77,10 @@ public:
         return m_buffers[m_render_idx.load(std::memory_order_relaxed)];
     }
 
+    bool has_published() const {
+        return m_latest_ready.load(std::memory_order_relaxed) != -1;
+    }
+
     // Call when done rendering this frame.
     void end_read()
     {

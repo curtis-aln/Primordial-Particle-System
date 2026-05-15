@@ -48,8 +48,14 @@ struct RenderData
     alignas(64) std::vector<float> positions_y{};
     alignas(64) std::vector<float> angles_{};
 
+    // Precomputed per-tick cos/sin for each particle's current angle.
+    // Filled once by fill_snapshot() using the sim's angle LUT — costs nothing
+    // at render time compared to calling std::cos/sin per render frame.
+    alignas(64) std::vector<float> cos_angles_{};
+    alignas(64) std::vector<float> sin_angles_{};
+
     alignas(64) std::vector<uint16_t> neighbourhood_count_{};
-    alignas(64) std::vector<sf::Color> colors{}; // filled based on neigbhourhood count, happens on the render thread
+    alignas(64) std::vector<sf::Color> colors{}; // filled based on neighbourhood count, happens on the render thread
 
     RenderData()
     {
@@ -58,6 +64,8 @@ struct RenderData
         positions_y.resize(n);
         colors.resize(n);
         angles_.resize(n);
+        cos_angles_.resize(n);
+        sin_angles_.resize(n);
         neighbourhood_count_.resize(n);
     }
 };

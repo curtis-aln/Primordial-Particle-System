@@ -8,6 +8,7 @@ Simulation::Simulation() : window_(sf::VideoMode({ screen_width, screen_height }
 {
 	window_.setFramerateLimit(max_frame_rate);
 	window_.setVerticalSyncEnabled(Vsync);
+	window_.setFramerateLimit(144);
 
 	if (set_Random_seed)
 	{
@@ -72,6 +73,7 @@ void Simulation::update()
 
 	// Package results into the triple buffer
 	SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
+	//pps_renderer_.notify_new_snapshot(snap);  // resets the age clock
 
 	// Filling the snapshot with information
 	particle_system_.fill_snapshot(snap);
@@ -83,13 +85,14 @@ void Simulation::update()
 
 void Simulation::render()
 {
-	if (!m_sim_buffer_.has_new_frame())
-	{
-		return;
-	}
+	if (!m_sim_buffer_.has_published()) return; // wait for first frame
 
-	// Always grab the freshest completed simulation frame
+	const bool is_new_frame = m_sim_buffer_.has_new_frame();
 	const SimSnapshot& snap = m_sim_buffer_.begin_read();
+
+	if (is_new_frame)
+		pps_renderer_.notify_new_snapshot(snap);
+
 	float dt = static_cast<float>(m_delta_time_.get_delta());
 	m_total_time_elapsed_ += dt;
 
@@ -112,7 +115,6 @@ void Simulation::render()
 	ImGui::SFML::Render(window_);
 	window_.display();
 }
-
 
 void Simulation::manage_frame_rate()
 {

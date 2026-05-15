@@ -16,6 +16,7 @@
 #include "../utils/spatial_grid/simple_spatial_grid.h"
 #include "../utils/random.h"
 #include "../utils/thread_pool.h"
+#include "utils/smooth_frame_rates.h"
 
 
 // pre-computing constants
@@ -66,6 +67,10 @@ private:
 public:
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
 		& render_data.positions_x, & render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
+	
+	FrameRateSmoothing<30> frame_rate_smoothing_{};
+	
+	
 	void fill_snapshot(SimSnapshot& snapshot);
 	
 

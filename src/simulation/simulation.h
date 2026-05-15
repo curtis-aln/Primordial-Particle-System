@@ -80,4 +80,5 @@ private:
 	void render();
 	void manage_frame_rate();
 	void handle_imGUI(const SimSnapshot& snap, float dt);
+	void draw_tab(const SimSnapshot& snap, float dt);
 };

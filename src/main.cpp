@@ -29,3 +29,6 @@ int main()
 // - rendering and updating happen on the same thread
 // - test if fetching the sin and cos values are actually faster, is there such thing as approximated sin and cos
 // -  add_particles_to_grid — spatial_grid.add_object called from multiple threads - see if doing this single threadedly is faster
+
+
+// 320 fps baseline

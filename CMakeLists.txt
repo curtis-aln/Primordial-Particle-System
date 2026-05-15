@@ -73,7 +73,7 @@ add_executable(PrimordialParticleSystem
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
    ${implot_SOURCE_DIR}/implot_items.cpp
-)
+ "src/particle_system/heatmap.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

@@ -82,6 +82,7 @@ void ParticlePopulation::add_particles_to_grid()
 
 void ParticlePopulation::update_particles()
 {
+
 	solveCollisions();
 
 	if (!toggles.paused)
@@ -244,55 +245,67 @@ inline void ParticlePopulation::add_neighbour_cells_particles(
 }
 
 
-inline void ParticlePopulation::update_particle(const obj_idx index, const bool at_border_x, const bool at_border_y,
+inline void ParticlePopulation::update_particle(
+	const obj_idx index, const bool at_border_x, const bool at_border_y,
 	std::array<float, cell_capacity * 9>& n_positions_x,
 	std::array<float, cell_capacity * 9>& n_positions_y,
 	const int neighbours_size)
 {
-	// first fetch the data we need
-	float& x = render_data.positions_x[index];
-	float& y = render_data.positions_y[index];
+	const float x = render_data.positions_x[index];
+	const float y = render_data.positions_y[index];
 	float& angle = render_data.angles_[index];
 
-	// Convert angle to lookup table index
-	const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
-	const float sin_angle = sin_table_[angle_index];
-	const float cos_angle = cos_table_[angle_index];
+	const int   angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE)
+		& (ANGLE_TABLE_SIZE - 1);
+	const float sin_a = sin_table_[angle_index];
+	const float cos_a = cos_table_[angle_index];
 
-	// calculating the total and right particle count
-	int total_neighbours = 0;
-	int on_right_hemisphere = 0;
+	static constexpr float r_sq = visual_radius * visual_radius;
 
-	for (uint32_t i{ 0 }; i < neighbours_size; ++i)
+	int total = 0;
+	int on_right = 0;
+
+	// ── Fast path (vast majority of cells) ────────────────────────────────
+	if (!at_border_x && !at_border_y) [[likely]]
 	{
-		float direction_x = n_positions_x[i] - x;
-		float direction_y = n_positions_y[i] - y;
-
-		if (at_border_x)
+		for (int i = 0; i < neighbours_size; ++i)
 		{
-			direction_x -= world_width * fast_round(direction_x * inv_width_);
+			const float dx = n_positions_x[i] - x;
+			const float dy = n_positions_y[i] - y;
+			const float d_sq = dx * dx + dy * dy;
+
+			if (d_sq > 0.f & d_sq < r_sq)   // bitwise & avoids branch
+			{
+				on_right += (dx * sin_a - dy * cos_a) < 0.f;
+				++total;
+			}
 		}
-
-		if (at_border_y)
+	}
+	// ── Slow path (border cells only) ─────────────────────────────────────
+	else
+	{
+		for (int i = 0; i < neighbours_size; ++i)
 		{
-			direction_y -= world_height * fast_round(direction_y * inv_height_);
-		}
+			float dx = n_positions_x[i] - x;
+			float dy = n_positions_y[i] - y;
+			if (at_border_x) dx -= world_width * fast_round(dx * inv_width_);
+			if (at_border_y) dy -= world_height * fast_round(dy * inv_height_);
+			const float d_sq = dx * dx + dy * dy;
 
-		const float dist_sq = direction_x * direction_x + direction_y * direction_y;
-
-		if (dist_sq > 0 && dist_sq < visual_radius * visual_radius)
-		{
-			on_right_hemisphere += (direction_x * sin_angle - direction_y * cos_angle) < 0;
-			++total_neighbours;
+			if (d_sq > 0.f & d_sq < r_sq)
+			{
+				on_right += (dx * sin_a - dy * cos_a) < 0.f;
+				++total;
+			}
 		}
 	}
 
-	// checking if the direction is on the right of the particle, if so converting this into -1 for false and 1 for trie
-	const int left = total_neighbours - on_right_hemisphere;
-	const auto sign = static_cast<float>(((on_right_hemisphere - left) >= 0) * 2 - 1);
-	render_data.neighbourhood_count_[index] = on_right_hemisphere + left;
+	// on_right + left == on_right + (total - on_right) == total
+	render_data.neighbourhood_count_[index] = static_cast<uint16_t>(total);
 
-	angle += (alpha + beta * (on_right_hemisphere + left) * sign) * pi_div_180;
+	const int   left = total - on_right;
+	const float sign = static_cast<float>(((on_right - left) >= 0) * 2 - 1);
+	angle += (alpha + beta * static_cast<float>(total) * sign) * pi_div_180;
 }
 
 void ParticlePopulation::precompute_thread_ranges()
@@ -327,4 +340,7 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 	std::memcpy(snapshot.render.positions_y.data(), render_data.positions_y.data(), n * sizeof(float));
 	std::memcpy(snapshot.render.neighbourhood_count_.data(), render_data.neighbourhood_count_.data(), n * sizeof(uint16_t));
 	std::memcpy(snapshot.render.angles_.data(), render_data.angles_.data(), n * sizeof(float));
+
+	frame_rate_smoothing_.update_frame_rate();
+	snapshot.stats.updating_fps = frame_rate_smoothing_.get_average_frame_rate();
 }

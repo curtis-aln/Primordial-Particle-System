@@ -29,6 +29,11 @@ private:
     bool m_is_panning_ = false;
 
 public:
+    float get_current_zoom()
+    {
+        return m_current_zoom_;
+    }
+
     explicit Camera(sf::RenderWindow* window_ptr, const float scale = 1.f)
         : m_window_(window_ptr), m_current_zoom_(scale), m_target_zoom_(scale)
     {

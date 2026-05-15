@@ -18,30 +18,17 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-	/*
-	particles   world scale    threads   sub_iterations   frame rate
-	4m          650            16        1                11fps
-	1m          550            16        1                60fps
-	500k        400            16        1                ?
-	200k        250            16        2                ?
-	100k        160            16        4                ?
-	50k         105            16        8                ?
-	20k         70             16        50               ?
-	10k         50             16        100              ?
-	5k          30             8         200              ?
-	1k          15             4         350              ?
-	*/
 
 	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 2;
+	inline static constexpr size_t sub_iterations = 1;
 
-	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 100'000;
+	inline static constexpr unsigned threads = 15;
+	inline static constexpr unsigned particle_count = 1'000'000;
 
 	inline static constexpr int add_to_grid_freq = 5;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 200;
+	inline static constexpr float scale_factor = 600;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size

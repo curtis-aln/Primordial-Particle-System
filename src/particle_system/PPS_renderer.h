@@ -1,8 +1,10 @@
 #pragma once
+#include "heatmap.h"
 #include "../settings.h"
 #include "../utils/utils.h"
 #include "../utils/font.h"
 #include "simulation/context/sim_snapshot.h"
+#include "utils/Camera.hpp"
 
 // This renders all the particles on the screen
 // A circle texture is first generated then it is replicated in a vertex array
@@ -94,7 +96,7 @@ class PPS_Renderer
 	sf::Texture texture;
 	sf::VertexArray vertex_array{ sf::PrimitiveType::Triangles };
 
-	sf::RenderStates states;
+	sf::RenderStates states{};
 
 	// Debug rendering
 	sf::CircleShape visual_radius_shape_;
@@ -103,6 +105,8 @@ class PPS_Renderer
 	sf::RenderWindow* window_ = nullptr;
 	Font debug_font_;
 
+
+	DensityHeatmap heatmap{ PPS_Settings::world_width, PPS_Settings::world_height, SimulationSettings::screen_width, SimulationSettings::screen_height };
 
 
 public:
@@ -118,12 +122,31 @@ public:
 
 		texture = generate_circle_texture(PPS_Settings::particle_radius);
 		texture.setSmooth(true);
+
+		states.blendMode = sf::BlendAdd;
 		
 		std::cout << "Renderer Initialized\n";
 	}
 
-	void render(const SimSnapshot& snapshot)
+	static float zoom_to_alpha(const float zoom,
+		const float zoom_min, const float zoom_max,
+		const float alpha_min, const float alpha_max)
 	{
+		const float t = std::clamp((zoom - zoom_min) / (zoom_max - zoom_min), 0.f, 1.f);
+		return alpha_min + t * (alpha_max - alpha_min);
+	}
+
+	void render(const SimSnapshot& snapshot, const float zoom, Camera& camera)
+	{
+		heatmap.clear();
+		heatmap.scatter(snapshot.render.positions_x, snapshot.render.positions_y, PPS_Settings::particle_count, camera.m_view_);
+		heatmap.upload();          // auto-normalises to peak density each frame
+		heatmap.draw(*window_);
+		return;
+
+		const float alpha = zoom_to_alpha(zoom, 0.001f, 0.01f, 45.f, 225.f);
+		std::cout << alpha << "\n";
+
 		auto* positions_x = &snapshot.render.positions_x;
 		auto* positions_y = &snapshot.render.positions_y;
 		auto* neighbourhood_count = &snapshot.render.neighbourhood_count_;
@@ -141,7 +164,9 @@ public:
 			const float pos_x = (*positions_x)[i];
 			const float pos_y = (*positions_y)[i];
 			const float r = PPS_Settings::particle_radius;
-			const sf::Color col = get_color((*neighbourhood_count)[i]);
+			sf::Color col = get_color((*neighbourhood_count)[i]);
+
+			col.a = alpha;
 
 			vertex_array[base + 0] = { .position = { pos_x - r, pos_y - r }, .color = col, .texCoords = {u0, v0} };
 			vertex_array[base + 1] = { .position = { pos_x + r, pos_y - r }, .color = col, .texCoords = {u1, v0} };

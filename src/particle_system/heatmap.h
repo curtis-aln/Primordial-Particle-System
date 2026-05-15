@@ -10,19 +10,6 @@
 
 #include "../settings.h"
 
-// ─────────────────────────────────────────────────────────────────────────────
-//  DensityHeatmap
-//
-//  Accumulates particle positions into a downsampled count grid, maps density
-//  to colour via a precomputed gradient LUT, then uploads to a GPU texture and
-//  draws it stretched to the target window.
-//
-//  Usage per frame:
-//      heatmap.clear();
-//      heatmap.scatter(positions_x, positions_y, n);
-//      heatmap.upload();
-//      heatmap.draw(window);
-// ─────────────────────────────────────────────────────────────────────────────
 class DensityHeatmap
 {
 public:
@@ -31,7 +18,6 @@ public:
 
     // ── Construction ──────────────────────────────────────────────────────────
 
-    // In the constructor, replace the sprite setup:
     DensityHeatmap(float world_w, float world_h,
         unsigned int screen_w, unsigned int screen_h,
         unsigned int downsample = 2)
@@ -43,103 +29,117 @@ public:
         , m_inv_world_y(static_cast<float>(m_tex_h) / world_h)
         , m_screen_w(screen_w)
         , m_screen_h(screen_h)
-		, m_sprite(m_texture)
+        , m_sprite(m_texture)
     {
         const size_t n = static_cast<size_t>(m_tex_w) * m_tex_h;
-        m_counts.resize(n, 0u);
+        m_counts.resize(n, 0.f);       // now float for decay blending
         m_pixels.resize(n * 4, 0u);
 
         if (!m_texture.resize({ m_tex_w, m_tex_h }))
             std::cout << "[DensityHeatmap] Failed to create texture\n";
 
+        m_sprite = sf::Sprite(m_texture);
+
         precompute_lut();
+    }
+
+    // ── Trail control ─────────────────────────────────────────────────────────
+
+    // decay ∈ [0, 1]:  0 = no trail (each frame independent)
+    //                  0.8 = moderate trail
+    //                  0.95 = long trail
+    void set_trail_decay(float decay)
+    {
+        m_trail_decay = std::clamp(decay, 0.f, 1.f);
     }
 
     // ── Per-frame API ─────────────────────────────────────────────────────────
 
+    // clear() now fades rather than resets when trails are enabled.
+    // Call once per frame before scatter().
     void clear()
     {
-        std::fill(m_counts.begin(), m_counts.end(), 0u);
+        if (m_trail_decay == 0.f)
+            std::fill(m_counts.begin(), m_counts.end(), 0.f);
+        else
+            for (float& v : m_counts) v *= m_trail_decay;
     }
 
     void scatter(const std::vector<float>& px, const std::vector<float>& py,
         int n, const sf::View& view)
     {
-        // View transform: world → normalised screen → texture pixel
         const sf::Vector2f view_center = view.getCenter();
         const sf::Vector2f view_size = view.getSize();
-
         const float inv_vw = 1.f / view_size.x;
         const float inv_vh = 1.f / view_size.y;
 
         for (int i = 0; i < n; ++i)
         {
-            // Normalised device coords [-0.5, 0.5]
             const float nx = (px[i] - view_center.x) * inv_vw + 0.5f;
             const float ny = (py[i] - view_center.y) * inv_vh + 0.5f;
 
-            // Texture pixel coords
             const int tx = static_cast<int>(nx * static_cast<float>(m_tex_w));
             const int ty = static_cast<int>(ny * static_cast<float>(m_tex_h));
 
             if (tx >= 0 && tx < static_cast<int>(m_tex_w) &&
                 ty >= 0 && ty < static_cast<int>(m_tex_h))
             {
-                ++m_counts[ty * m_tex_w + tx];
+                m_counts[ty * m_tex_w + tx] += 1.f;
             }
         }
     }
 
-    // Call after scatter(). Finds peak density, maps counts → LUT → pixel buffer.
     void upload(uint32_t fixed_peak = 0u)
     {
-        const uint32_t peak = fixed_peak > 0u
-            ? fixed_peak
+        const float peak = fixed_peak > 0u
+            ? static_cast<float>(fixed_peak)
             : *std::max_element(m_counts.begin(), m_counts.end());
 
-        if (peak == 0u)
+        if (peak == 0.f)
             return;
 
-        const float inv_peak = 1.f / static_cast<float>(peak);
+        const float inv_peak = 1.f / peak;
         const size_t n = m_counts.size();
 
         for (size_t i = 0; i < n; ++i)
         {
-            const float t = std::clamp(static_cast<float>(m_counts[i]) * inv_peak, 0.f, 1.f);
+            const float t = std::clamp(m_counts[i] * inv_peak, 0.f, 1.f);
             const sf::Color colour = sample_lut(t);
-            const size_t   base = i * 4;
+            const size_t base = i * 4;
 
             m_pixels[base + 0] = colour.r;
             m_pixels[base + 1] = colour.g;
             m_pixels[base + 2] = colour.b;
-            m_pixels[base + 3] = colour.a;
+            // Per-pixel alpha: zero-density cells are fully transparent so the
+            // background shows through even when the sprite alpha is 255.
+            m_pixels[base + 3] = (t > 0.f) ? colour.a : 0u;
         }
 
         m_texture.update(m_pixels.data());
     }
 
-    // Replace draw() entirely — reset view so camera doesn't affect it
-    void draw(sf::RenderWindow& window)
+    // alpha: 0 = invisible, 255 = fully opaque
+    void draw(sf::RenderWindow& window, uint8_t alpha = 255)
     {
         const sf::View saved_view = window.getView();
-
-        // Draw in raw screen space, no camera
         window.setView(window.getDefaultView());
 
-        sf::Sprite sprite(m_texture);
-        sprite.setScale({
+        m_sprite.setScale({
             static_cast<float>(SimulationSettings::screen_width) / static_cast<float>(m_tex_w),
             static_cast<float>(SimulationSettings::screen_height) / static_cast<float>(m_tex_h)
             });
-        window.draw(sprite);
+
+        // Tinting with {255,255,255,alpha} modulates the whole sprite's opacity
+        // without touching the RGB colours from the LUT.
+        m_sprite.setColor(sf::Color(255, 255, 255, alpha));
+
+        window.draw(m_sprite);
 
         window.setView(saved_view);
     }
 
     // ── Tunables ──────────────────────────────────────────────────────────────
 
-    // Replace to taste. Each stop is { t ∈ [0,1], RGBA }.
-    // Default: black → deep blue → cyan → green → yellow → white
     struct GradientStop { float t; sf::Color colour; };
 
     void set_gradient(std::vector<GradientStop> stops)
@@ -187,10 +187,8 @@ private:
                 const float lo = m_stops[i - 1].t;
                 const float hi = m_stops[i].t;
                 const float s = (t - lo) / (hi - lo);
-
                 const sf::Color& a = m_stops[i - 1].colour;
                 const sf::Color& b = m_stops[i].colour;
-
                 return {
                     lerp_u8(a.r, b.r, s),
                     lerp_u8(a.g, b.g, s),
@@ -218,11 +216,12 @@ private:
     float        m_world_w, m_world_h;
     unsigned int m_tex_w, m_tex_h;
     float        m_inv_world_x, m_inv_world_y;
+    float        m_trail_decay = 0.f;  // 0 = disabled
 
-    std::vector<uint32_t>    m_counts;   // density accumulator
-    std::vector<uint8_t>     m_pixels;   // RGBA upload buffer
-    sf::Texture              m_texture;
-    sf::Sprite               m_sprite;
+    std::vector<float>    m_counts;    // float so decay works smoothly
+    std::vector<uint8_t>  m_pixels;
+    sf::Texture           m_texture;
+    sf::Sprite            m_sprite;
 
     std::array<sf::Color, LUT_SIZE> m_lut;
     std::vector<GradientStop>       m_stops;

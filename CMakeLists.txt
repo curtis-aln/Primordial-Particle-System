@@ -67,13 +67,29 @@ set(IMGUI_DIR ${imgui_SOURCE_DIR} CACHE PATH "" FORCE)
 add_executable(PrimordialParticleSystem
     # ── Entry point
     src/main.cpp
-  "src/particle_system/particle_system.cpp" "src/simulation/simulation.cpp" "src/particle_system/state.h" 
-  "src/simulation/events.cpp" "src/utils/stop_watch.h"
+  "src/particle_system/particle_system.cpp" 
+  "src/particle_system/state.h" 
+  "src/particle_system/PPS_renderer.cpp" 
+
+  "src/simulation/simulation.cpp" 
+  "src/simulation/events.cpp" 
+
+  "src/utils/stop_watch.h"
+  "src/particle_system/heatmap.h" 
 
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
    ${implot_SOURCE_DIR}/implot_items.cpp
- "src/particle_system/heatmap.h" "src/simulation/imgui_tab.cpp" "src/particle_system/PPS_renderer.cpp")
+ "src/simulation/imgui/imgui_handling.cpp" 
+ "src/simulation/imgui/tabs/world_tab.h" 
+ "src/simulation/imgui/tabs/particle_tab.h" 
+ "src/simulation/imgui/tabs/particle_tab.cpp" 
+ "src/simulation/imgui/tabs/help_tab.h" 
+ "src/simulation/imgui/tabs/simulation_tab.h" 
+ "src/simulation/imgui/tabs/simulation_tab.cpp" 
+ "src/simulation/imgui/control_panel.h" 
+ "src/simulation/imgui/control_panel.cpp" 
+ "src/simulation/imgui/tabs/i_tab.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

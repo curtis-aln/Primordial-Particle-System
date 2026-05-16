@@ -2,6 +2,8 @@
 #include <SFML/Graphics/Color.hpp>
 #include <vector>
 
+#include "../settings.h"
+
 // ─────────────────────────────────────────────────────────────────────────────
 //  WorldToggles
 //  Owned by the main thread (ImGui writes, update thread reads).

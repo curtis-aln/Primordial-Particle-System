@@ -1,11 +1,19 @@
 #include "imgui-SFML.h"
-#include "simulation.h"
+#include "../simulation.h"
 
 void Simulation::handle_imGUI(const SimSnapshot& snap, float dt)
 {
 
     sf::Time delta_time = sf::seconds(static_cast<float>(dt));
     ImGui::SFML::Update(window_, delta_time);
+
+    //WorldToggles toggles_copy = snap.toggles;
+    //ImGuiContext ctx{ toggles_copy, m_cmd_mutex, m_commands };
+
+    //m_control_panel_.draw(snap, ctx, dt);
+
+    //if (std::memcmp(&toggles_copy, &snap.toggles, sizeof(WorldToggles)) != 0)
+    //    ctx.push({ CommandType::SetToggles, toggles_copy });
 
     draw_tab(snap, dt);
 }

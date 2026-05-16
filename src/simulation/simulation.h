@@ -13,6 +13,7 @@
 #include <string>
 
 #include "../utils/stop_watch.h"
+#include "imgui/control_panel.h"
 
 class Simulation : PPS_Settings, SimulationSettings
 {
@@ -44,6 +45,10 @@ class Simulation : PPS_Settings, SimulationSettings
 	float debug_radius = 8000.f;
 	const float change_in_debug_radius = 500.f;
 	SFML_Grid grid{ window_, sf::FloatRect({0, 0}, {world_width, world_height}), 10 };
+
+	// IMGui
+	ControlPanel    m_control_panel_;
+
 
 	// The particle system
 	ParticlePopulation particle_system_{};

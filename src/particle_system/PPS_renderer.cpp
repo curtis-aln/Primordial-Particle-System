@@ -113,10 +113,10 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera, bool rend
 
     extrapolate_positions(snapshot, camera, visible_world_width); 
 
-    constexpr float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
-    constexpr float transition_thresh_end = 1400.f * PPS_Settings::particle_radius;
+    const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
+    const float transition_thresh_end = 1400.f * PPS_Settings::particle_radius;
   
-    constexpr float diff = transition_thresh_end - transition_thresh_begin;
+    const float diff = transition_thresh_end - transition_thresh_begin;
 
     const float alpha_heat_map = std::clamp((visible_world_width - transition_thresh_begin) / diff * 255.f, 0.f, 255.f);
     const float alpha_particles = 255.f - alpha_heat_map;
@@ -173,7 +173,7 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
     for (size_t i = 0; i < PPS_Settings::particle_count; ++i)
     {
         const float px_v = pos_x[i], py_v = pos_y[i];
-        constexpr float r = PPS_Settings::particle_radius;
+        const float r = PPS_Settings::particle_radius;
 
         if (px_v < top_left.x || py_v < top_left.y ||
             px_v > bottom_right.x || py_v > bottom_right.y)
@@ -243,8 +243,8 @@ void PPS_Renderer::extrapolate_positions(const SimSnapshot& snapshot,
     const Camera& camera,
     const float visible_world_width)
 {
-    constexpr float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
-    constexpr float extrap_disable_width = transition_thresh_begin * 0.25f; // ~200*radius
+    const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
+    const float extrap_disable_width = transition_thresh_begin * 0.25f; // ~200*radius
 
     constexpr float enable_threshold_seconds = 1.f / 20.f;
 
@@ -259,7 +259,7 @@ void PPS_Renderer::extrapolate_positions(const SimSnapshot& snapshot,
     if (static_cast<int>(m_extrap_x_.size()) != n) { m_extrap_x_.resize(n); m_extrap_y_.resize(n); }
 
     // ── Visible frustum (with one-particle margin) ────────────────────────
-    constexpr float r = PPS_Settings::particle_radius;
+    const float r = PPS_Settings::particle_radius;
     const sf::Vector2f tl = camera.mapPixelToCoords({ 0, 0 });
     const sf::Vector2f br = camera.mapPixelToCoords(
         { SimulationSettings::screen_width, SimulationSettings::screen_height });

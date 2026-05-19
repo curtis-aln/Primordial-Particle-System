@@ -12,23 +12,19 @@ struct SimulationSettings
 	inline static const sf::Color screen_color = { 0, 0, 0 };
 	inline static const std::string simulation_title = "Primordial Particle Simulation";
 
-	inline static constexpr bool record = false; // for recording timelapses
 	inline static constexpr bool Vsync = false;
 };
 
 struct PPS_Settings
 {
-
-	// the amount of iterations of the update loop per frame
-	inline static constexpr size_t sub_iterations = 1;
-
 	inline static constexpr unsigned threads = 16;
-	inline static constexpr unsigned particle_count = 100'000;
+	inline static constexpr unsigned particle_count = 1'000'000;
 
-	inline static constexpr int add_to_grid_freq = 3;
+	// how many frames should pass before the spatial hash grid is updated
+	inline static int add_to_grid_freq = 3;
 
 	// scale factors determine how intense / large the difference is
-	inline static constexpr float scale_factor = 200;
+	inline static constexpr float scale_factor = 900;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	// world width is the virtual space. screen width is the physical window size
@@ -45,12 +41,12 @@ struct PPS_Settings
 	inline static constexpr float gamma = 0.67f * param_scale_factor;
 
 	// main simulation rules
-	inline static constexpr float alpha = 180.f;
-	inline static constexpr float beta = 17.f;
+	inline static float alpha = 180.f;
+	inline static float beta = 13.f;
 
 
 	// graphical settings
-	inline static constexpr float particle_radius = 150.f;
+	inline static float particle_radius = 160.f;
 
 
 	inline static constexpr size_t max_beacon_count = 100;

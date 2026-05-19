@@ -65,40 +65,57 @@ public:
             for (float& v : m_counts) v *= m_trail_decay;
     }
 
-    void scatter(const float* px, const float* py,
-        int n, const sf::View& view)
+    void scatter(const float* px, const float* py, int n, const sf::View& view)
     {
         const sf::Vector2f view_center = view.getCenter();
         const sf::Vector2f view_size = view.getSize();
         const float inv_vw = 1.f / view_size.x;
         const float inv_vh = 1.f / view_size.y;
 
+        const int W = static_cast<int>(m_tex_w);
+        const int H = static_cast<int>(m_tex_h);
+
         for (int i = 0; i < n; ++i)
         {
-            const float nx = (px[i] - view_center.x) * inv_vw + 0.5f;
-            const float ny = (py[i] - view_center.y) * inv_vh + 0.5f;
+            // Continuous texture-space position
+            const float fx = ((px[i] - view_center.x) * inv_vw + 0.5f) * W - 0.5f;
+            const float fy = ((py[i] - view_center.y) * inv_vh + 0.5f) * H - 0.5f;
 
-            const int tx = static_cast<int>(nx * static_cast<float>(m_tex_w));
-            const int ty = static_cast<int>(ny * static_cast<float>(m_tex_h));
+            const int x0 = static_cast<int>(std::floor(fx));
+            const int y0 = static_cast<int>(std::floor(fy));
+            const int x1 = x0 + 1;
+            const int y1 = y0 + 1;
 
-            if (tx >= 0 && tx < static_cast<int>(m_tex_w) &&
-                ty >= 0 && ty < static_cast<int>(m_tex_h))
-            {
-                m_counts[ty * m_tex_w + tx] += 1.f;
-            }
+            // Bilinear weights
+            const float sx = fx - x0;
+            const float sy = fy - y0;
+
+            // Splat to 4 neighbours (bounds checked)
+            auto splat = [&](int x, int y, float w) {
+                if (x >= 0 && x < W && y >= 0 && y < H)
+                    m_counts[y * W + x] += w;
+                };
+
+            splat(x0, y0, (1.f - sx) * (1.f - sy));
+            splat(x1, y0, sx * (1.f - sy));
+            splat(x0, y1, (1.f - sx) * sy);
+            splat(x1, y1, sx * sy);
         }
     }
 
     void upload(uint32_t fixed_peak = 0u)
     {
-        const float peak = fixed_peak > 0u
+        float raw_peak = fixed_peak > 0u
             ? static_cast<float>(fixed_peak)
             : *std::max_element(m_counts.begin(), m_counts.end());
 
-        if (peak == 0.f)
-            return;
+        if (raw_peak == 0.f) return;
 
-        const float inv_peak = 1.f / peak;
+        // Smooth the peak over time — kills brightness flicker
+        m_smoothed_peak = m_smoothed_peak * m_peak_ema + raw_peak * (1.f - m_peak_ema);
+
+        const float inv_peak = 1.f / m_smoothed_peak;
+  
         const size_t n = m_counts.size();
 
         for (size_t i = 0; i < n; ++i)
@@ -212,6 +229,8 @@ private:
     }
 
     // ── Members ───────────────────────────────────────────────────────────────
+    float m_smoothed_peak = 1.f;
+    float m_peak_ema = 0.96f; // 0 = no smoothing, closer to 1 = more smoothing
 
     float        m_world_w, m_world_h;
     unsigned int m_tex_w, m_tex_h;

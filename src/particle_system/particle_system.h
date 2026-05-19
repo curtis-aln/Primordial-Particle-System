@@ -48,7 +48,7 @@ public:
 private:
 
 	// Pre-computed constants for fast lookup when calculating the direction particles must go
-	static constexpr int ANGLE_TABLE_SIZE = 256;
+	static constexpr int ANGLE_TABLE_SIZE = 1024;
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 

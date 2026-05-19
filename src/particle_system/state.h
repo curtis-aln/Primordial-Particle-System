@@ -12,7 +12,7 @@
 struct WorldToggles
 {
     bool debug_mode = false;  // show per-cell debug info
-    bool paused = false;  // pause the simulation update loop
+    bool paused = true;  // pause the simulation update loop
     bool draw_grid = false;  // render the cell spatial hash grid
     bool track_statistics = true;   // gather per-frame statistics
     bool m_tick_frame_time = false;  // whether to advance the simulation by one tick (for debugging)

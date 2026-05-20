@@ -52,7 +52,6 @@ void Simulation::run()
 
 void Simulation::quit()
 {
-    running_ = false;
     running = false;
 }
 
@@ -164,7 +163,7 @@ void Simulation::render()
 
     window_.clear(screen_color);
 
-    pps_renderer_.render(snap, camera, false);
+    pps_renderer_.render(snap, camera);
 
     if (debug_)
     {

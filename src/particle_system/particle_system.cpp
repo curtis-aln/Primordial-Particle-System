@@ -116,6 +116,9 @@ void ParticlePopulation::init_particle_vectors()
 	render_data.positions_y.resize(particle_count);
 	render_data.angles_.resize(particle_count);
 	render_data.neighbourhood_count_.resize(particle_count);
+
+	render_data.cos_angles_.resize(particle_count);  
+	render_data.sin_angles_.resize(particle_count); 
 }
 
 void ParticlePopulation::randomize_angles()

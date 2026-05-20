@@ -41,7 +41,7 @@ public:
         const float zoom_min, const float zoom_max,
         const float alpha_min, const float alpha_max);
 
-    void render(const SimSnapshot& snapshot, Camera& camera, bool rend_map = true, bool rend_particles = true);
+    void render(const SimSnapshot& snapshot, Camera& camera);
     void render_heat_map(const SimSnapshot& snapshot, const Camera& camera, float alpha);
     void render_particles(const SimSnapshot& snapshot, const Camera& camera, float alpha);
     void render_debug(const SimSnapshot& snapshot, const sf::Vector2f mouse_pos, const float mouse_radius);

@@ -33,7 +33,6 @@ class Simulation : PPS_Settings, SimulationSettings
     Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
     // ── Runtime state ─────────────────────────────────────────────────────────
-    bool  running_ = true;
     bool  render_hash_grid_ = false;
     bool  debug_ = false;
     bool  rendering_ = true;

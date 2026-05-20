@@ -23,7 +23,7 @@ struct PPS_Settings
 
     inline static int add_to_grid_freq = 3;
 
-    inline static constexpr float scale_factor = 900;
+    inline static constexpr float scale_factor = 500;
     inline static constexpr float param_scale_factor = 200.f;
 
     inline static constexpr auto world_width = SimulationSettings::screen_width * scale_factor;

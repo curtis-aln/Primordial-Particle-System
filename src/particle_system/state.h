@@ -19,6 +19,7 @@ struct WorldToggles
     bool m_tick_frame_time = false;
     bool m_rendering_ = true;
     bool hide_panels = false;
+    bool render_particles = true;
 
     // ── Rendering mode ────────────────────────────────────────────────────────
     // IMGUI_TODO: consume in PPS_renderer.cpp — PPS_Renderer::render()

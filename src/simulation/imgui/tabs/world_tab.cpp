@@ -45,7 +45,7 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
     // Particle / grid / debug checkboxes in two columns
     float col_w = ImGui::GetContentRegionAvail().x * 0.5f;
     ImGui::BeginGroup();
-    toggle(ctx, "Particles", &WorldToggles::m_rendering_);
+    toggle(ctx, "Particles", &WorldToggles::render_particles);
     toggle(ctx, "Draw Grid", &WorldToggles::draw_grid);
     ImGui::EndGroup();
     ImGui::SameLine(col_w);

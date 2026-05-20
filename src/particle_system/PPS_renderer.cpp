@@ -42,6 +42,8 @@ PPS_Renderer::PPS_Renderer(sf::RenderWindow* window) : window_(window)
 
     states.blendMode = sf::BlendAdd;
 
+    heatmap.set_trail_decay(0.85);
+
     std::cout << "Renderer Initialized\n";
 }
 
@@ -55,9 +57,11 @@ float PPS_Renderer::zoom_to_alpha(const float zoom,
 }
 
 // ── Main render ───────────────────────────────────────────────────────────────
-void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera,
-    bool rend_map, bool rend_particles)
+void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera)
 {
+    bool rend_particles = snapshot.toggles.render_particles;
+    bool rend_map = true;
+
     const float left = camera.mapPixelToCoords({ 0, 0 }).x;
     const float right = camera.mapPixelToCoords(
         { SimulationSettings::screen_width, 0 }).x;
@@ -69,36 +73,38 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera,
     const float transition_thresh_end = 1400.f * PPS_Settings::particle_radius;
     const float diff = transition_thresh_end - transition_thresh_begin;
 
-    const float alpha_heat_map = std::clamp(
-        (visible_world_width - transition_thresh_begin) / diff * 255.f,
-        0.f, 255.f);
-    const float alpha_particles = 255.f - alpha_heat_map;
-
-    // ── Respect auto_heatmap / auto_interpolate toggles ───────────────────────
-    // IMGUI_TODO (partial): auto_heatmap and auto_interpolate are read from
-    //   snapshot.toggles below.  The toggle bits are set by WorldTab and flow
-    //   through the command system → Simulation::resolve_modifications() →
-    //   particle_system_.toggles → snapshot.toggles.
-    //   Once resolve_modifications() copies WorldToggles into the sim, this
-    //   code will work without further changes.
-
     const auto& tgl = snapshot.toggles;
+
+    float alpha_heat_map;
+    float alpha_particles;
 
     if (tgl.auto_heatmap)
     {
-        // Original zoom-based blending
+        // Original zoom-based blending — both alphas derived from zoom level
+        alpha_heat_map = std::clamp(
+            (visible_world_width - transition_thresh_begin) / diff * 255.f,
+            0.f, 255.f);
+        alpha_particles = 255.f - alpha_heat_map;
+
+        //if (rend_particles != false)
         rend_particles = visible_world_width < transition_thresh_end;
+
         rend_map = visible_world_width > transition_thresh_begin;
     }
     else
     {
+        // Manual override — each mode is fully on or fully off, independently
         rend_map = tgl.force_heatmap;
-        rend_particles = !tgl.force_heatmap || tgl.m_rendering_;
+        rend_particles = tgl.render_particles;
+
+        alpha_heat_map = rend_map ? 255.f : 0.f;
+        alpha_particles = rend_particles ? 255.f : 0.f;
     }
 
     if (rend_map)       render_heat_map(snapshot, camera, alpha_heat_map);
     if (rend_particles) render_particles(snapshot, camera, alpha_particles);
 }
+
 
 // ── Heat map ──────────────────────────────────────────────────────────────────
 void PPS_Renderer::render_heat_map(const SimSnapshot& snapshot,

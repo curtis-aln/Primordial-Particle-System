@@ -80,6 +80,10 @@ add_executable(PrimordialParticleSystem
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
    ${implot_SOURCE_DIR}/implot_items.cpp
+
+src/simulation/imgui/tabs/world_tab.cpp
+src/simulation/imgui/tabs/help_tab.cpp
+
  "src/simulation/imgui/imgui_handling.cpp" 
  "src/simulation/imgui/tabs/world_tab.h" 
  "src/simulation/imgui/tabs/particle_tab.h" 
@@ -89,7 +93,7 @@ add_executable(PrimordialParticleSystem
  "src/simulation/imgui/tabs/simulation_tab.cpp" 
  "src/simulation/imgui/control_panel.h" 
  "src/simulation/imgui/control_panel.cpp" 
- "src/simulation/imgui/tabs/i_tab.h")
+ "src/simulation/imgui/tabs/i_tab.h" "src/particle_system/particle_colors.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

@@ -4,126 +4,176 @@
 #include "imgui.h"
 #include "implot.h"
 
-Simulation::Simulation() : window_(sf::VideoMode({ screen_width, screen_height }), simulation_title)//, sf::Style::None)
+// ── Constructor ───────────────────────────────────────────────────────────────
+Simulation::Simulation()
+    : window_(sf::VideoMode({ screen_width, screen_height }), simulation_title)
 {
-	window_.setFramerateLimit(max_frame_rate);
-	window_.setVerticalSyncEnabled(Vsync);
-	window_.setFramerateLimit(144);
+    window_.setFramerateLimit(144);
+    window_.setVerticalSyncEnabled(Vsync);
 
-	if (set_Random_seed)
-	{
-		Random::set_seed(0);
-	}
+    if (set_Random_seed)
+        Random::set_seed(0);
 
-	init_imGUI();
+    init_imGUI();
 
-	// Translating the camera to be in the middle of the screen and zooming it in
-	camera.m_view_.move({ world_width / 2.f, world_height / 2.f });
-
-	const float zoom_factor = 1 / (particle_radius * 200.f);
-	// todo
+    camera.m_view_.move({ world_width / 2.f, world_height / 2.f });
 }
 
+// ── ImGui init ────────────────────────────────────────────────────────────────
 void Simulation::init_imGUI()
 {
-	if (!ImGui::SFML::Init(window_))
-		std::cerr << "[ERROR]: Failed to initialize ImGui-SFML\n";
+    if (!ImGui::SFML::Init(window_))
+        std::cerr << "[ERROR]: Failed to initialize ImGui-SFML\n";
 
-	constexpr int ui_scale_percent = 100.f;
-	ImGui::GetIO().FontGlobalScale = ui_scale_percent / 100.f;
-
-	ImPlot::CreateContext();
+    ImGui::GetIO().FontGlobalScale = 1.0f;
+    ImPlot::CreateContext();
 }
 
-
+// ── Main loop ─────────────────────────────────────────────────────────────────
 void Simulation::run()
 {
-	m_sim_thread_ = std::thread([this]
-		{
-			while (running)
-				update();
-		});
+    m_sim_thread_ = std::thread([this]
+        {
+            while (running)
+                update();
+        });
 
-	while (running)
-	{
-		handle_events();
-		manage_frame_rate();
-		render();
-	}
+    while (running)
+    {
+        handle_events();
+        manage_frame_rate();
+        render();
+    }
 
-	m_sim_thread_.join();
-	ImGui::SFML::Shutdown();
-	ImPlot::DestroyContext();
+    m_sim_thread_.join();
+    ImGui::SFML::Shutdown();
+    ImPlot::DestroyContext();
 }
 
 void Simulation::quit()
 {
-	running_ = false;
+    running = false;
 }
 
+// ── Update (sim thread) ───────────────────────────────────────────────────────
 void Simulation::update()
 {
-	resolve_modifications();
+    resolve_modifications();
 
-	if (particle_system_.iterations_ % add_to_grid_freq == 0)
-	{
-		particle_system_.add_particles_to_grid();
-	}
-	particle_system_.update_particles();
+    if (particle_system_.iterations_ % add_to_grid_freq == 0)
+        particle_system_.add_particles_to_grid();
 
-	// Package results into the triple buffer
-	SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
-	//pps_renderer_.notify_new_snapshot(snap);  // resets the age clock
+    particle_system_.update_particles();
 
-	// Filling the snapshot with information
-	particle_system_.fill_snapshot(snap);
-	snap.stats.fps = fps_;
-	snap.stats.m_total_time_elapsed_ = m_total_time_elapsed_;
+    SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
+    particle_system_.fill_snapshot(snap);
+    snap.stats.fps = fps_;
+    snap.stats.m_total_time_elapsed_ = m_total_time_elapsed_;
 
-	m_sim_buffer_.publish();
+    // Copy current toggles into snapshot so the render thread can read them
+    snap.toggles = particle_system_.toggles;
+
+    m_sim_buffer_.publish();
 }
 
+// ── Command dispatch ──────────────────────────────────────────────────────────
+void Simulation::resolve_modifications()
+{
+    std::queue<SimCommand> local;
+    {
+        std::lock_guard<std::mutex> lock(m_cmd_mutex);
+        std::swap(local, m_commands);
+    }
+
+    while (!local.empty())
+    {
+        SimCommand cmd = std::move(local.front());
+        local.pop();
+
+        switch (cmd.type)
+        {
+            // ── Toggles ───────────────────────────────────────────────────────────
+        case CommandType::SetToggles:
+            particle_system_.toggles = cmd.toggles;
+            break;
+
+            // ── Reset ─────────────────────────────────────────────────────────────
+        case CommandType::ResetSimulation:
+            particle_system_.init_grid_positioning();
+            break;
+
+            // ── Physics ───────────────────────────────────────────────────────────
+        case CommandType::SetAlpha:
+            PPS_Settings::alpha = cmd.float_val;
+            break;
+
+        case CommandType::SetBeta:
+            PPS_Settings::beta = cmd.float_val;
+            break;
+
+        case CommandType::SetGamma:
+            PPS_Settings::gamma = cmd.float_val;
+            break;
+
+            // ── World ─────────────────────────────────────────────────────────────
+        case CommandType::RandomizeSimulation:
+            particle_system_.randomize_sim();
+            break;
+
+        case CommandType::ClearBeacons:
+            // IMGUI_TODO
+            break;
+
+        case CommandType::SetThreadCount:
+            particle_system_.set_thread_count(cmd.int_val);
+   
+            break;
+
+        default:
+            break;
+        }
+    }
+}
+
+// ── Render (main thread) ──────────────────────────────────────────────────────
 void Simulation::render()
 {
-	if (!m_sim_buffer_.has_published()) return; // wait for first frame
+    if (!m_sim_buffer_.has_published()) return;
 
-	const bool is_new_frame = m_sim_buffer_.has_new_frame();
-	const SimSnapshot& snap = m_sim_buffer_.begin_read();
+    const bool         is_new_frame = m_sim_buffer_.has_new_frame();
+    const SimSnapshot& snap = m_sim_buffer_.begin_read();
 
-	if (is_new_frame)
-		pps_renderer_.notify_new_snapshot(snap);
+    const float dt = static_cast<float>(m_delta_time_.get_delta());
+    m_total_time_elapsed_ += dt;
 
-	float dt = static_cast<float>(m_delta_time_.get_delta());
-	m_total_time_elapsed_ += dt;
+    const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
 
-	const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
+    window_.clear(screen_color);
 
-	window_.clear(screen_color);
+    pps_renderer_.render(snap, camera);
 
-	pps_renderer_.render(snap, camera, false);
+    if (debug_)
+    {
+        pps_renderer_.render_debug(snap, mouse_pos, debug_radius);
+        particle_system_.beacons.render(window_);
+    }
 
-	if (debug_)
-	{
-		pps_renderer_.render_debug(snap, mouse_pos, debug_radius);
-		particle_system_.beacons.render(window_);
-	}
+    handle_imGUI(snap, dt);
 
-	handle_imGUI(snap, dt);
+    m_sim_buffer_.end_read();
 
-	m_sim_buffer_.end_read();
-
-	ImGui::SFML::Render(window_);
-	window_.display();
+    ImGui::SFML::Render(window_);
+    window_.display();
 }
 
+// ── Frame rate ────────────────────────────────────────────────────────────────
 void Simulation::manage_frame_rate()
 {
-	fps_ = static_cast<float>(clock_.get_average_frame_rate());
-	clock_.update_frame_rate();
+    fps_ = static_cast<float>(clock_.get_average_frame_rate());
+    clock_.update_frame_rate();
 
-	std::ostringstream title;
-	title << "Primordial Particle System"
-		<< " | FPS: " << std::fixed << std::setprecision(1) << fps_;
-
-	window_.setTitle(title.str());
+    std::ostringstream title;
+    title << "Primordial Particle System"
+        << " | FPS: " << std::fixed << std::setprecision(1) << fps_;
+    window_.setTitle(title.str());
 }

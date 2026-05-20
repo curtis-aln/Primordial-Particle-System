@@ -8,7 +8,7 @@
 
 #include "context/triple_buffer.h"
 #include "context/sim_snapshot.h"
-#include "context/sim_command.h" 
+#include "context/sim_command.h"
 
 #include <string>
 
@@ -17,73 +17,71 @@
 
 class Simulation : PPS_Settings, SimulationSettings
 {
-	// SFML
-	sf::RenderWindow window_{};
+    // ── SFML ──────────────────────────────────────────────────────────────────
+    sf::RenderWindow window_{};
 
-	// Smooths Frame rates by averaging them
-	FrameRateSmoothing<100> clock_{};
+    // ── Timing ────────────────────────────────────────────────────────────────
+    FrameRateSmoothing<100> clock_{};
+    StopWatch               m_delta_time_{};
+    float                   m_total_time_elapsed_ = 0.f;
 
-	// Allows for translation & Zooming
-	Camera camera{ &window_, 1.f / scale_factor };
+    // ── Camera / view ─────────────────────────────────────────────────────────
+    Camera camera{ &window_, 1.f / scale_factor };
 
-	// Two separate font sizes. allows rendering of text on-screen
-	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
-	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
+    // ── Fonts ─────────────────────────────────────────────────────────────────
+    Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
+    Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
-	// Runtime variables and statistics
-	StopWatch m_delta_time_{};
-	float    m_total_time_elapsed_ = 0.f;
+    // ── Runtime state ─────────────────────────────────────────────────────────
+    bool  render_hash_grid_ = false;
+    bool  debug_ = false;
+    bool  rendering_ = true;
+    float fps_ = 0.f;
 
-	bool running_ = true;
-	bool render_hash_grid_ = false;
-	bool debug_ = false;
-	bool rendering_ = true;
+    // ── Debug interaction ─────────────────────────────────────────────────────
+    float       debug_radius = 8000.f;
+    const float change_in_debug_radius = 500.f;
 
-	float fps_ = 0.f;
+    // ── Spatial-grid overlay ──────────────────────────────────────────────────
+    SFML_Grid grid{ window_,
+                    sf::FloatRect({0, 0}, {world_width, world_height}), 10 };
 
-	// radius around the mouse in which debug settings are shown
-	float debug_radius = 8000.f;
-	const float change_in_debug_radius = 500.f;
-	SFML_Grid grid{ window_, sf::FloatRect({0, 0}, {world_width, world_height}), 10 };
+    // ── ImGui ─────────────────────────────────────────────────────────────────
+    ControlPanel m_control_panel_;
 
-	// IMGui
-	ControlPanel    m_control_panel_;
+    // ── Particle system ───────────────────────────────────────────────────────
+    ParticlePopulation particle_system_{};
+    PPS_Renderer       pps_renderer_{ &window_ };
 
+    // ── Triple-buffer (sim → render, lock-free) ───────────────────────────────
+    TripleBuffer<SimSnapshot> m_sim_buffer_{ PPS_Settings::particle_count };
 
-	// The particle system
-	ParticlePopulation particle_system_{};
-	PPS_Renderer pps_renderer_{&window_};
+    // ── Command queue (render → sim, mutex-protected) ─────────────────────────
+    std::mutex             m_cmd_mutex{};
+    std::queue<SimCommand> m_commands{};
 
-	// the render-update seperated multithreadding
-	TripleBuffer<SimSnapshot> m_sim_buffer_{ PPS_Settings::particle_count }; // sim -> render (lock-free)
-
-	// render → sim  (low frequency, mutex protected)
-	std::mutex             m_cmd_mutex{};
-	std::queue<SimCommand> m_commands{};
-
-	std::thread m_sim_thread_;
-	std::atomic<bool> running{ true }; // replace your existing bool if you have one
-
+    // ── Threading ─────────────────────────────────────────────────────────────
+    std::thread       m_sim_thread_;
+    std::atomic<bool> running{ true };
 
 public:
-	Simulation(); //, sf::Style::None)
-	void init_imGUI();
-	void run();
+    Simulation();
+    void init_imGUI();
+    void run();
+    void quit();
 
-	void quit();
-	void update();
-	void resolve_modifications();
-	void handle_events();
-	void dispatch_event(const sf::Event& event, const sf::Vector2f& cam_pos);
-	void handle_keyboard_events(const sf::Keyboard::Key& event_key_code);
-	void handle_pause_toggle();
-	void handle_mouse_press(const sf::Vector2f& cam_pos);
-	void handle_mouse_release();
+    void update();
+    void resolve_modifications();
+    void handle_events();
+    void dispatch_event(const sf::Event& event, const sf::Vector2f& cam_pos);
+    void handle_keyboard_events(const sf::Keyboard::Key& event_key_code);
+    void handle_pause_toggle();
+    void handle_mouse_press(const sf::Vector2f& cam_pos);
+    void handle_mouse_release();
 
 private:
-	void render();
-	//bool render_particle_system(float dt);
-	void manage_frame_rate();
-	void handle_imGUI(const SimSnapshot& snap, float dt);
-	void draw_tab(const SimSnapshot& snap, float dt);
+    void render();
+    void manage_frame_rate();
+    void handle_imGUI(const SimSnapshot& snap, float dt);
+    // draw_tab removed — replaced by ControlPanel::draw()
 };

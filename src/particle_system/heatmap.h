@@ -13,8 +13,8 @@
 class DensityHeatmap
 {
 public:
-    float m_screen_w = SimulationSettings::screen_width;
-    float m_screen_h = SimulationSettings::screen_height;
+    float m_screen_w = static_cast<float>(SimulationSettings::screen_width);
+    float m_screen_h = static_cast<float>(SimulationSettings::screen_height);
 
     // ── Construction ──────────────────────────────────────────────────────────
 
@@ -225,7 +225,8 @@ private:
 
     static uint8_t lerp_u8(uint8_t a, uint8_t b, float t)
     {
-        return static_cast<uint8_t>(static_cast<float>(a) + t * static_cast<float>(b - a));
+        float sub = static_cast<float>(b) - static_cast<float>(a);
+        return static_cast<uint8_t>(static_cast<float>(a) + t * sub);
     }
 
     // ── Members ───────────────────────────────────────────────────────────────

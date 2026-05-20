@@ -1,16 +1,6 @@
-// performance testing - 4 million particles - No rendering - 950 sf
-// benchmark         12fps
-// SPSCQueue usage
-
-
 // create a load of cpp files for the header files, organise file and folder structure
 // get updating and rendering to happen on different threads
 // Benchmark the updating thread - i can imagine he bottle neck will be with how we are updating
-// push code to github
-// add Interpolation
-
-// graphics
-// - make the particles circles
 
 // new features
 // Adding Gaussian rotation noise η(σ, t) to Equation 1:
@@ -26,50 +16,24 @@
 
 // graphics is buggy even though it says 1000 fps
 
------- graphics todo on the train ------
-4 Tabs - World, Particle, Simulation, help
-
-World:
-TITLE
-time elapsed
-
-Catagory 1 (graphics):
--> Checkboxes for each of the grid rendering, particle rendering, debug mode
--> rendering fps
--> auto interpolate option (if unchecked add a new checkbox called interpolate)
--> auto heatmap render option (if unchecked add a new checkbox called heatmap)
-
-Catagory 2 (statistics):
-- updating fps
-- iterations
-- count for each type of particle
-
-Catagory 3 (Interaction):
-Left click is always to pan
-Right click is determined by one of the following checkboxes (only one can be selected)
-- create cell
-- destroy
-- turn into beacons
-a slider to control the effect radius (the scroll wheel also has the same effect)
-- reset simulation
-- randomize simulation
-- clear beacons
-a slider to control Simulation speed (0.1x -> maximum)
 
 
-Particle:
-- An editor of sorts to modify the colors of the particles that they go through, the n values required, and all the
-blending settings
-- alpha value modification
-- beta value modification
-- gamma value modification
+
+README Todo:
+- demonstrate alternative update rules (with different colors)
+- finish showing survival and death gifs
+- show massive scale of simulation
 
 
-Simulation:
-- control the amount of threads used for updating
-- control the spatial hash grid dimensions
+GUI TO-Fix:
+- add a randomize button to the particle rules,
+- add a reset button to the particle rules
+- Have 8 preset options for the particle rules
 
 
-help:
-- keybinds
-- information on how the simulation works
+// 80fps Inner rendering 10,000,000 particles
+optimisation: use the spatial grid to read all of the particles within the camera range
+this makes the if statements fall from 10 million down to zero
+
+second optimization: go from appending to the vertex array to pre calculating the amount of particles in all
+the spatial grid cells, then resizing and appending

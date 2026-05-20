@@ -6,35 +6,50 @@
 
 enum class CommandType
 {
-    // ── Toggle state (whole WorldToggles struct carried in payload) ───────
-    SetToggles,
+    // ── Toggle state ──────────────────────────────────────────────────────
+    SetToggles,             // toggles field carries the full new WorldToggles
 
     // ── One-shot actions ──────────────────────────────────────────────────
-    ResetSimulation
+    ResetSimulation,        // Wired: call particle_system_.init_grid_positioning()
 
+    // ── Physics ───────────────────────────────────────────────────────────
+    // IMGUI_TODO: in Simulation::resolve_modifications(), handle each:
+    //   SetAlpha  → particle_system_.alpha  = cmd.float_val;
+    //   SetBeta   → particle_system_.beta   = cmd.float_val;
+    //   SetGamma  → particle_system_.gamma  = cmd.float_val;
+    //              (requires gamma promoted to non-constexpr in settings.h)
+    SetAlpha,
+    SetBeta,
+    SetGamma,
+
+    // ── World ─────────────────────────────────────────────────────────────
+    // IMGUI_TODO: in Simulation::resolve_modifications(), handle each:
+    //   RandomizeSimulation → particle_system_.randomize_angles(); 
+    //                          particle_system_.init_grid_positioning();
+    //   ClearBeacons        → particle_system_.beacons.clear();
+    //   SetThreadCount      → rebuild particle_system_.thread_pool with int_val threads
+    RandomizeSimulation,
+    ClearBeacons,
+    SetThreadCount,
 };
 
-// Only one of these is meaningful per command — think of it like a union but without the hassle
 struct SimCommand
 {
-	CommandType  type; // identifies which of the following fields to read
-    
-
+    CommandType  type;
     WorldToggles toggles{};
-
-    float        float_val = 0;
+    float        float_val = 0.f;
     int          int_val = 0;
     bool         bool_val = false;
 };
 
-
-struct ImGuiContext
+// Renamed from ImGuiContext — the original name collides with ImGui's own
+// internal ImGuiContext type, causing silent ODR issues with ImGui headers.
+struct SimCtx
 {
-    WorldToggles& toggles;   // write toggles here freely
+    WorldToggles& toggles;    // mutable copy for this frame — write freely
     std::mutex& cmd_mutex;
     std::queue<SimCommand>& commands;
 
-    // Helper so tabs don't need to write the lock_guard boilerplate
     void push(SimCommand cmd) const
     {
         std::lock_guard<std::mutex> lock(cmd_mutex);

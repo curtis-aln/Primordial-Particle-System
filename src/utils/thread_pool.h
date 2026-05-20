@@ -170,30 +170,46 @@ namespace tp
     // manages a collection of Worker threads and provides the main interface
     struct ThreadPool
     {
-        uint32_t            m_thread_count = 0;
-        TaskQueue           m_queue; // The Task Queue shared by all workers
-        std::vector<Worker> m_workers;
+        uint32_t                             m_thread_count = 0;
+        TaskQueue                            m_queue;
+        std::vector<std::unique_ptr<Worker>> m_workers; // <-- pointer stable
 
-        // Initializes Self, Task Queue, and worker threads
-        explicit ThreadPool(uint32_t thread_count)
-            : m_thread_count{ thread_count }
+        explicit ThreadPool(uint32_t thread_count) : m_thread_count{ thread_count }
         {
-            m_workers.reserve(thread_count);
-            
-            for (uint32_t i{ thread_count }; i--;) 
-            {
-                m_workers.emplace_back(m_queue, static_cast<uint32_t>(m_workers.size()));
-            }
+            for (uint32_t i = 0; i < thread_count; ++i)
+                m_workers.push_back(std::make_unique<Worker>(m_queue, i));
         }
 
         ~ThreadPool()
         {
             m_queue.stop();
+            for (auto& w : m_workers) w->stop();
+        }
 
-            for (Worker& worker : m_workers) 
+        void setThreadCount(uint32_t new_thread_count)
+        {
+            if (new_thread_count == m_thread_count) return;
+
+            m_queue.waitForCompletion();
+
+            if (new_thread_count > m_thread_count)
             {
-                worker.stop();
+                for (uint32_t i = m_thread_count; i < new_thread_count; ++i)
+                    m_workers.push_back(std::make_unique<Worker>(m_queue, i));
             }
+            else
+            {
+                m_queue.stop();
+                for (auto& w : m_workers) w->stop();
+                m_workers.clear();
+
+                { std::lock_guard<std::mutex> lock(m_queue.m_mutex); m_queue.m_stop = false; }
+
+                for (uint32_t i = 0; i < new_thread_count; ++i)
+                    m_workers.push_back(std::make_unique<Worker>(m_queue, i));
+            }
+
+            m_thread_count = new_thread_count;
         }
 
         // adds a task the the queue
@@ -214,14 +230,14 @@ namespace tp
         void dispatch(uint32_t element_count, TCallback&& callback)
         {
             const uint32_t batch_size = element_count / m_thread_count;
-            for (uint32_t i{ 0 }; i < m_thread_count; ++i) 
+            for (uint32_t i{ 0 }; i < m_thread_count; ++i)
             {
                 const uint32_t start = batch_size * i;
                 const uint32_t end = start + batch_size;
                 addTask([start, end, &callback]() { callback(start, end); });
             }
 
-            if (batch_size * m_thread_count < element_count) 
+            if (batch_size * m_thread_count < element_count)
             {
                 const uint32_t start = batch_size * m_thread_count;
                 callback(start, element_count);
@@ -229,6 +245,6 @@ namespace tp
 
             waitForCompletion();
         }
-    };
 
+    };
 }

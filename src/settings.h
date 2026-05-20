@@ -18,12 +18,12 @@ struct SimulationSettings
 
 struct PPS_Settings
 {
-    inline static constexpr unsigned threads = 16;
-    inline static constexpr unsigned particle_count = 1'000'000;
+    inline static constexpr unsigned initial_thread_count = 16;
+    inline static constexpr unsigned particle_count = 10'000'000;
 
     inline static int add_to_grid_freq = 3;
 
-    inline static constexpr float scale_factor = 500;
+    inline static constexpr float scale_factor = 1500;
     inline static constexpr float param_scale_factor = 200.f;
 
     inline static constexpr auto world_width = SimulationSettings::screen_width * scale_factor;
@@ -38,9 +38,6 @@ struct PPS_Settings
     // Scale-sensitive parameters
     inline static constexpr float visual_radius = 5.f * param_scale_factor;
 
-    // IMGUI_TODO: gamma was constexpr; promoted to runtime-editable so the
-    //   Particle tab slider can write to it.  Any constexpr use-site that
-    //   depended on it will need to be updated (none found at time of change).
     inline static float gamma = 0.67f * param_scale_factor;
 
     // Main simulation rules — already non-constexpr, safe to write from GUI

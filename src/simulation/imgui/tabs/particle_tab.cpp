@@ -104,19 +104,12 @@ void ParticleTab::draw_physics(SimCtx& ctx)
 {
     section_header("PHYSICS");
 
-    // IMGUI_TODO: SetAlpha / SetBeta / SetGamma commands must be handled in
-    //   Simulation::resolve_modifications():
-    //     case CommandType::SetAlpha: particle_system_.alpha = cmd.float_val; break;
-    //     case CommandType::SetBeta:  particle_system_.beta  = cmd.float_val; break;
-    //     case CommandType::SetGamma: particle_system_.gamma = cmd.float_val; break;
-    //   (gamma also requires PPS_Settings::gamma to be non-constexpr — see settings.h)
-
     ImGui::SetNextItemWidth(-1.f);
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Alpha  (turn rate)");
     ImGui::PopStyleColor();
     ImGui::SetNextItemWidth(-1.f);
-    if (ImGui::SliderFloat("##alpha", &m_alpha_, 0.f, 360.f, "%.1f deg"))
+    if (ImGui::SliderFloat("##alpha", &m_alpha_, -180.f, 180.f, "%.1f deg"))
         ctx.push({ CommandType::SetAlpha, {}, m_alpha_ });
 
     ImGui::Spacing();
@@ -124,7 +117,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
     ImGui::TextUnformatted("Beta   (neighbour scale)");
     ImGui::PopStyleColor();
     ImGui::SetNextItemWidth(-1.f);
-    if (ImGui::SliderFloat("##beta", &m_beta_, -30.f, 30.f, "%.2f deg/n"))
+    if (ImGui::SliderFloat("##beta", &m_beta_, -180.f, 180.f, "%.2f deg/n"))
         ctx.push({ CommandType::SetBeta, {}, m_beta_ });
 
     ImGui::Spacing();

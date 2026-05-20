@@ -7,7 +7,7 @@ thread_local TL_NeighbourPositions neighbour_positions_y;
 
 ParticlePopulation::ParticlePopulation() :
 	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height),
-	thread_pool(threads)
+	thread_pool(initial_thread_count)
 {
 	precompute_thread_ranges();
 
@@ -21,6 +21,18 @@ ParticlePopulation::ParticlePopulation() :
 
 	// choosing 20 random particles to put at the center
 	create_cell_at({ world_width / 2.f, world_height / 2.f }, 35);
+}
+
+void ParticlePopulation::randomize_sim()
+{
+	init_grid_positioning();
+	randomize_angles();
+}
+
+void ParticlePopulation::set_thread_count(int threads)
+{
+	thread_pool.setThreadCount(threads);
+	precompute_thread_ranges();
 }
 
 void ParticlePopulation::init_grid_positioning()

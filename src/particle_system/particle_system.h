@@ -84,6 +84,10 @@ public:
 public:
 	explicit ParticlePopulation();
 
+	void randomize_sim();
+
+	void set_thread_count(int threads);
+
 
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);

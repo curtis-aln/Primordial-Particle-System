@@ -42,7 +42,7 @@ PPS_Renderer::PPS_Renderer(sf::RenderWindow* window) : window_(window)
 
     states.blendMode = sf::BlendAdd;
 
-    heatmap.set_trail_decay(0.85);
+    heatmap.set_trail_decay(.45);
 
     std::cout << "Renderer Initialized\n";
 }
@@ -225,8 +225,6 @@ void PPS_Renderer::notify_new_snapshot(const SimSnapshot& snapshot)
 void PPS_Renderer::extrapolate_positions(const SimSnapshot& snapshot,
     const Camera& camera, const float visible_world_width)
 {
-    // IMGUI_TODO (partial): auto_interpolate / force_interpolate read from
-    //   snapshot.toggles.  See note in render() above.
     const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
     const float extrap_disable_width = transition_thresh_begin * 0.25f;
 

@@ -108,6 +108,18 @@ public:
         }
     }
 
+    // This converts a world-space rect into a clamped grid cell range with zero allocation
+    void get_cell_range(float wx0, float wy0, float wx1, float wy1,
+        uint32_t& cx0, uint32_t& cy0,
+        uint32_t& cx1, uint32_t& cy1) const
+    {
+        cx0 = static_cast<uint32_t>(std::clamp(wx0 / cell_width, 0.f, static_cast<float>(CellsX - 1)));
+        cy0 = static_cast<uint32_t>(std::clamp(wy0 / cell_height, 0.f, static_cast<float>(CellsY - 1)));
+        cx1 = static_cast<uint32_t>(std::clamp(wx1 / cell_width, 0.f, static_cast<float>(CellsX - 1)));
+        cy1 = static_cast<uint32_t>(std::clamp(wy1 / cell_height, 0.f, static_cast<float>(CellsY - 1)));
+    }
+
+
     void track_stats(int& total, int& max_in, int& full, int& empty, int& inv)
     {
         for (size_t i = 0; i < get_total_cells(); ++i)

@@ -8,7 +8,7 @@ void SimulationTab::draw(const SimSnapshot& snap, SimCtx& ctx)
 {
     if (m_first_draw_)
     {
-        m_thread_count_ = static_cast<int>(PPS_Settings::threads);
+        m_thread_count_ = static_cast<int>(PPS_Settings::initial_thread_count);
         m_grid_freq_ = PPS_Settings::add_to_grid_freq;
         m_first_draw_ = false;
     }
@@ -16,19 +16,12 @@ void SimulationTab::draw(const SimSnapshot& snap, SimCtx& ctx)
     // ══ THREADING ═════════════════════════════════════════════════════════════
     section_header("THREADING");
 
-    // IMGUI_TODO: SetThreadCount — handle in Simulation::resolve_modifications():
-    //   Rebuilding the thread pool at runtime requires care:
-    //     particle_system_.thread_pool.wait_all();
-    //     particle_system_.thread_pool = tp::ThreadPool(cmd.int_val);
-    //     particle_system_.precompute_thread_ranges();
-    //   Mark thread_pool and the ranges method public or add a resize() helper.
-
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Worker Threads");
     ImGui::PopStyleColor();
     ImGui::SameLine();
     ImGui::SetNextItemWidth(-1.f);
-    if (ImGui::SliderInt("##threads", &m_thread_count_, 1, 32))
+    if (ImGui::SliderInt("##threads", &m_thread_count_, 1, 64))
         ctx.push({ CommandType::SetThreadCount, {}, 0.f, m_thread_count_ });
 
     ImGui::Spacing();

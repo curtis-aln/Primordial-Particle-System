@@ -6,8 +6,6 @@
 
 static void right_click_radio(SimCtx& ctx, int value, const char* label)
 {
-    // IMGUI_TODO: right_click_mode is consumed in Simulation::handle_mouse_press().
-    //   Check snap.toggles.right_click_mode and act accordingly.
     bool selected = (ctx.toggles.right_click_mode == value);
     if (selected)
     {
@@ -57,7 +55,6 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
 
     // Auto-heatmap + optional manual override
     toggle(ctx, "Auto Heatmap", &WorldToggles::auto_heatmap);
-    // IMGUI_TODO: auto_heatmap consumed in PPS_renderer.cpp — PPS_Renderer::render()
     if (!ctx.toggles.auto_heatmap)
     {
         ImGui::Indent(16.f);
@@ -66,7 +63,6 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
     }
 
     toggle(ctx, "Auto Interpolate", &WorldToggles::auto_interpolate);
-    // IMGUI_TODO: auto_interpolate consumed in PPS_renderer.cpp — PPS_Renderer::extrapolate_positions()
     if (!ctx.toggles.auto_interpolate)
     {
         ImGui::Indent(16.f);
@@ -134,7 +130,6 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
     ImGui::Spacing();
 
     // Interaction radius slider
-    // IMGUI_TODO: interaction_radius consumed in Simulation::handle_mouse_press()
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Radius");
     ImGui::PopStyleColor();
@@ -144,8 +139,6 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
         "%.0f", ImGuiSliderFlags_Logarithmic);
 
     // Simulation speed slider
-    // IMGUI_TODO: sim_speed consumed in Simulation::update()
-    //   speed < 1 → skip ticks  |  speed > 1 → multi-step per render frame
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Sim Speed");
     ImGui::PopStyleColor();
@@ -164,14 +157,9 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
 
     ImGui::SameLine();
 
-    // IMGUI_TODO: RandomizeSimulation — handle in Simulation::resolve_modifications():
-    //   particle_system_.randomize_angles();
-    //   particle_system_.init_grid_positioning();
     if (ImGui::Button("Randomize", { bw, 0 }))
         ctx.push({ CommandType::RandomizeSimulation });
 
-    // IMGUI_TODO: ClearBeacons — handle in Simulation::resolve_modifications():
-    //   particle_system_.beacons.clear();
     if (ImGui::Button("Clear Beacons", { -1.f, 0 }))
         ctx.push({ CommandType::ClearBeacons });
 

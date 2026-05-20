@@ -112,31 +112,21 @@ void Simulation::resolve_modifications()
             break;
 
         case CommandType::SetGamma:
-            // IMGUI_TODO: gamma was constexpr — promoted to inline static float
-            //   in settings.h.  Once that change is made, this line is live.
             PPS_Settings::gamma = cmd.float_val;
             break;
 
             // ── World ─────────────────────────────────────────────────────────────
         case CommandType::RandomizeSimulation:
-            // IMGUI_TODO: expose randomize_angles() + init_grid_positioning()
-            //   as public on ParticlePopulation (currently they are private).
-            //   Then uncomment:
-            //   particle_system_.randomize_angles();
-            //   particle_system_.init_grid_positioning();
+            particle_system_.randomize_sim();
             break;
 
         case CommandType::ClearBeacons:
-            // IMGUI_TODO: add a clear() method to the Beacons class:
-            //   particle_system_.beacons.clear();
+            // IMGUI_TODO
             break;
 
         case CommandType::SetThreadCount:
-            // IMGUI_TODO: resizing the thread pool at runtime requires:
-            //   particle_system_.thread_pool.wait_all();   // drain in-flight tasks
-            //   particle_system_.thread_pool = tp::ThreadPool(cmd.int_val);
-            //   particle_system_.precompute_thread_ranges();
-            //   thread_pool and precompute_thread_ranges() must be made public first.
+            particle_system_.set_thread_count(cmd.int_val);
+   
             break;
 
         default:

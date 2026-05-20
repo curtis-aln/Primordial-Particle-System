@@ -143,9 +143,6 @@ void Simulation::render()
     const bool         is_new_frame = m_sim_buffer_.has_new_frame();
     const SimSnapshot& snap = m_sim_buffer_.begin_read();
 
-    if (is_new_frame)
-        pps_renderer_.notify_new_snapshot(snap);
-
     const float dt = static_cast<float>(m_delta_time_.get_delta());
     m_total_time_elapsed_ += dt;
 

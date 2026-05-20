@@ -67,8 +67,6 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera)
         { SimulationSettings::screen_width, 0 }).x;
     const float visible_world_width = right - left;
 
-    extrapolate_positions(snapshot, camera, visible_world_width);
-
     const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
     const float transition_thresh_end = 1400.f * PPS_Settings::particle_radius;
     const float diff = transition_thresh_end - transition_thresh_begin;
@@ -110,13 +108,9 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera)
 void PPS_Renderer::render_heat_map(const SimSnapshot& snapshot,
     const Camera& camera, const float alpha)
 {
-    const float* pos_x = m_extrapolating_
-        ? m_extrap_x_.data() : snapshot.render.positions_x.data();
-    const float* pos_y = m_extrapolating_
-        ? m_extrap_y_.data() : snapshot.render.positions_y.data();
 
     heatmap.clear();
-    heatmap.scatter(pos_x, pos_y, PPS_Settings::particle_count, camera.m_view_);
+    heatmap.scatter(snapshot.render.positions_x.data(), snapshot.render.positions_y.data(), PPS_Settings::particle_count, camera.m_view_);
     heatmap.upload();
     heatmap.draw(*window_, static_cast<uint8_t>(alpha));
 }
@@ -134,11 +128,7 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
     const sf::Vector2f bottom_right = camera.mapPixelToCoords(
         { SimulationSettings::screen_width, SimulationSettings::screen_height });
 
-    const float* pos_x = m_extrapolating_
-        ? m_extrap_x_.data() : snapshot.render.positions_x.data();
-    const float* pos_y = m_extrapolating_
-        ? m_extrap_y_.data() : snapshot.render.positions_y.data();
-
+ 
     // Rebuild color cache when sim produced a new frame OR color scheme changed
     if (m_colors_dirty_ || g_color_scheme_dirty)
     {
@@ -155,7 +145,7 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
 
     for (size_t i = 0; i < PPS_Settings::particle_count; ++i)
     {
-        const float px_v = pos_x[i], py_v = pos_y[i];
+        const float px_v = snapshot.render.positions_x[i], py_v = snapshot.render.positions_y[i];
         const float r = PPS_Settings::particle_radius;
 
         if (px_v < top_left.x || py_v < top_left.y ||
@@ -211,81 +201,4 @@ void PPS_Renderer::render_debug(const SimSnapshot& snapshot,
     }
 
     window_->draw(debug_lines_);
-}
-
-// ── Snapshot notification ─────────────────────────────────────────────────────
-void PPS_Renderer::notify_new_snapshot(const SimSnapshot& snapshot)
-{
-    m_sim_tick_seconds_ = snapshot.sim_tick_seconds;
-    m_snapshot_age_.restart();
-    m_colors_dirty_ = true;
-}
-
-// ── Position extrapolation ────────────────────────────────────────────────────
-void PPS_Renderer::extrapolate_positions(const SimSnapshot& snapshot,
-    const Camera& camera, const float visible_world_width)
-{
-    const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
-    const float extrap_disable_width = transition_thresh_begin * 0.25f;
-
-    constexpr float enable_threshold_seconds = 1.f / 20.f;
-
-    const auto& tgl = snapshot.toggles;
-
-    if (tgl.auto_interpolate)
-    {
-        m_extrapolating_ =
-            (visible_world_width <= extrap_disable_width) &&
-            (m_sim_tick_seconds_ > enable_threshold_seconds);
-    }
-    else
-    {
-        m_extrapolating_ = tgl.force_interpolate;
-    }
-
-    if (!m_extrapolating_) return;
-
-    const int   n = PPS_Settings::particle_count;
-    const float gamma = PPS_Settings::gamma;
-
-    if (static_cast<int>(m_extrap_x_.size()) != n)
-    {
-        m_extrap_x_.resize(n);
-        m_extrap_y_.resize(n);
-    }
-
-    const float r = PPS_Settings::particle_radius;
-    const sf::Vector2f tl = camera.mapPixelToCoords({ 0, 0 });
-    const sf::Vector2f br = camera.mapPixelToCoords(
-        { SimulationSettings::screen_width, SimulationSettings::screen_height });
-    const float min_x = tl.x - r, max_x = br.x + r;
-    const float min_y = tl.y - r, max_y = br.y + r;
-
-    const float elapsed = m_snapshot_age_.getElapsedTime().asSeconds();
-    const float t = std::clamp(elapsed / m_sim_tick_seconds_, 0.f, 1.f);
-
-    const float* ca = snapshot.render.cos_angles_.data();
-    const float* sa = snapshot.render.sin_angles_.data();
-    const float* px = snapshot.render.positions_x.data();
-    const float* py = snapshot.render.positions_y.data();
-    float* ex = m_extrap_x_.data();
-    float* ey = m_extrap_y_.data();
-
-    for (int i = 0; i < n; ++i)
-    {
-        const float x = px[i], y = py[i];
-        if (x < min_x || x > max_x || y < min_y || y > max_y)
-        {
-            ex[i] = x; ey[i] = y;
-            continue;
-        }
-
-        const float variation =
-            static_cast<float>((static_cast<unsigned>(i) * 2654435761u) & 0xFFFF) / 65535.f;
-        const float blend = 0.3f + 0.4f * variation;
-        const float t_eased = t * (1.f - blend * (1.f - t));
-
-        ex[i] = x + ca[i] * gamma * t_eased;
-        ey[i] = y + sa[i] * gamma * t_eased;
-    }
 }

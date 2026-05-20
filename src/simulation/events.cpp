@@ -1,29 +1,6 @@
 #include "imgui-SFML.h"
 #include "simulation.h"
 
-void Simulation::resolve_modifications()
-{
-	// Apply any commands ImGui pushed since last tick
-	{
-		// lock the command queue while we process it, but release it before ticking the simulation
-		std::lock_guard lock(m_cmd_mutex);
-		//Protozoa* selected_protozoa = m_world_.get_selected_protozoa();
-
-		while (!m_commands.empty())
-		{
-			const SimCommand& cmd = m_commands.front();
-			switch (cmd.type)
-			{
-			case CommandType::SetToggles:
-				particle_system_.toggles = cmd.toggles;
-				break;
-			}
-
-			m_commands.pop();
-		}
-	}
-}
-
 void Simulation::handle_events()
 {
 	const sf::Vector2f cam_pos = camera.get_world_mouse_pos();

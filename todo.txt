@@ -73,3 +73,9 @@ Simulation:
 help:
 - keybinds
 - information on how the simulation works
+
+
+README Todo:
+- demonstrate alternative update rules (with different colors)
+- finish showing survival and death gifs
+- show massive scale of simulation

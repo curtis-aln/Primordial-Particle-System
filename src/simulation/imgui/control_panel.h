@@ -3,6 +3,7 @@
 #include <vector>
 #include <memory>
 #include "../context/sim_snapshot.h"
+#include "../context/sim_command.h"
 
 
 class ControlPanel
@@ -10,8 +11,7 @@ class ControlPanel
 public:
     ControlPanel();
 
-    void draw(const SimSnapshot& snap, ImGuiContext& ctx, float dt);
-
+    void draw(const SimSnapshot& snap, SimCtx& ctx, float dt);
 
 private:
     std::vector<std::unique_ptr<ITab>> m_tabs_;

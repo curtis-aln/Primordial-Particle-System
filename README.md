@@ -34,7 +34,7 @@
 
 The Primordial Particle System is a zero-intelligence particle model originally designed by the [Artificial Life Lab Graz](https://alife.uni-graz.at/projects/primordial-particle-systems/). Each particle follows three local rules based on its immediate neighbours. Together they produce complex lifelike behaviour: swarming, clustering, rotating rings, and chain-like structures that emerge from chaos.
 
-> **There is no global coordination, or central control.**
+> **No global Update rules, Every particle acts independently based on local information.**
 
 <br/>
 

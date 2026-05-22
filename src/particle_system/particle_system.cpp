@@ -99,14 +99,50 @@ void ParticlePopulation::add_particles_to_grid()
 void ParticlePopulation::update_particles()
 {
 
-	solveCollisions();
-
+	add_particles_to_grid();
+	density_grid.build(
+		render_data.positions_x.data(),
+		render_data.positions_y.data(),
+		particle_count);
+	
+	    
 	if (!toggles.paused)
 	{
-		update_particle_positions();
+		solveCollisions_density();
 	}
 
 	iterations_++;
+}
+
+void ParticlePopulation::solveCollisions_density()
+{
+    const uint32_t tc = thread_pool.m_thread_count;
+    const int ppt = particle_count / tc;
+    for (uint32_t t = 0; t < tc; ++t)
+    {
+        thread_pool.addTask([this, t, ppt, tc] {
+            const int start = t * ppt;
+            const int end   = (t == tc - 1) ? particle_count : start + ppt;
+            for (int i = start; i < end; ++i)
+            {
+                density_grid.update_particle_density(
+                    render_data.angles_[i],
+                    render_data.positions_x[i],
+                    render_data.positions_y[i],
+                    render_data.neighbourhood_count_[i],
+                    sin_table_, cos_table_,
+                    ANGLE_TABLE_SIZE);
+                // Toroidal wrap (same as add_particles_to_grid)
+                float& x = render_data.positions_x[i];
+                float& y = render_data.positions_y[i];
+                if (x < 0.f || x >= world_width)
+                    x -= world_width * std::floor(x * inv_width_);
+                if (y < 0.f || y >= world_height)
+                    y -= world_height * std::floor(y * inv_height_);
+            }
+        });
+    }
+    thread_pool.waitForCompletion();
 }
 
 
@@ -174,17 +210,17 @@ void ParticlePopulation::update_particle_positions()
 }
 
 
-void ParticlePopulation::solveCollisions()
-{
-	for (const auto& [start, end] : collision_ranges_)
-	{
-		thread_pool.addTask([this, start, end] {
-			for (uint32_t idx{ start }; idx < end; ++idx)
-				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
-		});
-	}
-	thread_pool.waitForCompletion();
-}
+//void ParticlePopulation::solveCollisions()
+//{
+//	for (const auto& [start, end] : collision_ranges_)
+//	{
+//		thread_pool.addTask([this, start, end] {
+//			for (uint32_t idx{ start }; idx < end; ++idx)
+//				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
+//		});
+//	}
+//	thread_pool.waitForCompletion();
+//}
 
 
 void ParticlePopulation::process_cell(

@@ -8,7 +8,7 @@
 #include <vector>
 #include <omp.h> // For OpenMP parallelization
 
-#include "PPS_renderer.h"
+#include "../rendering/PPS_renderer.h"
 #include "beacons.h"
 #include "state.h"
 
@@ -18,6 +18,7 @@
 #include "../utils/random.h"
 #include "../utils/thread_pool.h"
 #include "utils/smooth_frame_rates.h"
+#include "density_grid.h"
 
 
 // pre-computing constants
@@ -54,6 +55,8 @@ private:
 
 	// The Spatial Grid Optimizes finding what particles are nearby
 	SimpleSpatialGrid spatial_grid;
+
+	DensityGrid density_grid{ world_width, world_height, visual_radius };
 
 	// pre-computed values for wrapping the particles in the world
 	float inv_width_ = 0.f;
@@ -96,6 +99,8 @@ public:
 
 	void update_particles();
 
+	void solveCollisions_density();
+
 
 private:
 	void init_sin_cos_tables();
@@ -105,7 +110,6 @@ private:
 
 	void update_particle_positions();
 
-	void solveCollisions();
 
 	void process_cell(
 		const cell_idx cell_index,

@@ -37,3 +37,7 @@ this makes the if statements fall from 10 million down to zero
 
 second optimization: go from appending to the vertex array to pre calculating the amount of particles in all
 the spatial grid cells, then resizing and appending
+
+
+# Density Grid Section
+Visual Radius

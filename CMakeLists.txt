@@ -69,13 +69,14 @@ add_executable(PrimordialParticleSystem
     src/main.cpp
   "src/particle_system/particle_system.cpp" 
   "src/particle_system/state.h" 
-  "src/particle_system/PPS_renderer.cpp" 
+  "src/rendering/PPS_renderer.cpp" 
 
   "src/simulation/simulation.cpp" 
   "src/simulation/events.cpp" 
 
   "src/utils/stop_watch.h"
-  "src/particle_system/heatmap.h" 
+  "src/rendering/heatmap.h" 
+  "src/rendering/heatmap.cpp" 
 
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
@@ -93,7 +94,7 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/simulation/imgui/tabs/simulation_tab.cpp" 
  "src/simulation/imgui/control_panel.h" 
  "src/simulation/imgui/control_panel.cpp" 
- "src/simulation/imgui/tabs/i_tab.h" "src/particle_system/particle_colors.h")
+ "src/simulation/imgui/tabs/i_tab.h" "src/rendering/particle_colors.h" "src/particle_system/density_grid.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

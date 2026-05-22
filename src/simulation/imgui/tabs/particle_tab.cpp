@@ -1,5 +1,5 @@
 #include "particle_tab.h"
-#include "../../../particle_system/particle_colors.h"
+#include "../../../rendering/particle_colors.h"
 #include "../../../settings.h"
 
 #include <imgui.h>

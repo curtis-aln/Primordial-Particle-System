@@ -41,3 +41,37 @@ the spatial grid cells, then resizing and appending
 
 # Density Grid Section
 Visual Radius
+
+
+# Heatmap grid section
+- Trail amount
+- LUT_SIZE
+- Peak EMA smoothing (m_peak_ema) — controls how fast the brightness adapts to density changes. Slider 0–1.
+- Fixed peak override (fixed_peak param in upload()) — lets you pin the scale instead of auto-ranging. A checkbox to toggle between auto/fixed, plus an int input when fixed.
+- Sprite alpha (alpha param in draw()) — overall heatmap opacity. Already a uint8, just a 0–255 slider.
+- Downsample factor — passed at construction, so you'd need a rebuild, but an int combo (1×, 2×, 4×, 8×) is very useful for perf tuning.
+
+Gradient editor (m_stops via set_gradient()):
+This is the richest one — each GradientStop has a t position and an RGBA colour. You could expose a small table: one row per stop with a ImGui::ColorEdit4 and a ImGui::DragFloat for the position t. Add/remove stop buttons. Calls set_gradient() on any change.
+Derived from scatter logic:
+The bilinear splat is always weight 1 per point — you could expose a point weight/intensity multiplier so you can boost density without adding more points.
+
+
+# Density Grid section
+Construction-time (require rebuild):
+
+Cell size (m_s) — the most impactful setting. Smaller = more accurate, more memory/compute. A combo of presets (visual_radius/4, /2, 1.0, 2.0) is cleaner than a raw float slider since the grid is rebuilt on change.
+Grid dimensions — these follow from cell size, but you could display them read-only (%d × %d, %d cells) as a debug indicator so you can see the cost of your cell size choice.
+
+Per-frame tunables:
+
+Smoothing mode — you have both smooth_box() and smooth_gaussian() implemented but only smooth_gaussian() is called in build(). A radio button to switch between them is an easy win; box is faster for large particle counts.
+Gaussian sigma multiplier — the 0.5f in sigma = visual_radius * inv_s * 0.5f. A slider from ~0.2–1.0 lets you trade sharpness vs smoothness of the density estimate.
+Box filter cascade passes — hardcoded to 3 in smooth_box(). An int slider (1–5) trades accuracy for speed.
+
+Sampling mode — you have three samplers (bilerp, bicubic, sample8) but update_particle_density hardcodes bicubic. A combo letting you switch between them is useful for profiling; bicubic is noticeably more expensive than bilinear at high particle counts.
+
+Debug visualisation:
+
+Overlay selector — radio buttons for None / Density (D) / Gradient X (Gx) / Gradient Y (Gy) / Gradient magnitude (√Gx²+Gy²). 
+	You already expose density(), gradient_x(), gradient_y() accessors, so you can pipe any of them straight into your existing DensityHeatmap.

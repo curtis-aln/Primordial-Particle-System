@@ -18,7 +18,7 @@
 #include "../utils/random.h"
 #include "../utils/thread_pool.h"
 #include "utils/smooth_frame_rates.h"
-#include "density_grid.h"
+#include "density_grid/density_grid.h"
 
 
 // pre-computing constants

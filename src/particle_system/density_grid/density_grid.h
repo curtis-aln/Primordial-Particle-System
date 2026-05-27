@@ -12,17 +12,6 @@
 //
 //   // Then dispatch per-particle update with density sampling instead of
 //   // the neighbour loop — see update_particle_density() below.
-//
-// INTEGRATION NOTES:
-//   • Cell size `s` defaults to 1.0 (one grid cell per world unit).
-//     Set s = visual_radius / 2.f for better accuracy at the cost of
-//     a larger convolution kernel.
-//   • The grid dimensions are fixed at construction to
-//     ceil(world_w / s) × ceil(world_h / s).
-//   • All grids (D, Gx, Gy) are kept in a flat float[] — same layout as
-//     heatmap.h's m_counts so the memory access pattern is identical.
-//   • Wrapping (toroidal world) is handled during binning and gradient
-//     computation, matching particle_system.cpp's wrap logic.
 // ─────────────────────────────────────────────────────────────────────────────
 
 #pragma once
@@ -32,7 +21,7 @@
 #include <algorithm>
 #include <cstring>
 
-#include "../settings.h"   // PPS_Settings — visual_radius, alpha, beta, gamma, world_w/h
+#include "../../settings.h"   // PPS_Settings — visual_radius, alpha, beta, gamma, world_w/h
 
 class DensityGrid
 {
@@ -65,6 +54,8 @@ public:
     const std::vector<float>& density()    const { return m_D; }
     const std::vector<float>& gradient_x() const { return m_Gx; }
     const std::vector<float>& gradient_y() const { return m_Gy; }
+
+    // modifications
 
 private:
     void bin(const float* px, const float* py, int n);

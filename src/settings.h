@@ -49,10 +49,4 @@ struct PPS_Settings
 
     inline static constexpr size_t max_beacon_count = 100;
     inline static constexpr float  init_position_scatter = 125.f;
-
-    // Density grid settings
-	inline static float density_grid_cell_size = visual_radius * 0.5f;
-	inline static char smoothing_mode = 'b'; // b for box smoothing, g for gaussian smoothing, n for no smoothing
-    inline static float gaussian_sigma = 0.5f;
-	inline static char sampling_mode = 's'; // b for bilerp, c for bicubic, s for sample8
 };

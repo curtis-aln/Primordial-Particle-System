@@ -17,7 +17,7 @@ void DensityGrid::smooth_box()
 
     // Three cascade passes in each dimension approximate a Gaussian well
     // enough for PPS purposes (~5 % error on neighbour count vs exact disc).
-    for (int pass = 0; pass < 3; ++pass)
+    for (int pass = 0; pass < box_filter_cascade_passes; ++pass)
     {
         // Horizontal pass  (operates on m_D, writes to m_tmp)
         for (int y = 0; y < H; ++y)
@@ -81,15 +81,15 @@ void DensityGrid::smooth_gaussian()
 {
     const int W = m_W, H = m_H;
 
-    const float sigma = PPS_Settings::visual_radius * m_inv_s * 0.5f;
-    const int   krad = static_cast<int>(std::ceil(2.5f * sigma));
+    const float scaled_sigma = PPS_Settings::visual_radius * m_inv_s * gaussian_sigma;
+    const int   krad = static_cast<int>(std::ceil(2.5f * scaled_sigma));
 
     // Build 1-D kernel
     std::vector<float> kern(2 * krad + 1);
     float kern_sum = 0.f;
     for (int k = -krad; k <= krad; ++k)
     {
-        const float v = std::exp(-0.5f * (k * k) / (sigma * sigma));
+        const float v = std::exp(-0.5f * (k * k) / (scaled_sigma * scaled_sigma));
         kern[k + krad] = v;
         kern_sum += v;
     }

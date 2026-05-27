@@ -28,16 +28,24 @@ DensityGrid::DensityGrid(float world_w, float world_h, float cell_size)
 
 // build() — call once per simulation tick, before the particle update loop.
 // Performs binning → smoothing → gradient in O(n + W·H).
-void DensityGrid::build(const float* px, const float* py, int n)
+void DensityGrid::build(const float* positions_x, const float* positions_y, int particle_count)
 {
-    bin(px, py, n);
-    smooth_gaussian();
+    // Bottleneck
+    bin(positions_x, positions_y, particle_count);
 
-    // Rescale: normalized Gaussian gives density per cell.
-    // Multiply by disc area in grid units to recover particle counts.
-    const float r_grid = PPS_Settings::visual_radius * m_inv_s;
-    const float disc_area = 3.14159f * r_grid * r_grid;
-    for (float& v : m_D) v *= disc_area;
+    if (box_smoothing_)
+        smooth_box();
+
+    if (gaussian_smoothing_)
+    {
+        smooth_gaussian();
+
+        // Rescale: normalized Gaussian gives density per cell.
+        // Multiply by disc area in grid units to recover particle counts.
+        const float r_grid = PPS_Settings::visual_radius * m_inv_s;
+        const float disc_area = 3.14159f * r_grid * r_grid;
+        for (float& v : m_D) v *= disc_area;
+    }
 
     gradient();
 }
@@ -91,16 +99,25 @@ void DensityGrid::update_particle_density(
     const float cos_a = cos_table[angle_index];
     const float sin_a = sin_table[angle_index];
 
-    // ── Sample density field (bilinear) ───────────────────────────────────
-    const float N = bicubic(m_D, x, y);
-    const float gx = bicubic(m_Gx, x, y);
-    const float gy = bicubic(m_Gy, x, y);
+    // ── Sample density field ───────────────────────────────────
+    auto sampleField = [&](const std::vector<float>& field) -> float {
+        switch (sampling_mode_) {
+        case SamplingMode::Bilinear: return bilerp(field, x, y);
+        case SamplingMode::Bicubic:  return bicubic(field, x, y);
+        case SamplingMode::Sample8:  return sample8(field, x, y);
+        }
+        };
 
+    const float N = sampleField(m_D);
+    const float gx = sampleField(m_Gx);
+    const float gy = sampleField(m_Gy);
+
+    // the + 0.5 is a manual round-to-nearest trick
     neighbourhood_count_out = static_cast<uint16_t>(static_cast<int>(N + 0.5f));
 
     // ── sign(R - L) via perpendicular gradient component ──────────────────
     // heading_perp = (-sin_a, cos_a)  — the rightward normal
-    const float perp = gx * (sin_a)+gy * (-cos_a);
+    const float perp = gx * (sin_a * sin_sign)+gy * (cos_a * cos_sign);
 
     // sign convention matches particle_system.cpp:
     //   sign = +1 when right >= left,  -1 when left > right
@@ -124,13 +141,13 @@ void DensityGrid::update_particle_density(
 // pattern as DensityHeatmap::scatter in heatmap.h).  Bilinear splatting
 // gives smoother counts than nearest-cell and eliminates hard cell-boundary
 // artefacts for free.
-void DensityGrid::bin(const float* px, const float* py, int n)
+void DensityGrid::bin(const float* px, const float* py, int particle_count)
 {
     std::fill(m_D.begin(), m_D.end(), 0.f);
 
     const int W = m_W, H = m_H;
 
-    for (int i = 0; i < n; ++i)
+    for (int i = 0; i < particle_count; ++i)
     {
         // Continuous cell-space position
         const float fx = px[i] * m_inv_s - 0.5f;

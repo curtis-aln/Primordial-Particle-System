@@ -23,7 +23,30 @@
 
 #include "../../settings.h"   // PPS_Settings — visual_radius, alpha, beta, gamma, world_w/h
 
-class DensityGrid
+enum class SamplingMode : uint8_t {
+    Bilinear,
+    Bicubic,
+    Sample8
+};
+
+struct DensitySettings
+{
+    // Smoothing
+    inline static bool box_smoothing_ = false;
+    inline static bool gaussian_smoothing_ = true;
+    inline static float gaussian_sigma = 0.5f;
+    inline static int box_filter_cascade_passes = 3;
+
+    // Sampling
+    inline static SamplingMode sampling_mode_ = SamplingMode::Sample8; // b for bilerp, c for bicubic, s for sample8
+
+    // update rule
+    inline static float sin_sign = -1.f;
+    inline static float cos_sign = 1.f;
+};
+
+
+class DensityGrid : DensitySettings
 {
 public:
     // ── Construction ──────────────────────────────────────────────────────────

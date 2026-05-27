@@ -169,6 +169,54 @@ void ParticleTab::draw_color_scheme()
     draw_gradient_preview(ImGui::GetContentRegionAvail().x);
 }
 
+// -- Density grid section -----------------------
+void ParticleTab::draw_density_grid(SimCtx& ctx)
+{
+    section_header("DENSITY GRID");
+    toggle(ctx, "Use Density Grid", &WorldToggles::use_density_grid);
+    if (!ctx.toggles.use_density_grid)
+        return;
+
+    ImGui::SetNextItemWidth(-1.f);
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Sin Sign");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##SinSign", &m_sin_sign, -1.f, 1.f, "%.01f deg"))
+        ctx.push({ CommandType::SetSinSign, {}, m_sin_sign });
+
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Cos Sign");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##CosSign", &m_cos_sign, -1.f, 1.f, "%.01f deg"))
+        ctx.push({ CommandType::SetCosSign, {}, m_cos_sign });
+
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("gaussian sigma");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##GaussianSigma", &m_gaussian_sigma, 0.1f, 0.8f, "%.01f deg"))
+        ctx.push({ CommandType::SetGaussianSigma, {}, m_gaussian_sigma });
+
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Box Cascade");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderInt("##BoxCascade", &m_box_filter_cascade_passes, 1, 5, "%1 deg"))
+    {
+        SimCommand cmd{};
+        cmd.type = CommandType::SetBoxFilterCascadePasses;
+        cmd.int_val = m_box_filter_cascade_passes;
+        ctx.push(cmd);
+    }
+
+    // smoothing options
+
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 void ParticleTab::draw(const SimSnapshot& /*snap*/, SimCtx& ctx)
@@ -183,5 +231,6 @@ void ParticleTab::draw(const SimSnapshot& /*snap*/, SimCtx& ctx)
     }
 
     draw_physics(ctx);
+    draw_density_grid(ctx);
     draw_color_scheme();
 }

@@ -5,14 +5,18 @@
 //   s = 1.0          — natural, grid == world integer coords
 //   s = visual_radius/2  — better accuracy, 3×3 block covers sensing disc
 //   s = visual_radius/4  — highest accuracy, 5×5 block, more convolution cost
-DensityGrid::DensityGrid(float world_w, float world_h, float cell_size)
-    : m_world_w(world_w)
-    , m_world_h(world_h)
-    , m_s(cell_size)
-    , m_inv_s(1.f / cell_size)
-    , m_W(static_cast<int>(std::ceil(world_w / cell_size)))
-    , m_H(static_cast<int>(std::ceil(world_h / cell_size)))
+DensityGrid::DensityGrid(float world_w, float world_h, float cell_size) : m_world_w(world_w) , m_world_h(world_h)
 {
+    set_cell_size(cell_size);
+}
+
+void DensityGrid::set_cell_size(float cell_size)
+{
+    m_s = cell_size;
+    m_inv_s = 1.f / cell_size;
+    m_W = static_cast<int>(std::ceil(m_world_w / cell_size));
+    m_H = static_cast<int>(std::ceil(m_world_h / cell_size));
+
     const size_t n = static_cast<size_t>(m_W) * m_H;
     m_D.resize(n, 0.f);
     m_Gx.resize(n, 0.f);

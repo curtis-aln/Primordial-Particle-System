@@ -108,7 +108,13 @@ void ParticlePopulation::update_particles()
 	    
 	if (!toggles.paused)
 	{
-		solveCollisions_density();
+		if (toggles.use_density_grid)
+			solveCollisions_density();
+		else
+		{
+			solveCollisions();
+			update_particle_positions();
+		}
 	}
 
 	iterations_++;
@@ -210,17 +216,17 @@ void ParticlePopulation::update_particle_positions()
 }
 
 
-//void ParticlePopulation::solveCollisions()
-//{
-//	for (const auto& [start, end] : collision_ranges_)
-//	{
-//		thread_pool.addTask([this, start, end] {
-//			for (uint32_t idx{ start }; idx < end; ++idx)
-//				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
-//		});
-//	}
-//	thread_pool.waitForCompletion();
-//}
+void ParticlePopulation::solveCollisions()
+{
+	for (const auto& [start, end] : collision_ranges_)
+	{
+		thread_pool.addTask([this, start, end] {
+			for (uint32_t idx{ start }; idx < end; ++idx)
+				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
+		});
+	}
+	thread_pool.waitForCompletion();
+}
 
 
 void ParticlePopulation::process_cell(

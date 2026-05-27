@@ -73,6 +73,8 @@ private:
 	FrameRateSmoothing<100> frame_rate_smoothing_{};
 
 public:
+	DensitySettings& density_settings() { return density_grid; }
+
 	size_t iterations_ = 0;
 
 	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
@@ -109,6 +111,8 @@ private:
 	void randomize_angles();
 
 	void update_particle_positions();
+
+	void solveCollisions();
 
 
 	void process_cell(

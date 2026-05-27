@@ -32,27 +32,28 @@ enum class SamplingMode : uint8_t {
 struct DensitySettings
 {
     // Smoothing
-    inline static bool box_smoothing_ = false;
-    inline static bool gaussian_smoothing_ = true;
-    inline static float gaussian_sigma = 0.5f;
-    inline static int box_filter_cascade_passes = 3;
+    inline static bool box_smoothing_ = false; // button
+    inline static bool gaussian_smoothing_ = true; // button
+    inline static float gaussian_sigma = 0.5f; // slider between 0.1 to 1
+    inline static int box_filter_cascade_passes = 3; // slider between 1 and 6
 
     // Sampling
-    inline static SamplingMode sampling_mode_ = SamplingMode::Sample8; // b for bilerp, c for bicubic, s for sample8
+    inline static SamplingMode sampling_mode_ = SamplingMode::Sample8; // b for bilerp, c for bicubic, s for sample8 can only choose one
 
     // update rule
-    inline static float sin_sign = -1.f;
-    inline static float cos_sign = 1.f;
+    inline static float sin_sign = -1.f; // slider between -1 and 1
+    inline static float cos_sign = 1.f;  // slider between -1 and 1
 };
 
 
-class DensityGrid : DensitySettings
+class DensityGrid : public DensitySettings
 {
 public:
     // ── Construction ──────────────────────────────────────────────────────────
 
   
     explicit DensityGrid(float world_w, float world_h, float cell_size);
+    
     // ── Main API ──────────────────────────────────────────────────────────────
 
     void build(const float* px, const float* py, int n);
@@ -79,6 +80,7 @@ public:
     const std::vector<float>& gradient_y() const { return m_Gy; }
 
     // modifications
+    void set_cell_size(float cell_size);
 
 private:
     void bin(const float* px, const float* py, int n);

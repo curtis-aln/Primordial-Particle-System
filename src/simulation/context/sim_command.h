@@ -22,6 +22,13 @@ enum class CommandType
     SetBeta,
     SetGamma,
 
+    // Density grid
+    SetDensityCellSize,
+    SetGaussianSigma,
+    SetBoxFilterCascadePasses,
+    SetSinSign,
+    SetCosSign,
+
     // ── World ─────────────────────────────────────────────────────────────
     // IMGUI_TODO: in Simulation::resolve_modifications(), handle each:
     //   RandomizeSimulation → particle_system_.randomize_angles(); 

@@ -115,6 +115,22 @@ void Simulation::resolve_modifications()
             PPS_Settings::gamma = cmd.float_val;
             break;
 
+            // Density Grid
+        case CommandType::SetSinSign:
+            particle_system_.density_settings().sin_sign = cmd.float_val;
+            break;
+        case CommandType::SetCosSign:
+            particle_system_.density_settings().cos_sign = cmd.float_val;
+            break;
+
+        case CommandType::SetGaussianSigma:
+            particle_system_.density_settings().gaussian_sigma = cmd.float_val;
+            break;
+
+        case CommandType::SetBoxFilterCascadePasses:
+            particle_system_.density_settings().box_filter_cascade_passes = cmd.int_val;
+            break;
+
             // ── World ─────────────────────────────────────────────────────────────
         case CommandType::RandomizeSimulation:
             particle_system_.randomize_sim();

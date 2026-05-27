@@ -21,6 +21,8 @@ struct WorldToggles
     bool hide_panels = false;
     bool render_particles = true;
 
+    bool use_density_grid = true;
+
     // ── Rendering mode ────────────────────────────────────────────────────────
     // IMGUI_TODO: consume in PPS_renderer.cpp — PPS_Renderer::render()
     //   if  auto_heatmap → existing zoom-based switching (current behaviour)

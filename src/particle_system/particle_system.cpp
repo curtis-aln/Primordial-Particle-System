@@ -102,6 +102,7 @@ void ParticlePopulation::update_particles()
 	add_particles_to_grid();
 	density_grid.gaussian_smoothing_ = toggles.gaussian_smoothing_;
 	density_grid.box_smoothing_ = toggles.box_smoothing_;
+	density_grid.sampling_mode_ = toggles.sampling_mode_;
 	density_grid.build(
 		render_data.positions_x.data(),
 		render_data.positions_y.data(),
@@ -431,4 +432,5 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 
 	const float sim_fps = snapshot.stats.updating_fps;
 	snapshot.sim_tick_seconds = (sim_fps > 0.f) ? 1.f / sim_fps : 0.f;
+	snapshot.toggles.sampling_mode_ = density_grid.sampling_mode_;
 }

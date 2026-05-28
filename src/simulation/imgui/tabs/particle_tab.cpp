@@ -224,6 +224,31 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     toggle(ctx, "Box Cascade Smoothing", &WorldToggles::box_smoothing_);
     toggle(ctx, "Guassian Smoothing", &WorldToggles::gaussian_smoothing_);
 
+    // Type of Sampling
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Sampling Mode");
+    ImGui::PopStyleColor();
+
+    int mode = static_cast<int>(ctx.toggles.sampling_mode_);
+
+    if (ImGui::RadioButton("Bilinear", &mode,
+        static_cast<int>(SamplingMode::Bilinear)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Bilinear;
+    }
+
+    if (ImGui::RadioButton("Bicubic", &mode,
+        static_cast<int>(SamplingMode::Bicubic)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Bicubic;
+    }
+
+    if (ImGui::RadioButton("Sample8", &mode,
+        static_cast<int>(SamplingMode::Sample8)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Sample8;
+    }
+
 }
 
 // ── Entry point ───────────────────────────────────────────────────────────────

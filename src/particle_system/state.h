@@ -56,6 +56,7 @@ struct WorldToggles
 
     bool box_smoothing_ = true; // button
     bool gaussian_smoothing_ = false; // button
+    SamplingMode sampling_mode_;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

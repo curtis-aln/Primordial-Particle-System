@@ -75,3 +75,20 @@ Debug visualisation:
 
 Overlay selector — radio buttons for None / Density (D) / Gradient X (Gx) / Gradient Y (Gy) / Gradient magnitude (√Gx²+Gy²). 
 	You already expose density(), gradient_x(), gradient_y() accessors, so you can pipe any of them straight into your existing DensityHeatmap.
+
+
+
+
+
+
+
+
+	--------
+	- Add claude fixes to Density Grid
+	- Add the rest of the Density Grid settings
+	- SinSign and CosinSign should start in the correct places
+	- Box cascade settings should look better
+	- Toggle "show titlebar" and set defualt to false
+	- Reset In particle tab settings
+	- Text Explaining what each slider does briefly
+	- Simulation starts more zoomed in  

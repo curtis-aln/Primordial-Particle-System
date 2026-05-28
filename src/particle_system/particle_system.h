@@ -56,7 +56,7 @@ private:
 	// The Spatial Grid Optimizes finding what particles are nearby
 	SimpleSpatialGrid spatial_grid;
 
-	DensityGrid density_grid{ world_width, world_height, visual_radius };
+	DensityGrid density_grid{ world_width, world_height, visual_radius / 4.f };
 
 	// pre-computed values for wrapping the particles in the world
 	float inv_width_ = 0.f;

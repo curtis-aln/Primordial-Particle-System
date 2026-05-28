@@ -60,14 +60,10 @@ void DensityGrid::smooth_box()
         }
     }
 
-    // Normalise so that a uniform density field returns the expected
-    // neighbour count (the box filter inflates counts by (2·bh+1)^2 × 3
-    // cascade passes accumulate area).  We divide by the kernel area once.
-    const float kernel_area = static_cast<float>((2 * bh + 1) * (2 * bh + 1));
-    const float norm = 1.f / (kernel_area * kernel_area * kernel_area); // 3 cascade passes
-    // NOTE: this normalisation brings D back to units of "particles per
-    // visual_radius disc area".  If you want raw counts, omit this step.
-    for (float& v : m_D) v *= norm;
+    const float box_area = static_cast<float>((2 * bh + 1) * (2 * bh + 1));
+    const float disc_area = 3.14159f * static_cast<float>(m_box_half * m_box_half);
+    const float scale = disc_area / box_area;
+    for (float& v : m_D) v *= scale;
 }
 
 

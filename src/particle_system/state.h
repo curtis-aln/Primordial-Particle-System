@@ -3,6 +3,7 @@
 #include <vector>
 
 #include "../settings.h"
+#include "density_grid/density_grid.h"
 
 // ─────────────────────────────────────────────────────────────────────────────
 //  WorldToggles
@@ -51,6 +52,10 @@ struct WorldToggles
     //   speed < 1 → skip ticks:   run update only when (frame % round(1/speed) == 0)
     //   speed > 1 → multi-step:   run update round(speed) times per render frame
     float sim_speed = 1.0f;
+
+
+    bool box_smoothing_ = true; // button
+    bool gaussian_smoothing_ = false; // button
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

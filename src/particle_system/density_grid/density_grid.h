@@ -32,8 +32,8 @@ enum class SamplingMode : uint8_t {
 struct DensitySettings
 {
     // Smoothing
-    inline static bool box_smoothing_ = false; // button
-    inline static bool gaussian_smoothing_ = true; // button
+    inline static bool box_smoothing_ = true; // button
+    inline static bool gaussian_smoothing_ = false; // button
     inline static float gaussian_sigma = 0.5f; // slider between 0.1 to 1
     inline static int box_filter_cascade_passes = 3; // slider between 1 and 6
 

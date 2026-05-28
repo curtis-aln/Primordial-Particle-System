@@ -104,6 +104,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
 {
     section_header("PHYSICS");
 
+    // Alpha Slider
     ImGui::SetNextItemWidth(-1.f);
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Alpha  (turn rate)");
@@ -112,6 +113,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
     if (ImGui::SliderFloat("##alpha", &m_alpha_, -180.f, 180.f, "%.1f deg"))
         ctx.push({ CommandType::SetAlpha, {}, m_alpha_ });
 
+    // Beta Slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Beta   (neighbour scale)");
@@ -120,6 +122,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
     if (ImGui::SliderFloat("##beta", &m_beta_, -180.f, 180.f, "%.2f deg/n"))
         ctx.push({ CommandType::SetBeta, {}, m_beta_ });
 
+    // Gamma Slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Gamma  (step size)");
@@ -177,6 +180,7 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     if (!ctx.toggles.use_density_grid)
         return;
 
+    // Sin Sign Slider
     ImGui::SetNextItemWidth(-1.f);
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Sin Sign");
@@ -185,6 +189,7 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     if (ImGui::SliderFloat("##SinSign", &m_sin_sign, -1.f, 1.f, "%.01f deg"))
         ctx.push({ CommandType::SetSinSign, {}, m_sin_sign });
 
+    // Cos Sign Slider
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Cos Sign");
     ImGui::PopStyleColor();
@@ -192,6 +197,7 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     if (ImGui::SliderFloat("##CosSign", &m_cos_sign, -1.f, 1.f, "%.01f deg"))
         ctx.push({ CommandType::SetCosSign, {}, m_cos_sign });
 
+    // Guassian Slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("gaussian sigma");
@@ -200,12 +206,13 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     if (ImGui::SliderFloat("##GaussianSigma", &m_gaussian_sigma, 0.1f, 0.8f, "%.01f deg"))
         ctx.push({ CommandType::SetGaussianSigma, {}, m_gaussian_sigma });
 
+    // Cascade slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Box Cascade");
     ImGui::PopStyleColor();
     ImGui::SetNextItemWidth(-1.f);
-    if (ImGui::SliderInt("##BoxCascade", &m_box_filter_cascade_passes, 1, 5, "%1 deg"))
+    if (ImGui::SliderInt("##BoxCascade", &m_box_filter_cascade_passes, 1, 5))
     {
         SimCommand cmd{};
         cmd.type = CommandType::SetBoxFilterCascadePasses;
@@ -214,6 +221,8 @@ void ParticleTab::draw_density_grid(SimCtx& ctx)
     }
 
     // smoothing options
+    toggle(ctx, "Box Cascade Smoothing", &WorldToggles::box_smoothing_);
+    toggle(ctx, "Guassian Smoothing", &WorldToggles::gaussian_smoothing_);
 
 }
 

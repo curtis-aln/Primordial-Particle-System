@@ -22,7 +22,7 @@ struct WorldToggles
     bool hide_panels = false;
     bool render_particles = true;
 
-    bool use_density_grid = true;
+    bool use_density_grid = false;
 
     // ── Rendering mode ────────────────────────────────────────────────────────
     // IMGUI_TODO: consume in PPS_renderer.cpp — PPS_Renderer::render()

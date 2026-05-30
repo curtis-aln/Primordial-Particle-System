@@ -184,7 +184,7 @@ target_fps     = 60
 ```
 
 <!-- ============================================================
-     INSERT: Copy your actual settings.toml structure here.
+     INSERT: Copy settings.toml structure here.
      Replace the values above with whatever your real defaults are.
      ============================================================ -->
 

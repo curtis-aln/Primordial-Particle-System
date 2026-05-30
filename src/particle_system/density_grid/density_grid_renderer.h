@@ -22,7 +22,7 @@
 #include <cmath>
 #include <algorithm>
 
-#include "density_grid/density_grid.h"
+#include "density_grid.h"
 
 class DensityGridRenderer
 {
@@ -64,12 +64,15 @@ private:
 
     // ── SFML resources (render-thread only) ───────────────────────────────────
     sf::Texture texture_;
-    sf::Sprite  sprite_;
-    std::vector<sf::Uint8> pixels_;
+    sf::Sprite  sprite_{texture_};
+    std::vector<std::uint8_t> pixels_;
     int tex_W_ = 0, tex_H_ = 0;   // track when we need to recreate the texture
 
 public:
-    DensityGridRenderer() = default;
+    DensityGridRenderer()
+    {
+
+    }
 
     // ── UPDATE THREAD ─────────────────────────────────────────────────────────
     //  Call after DensityGrid::build() every simulation tick.
@@ -113,7 +116,7 @@ public:
         // Recreate texture only when grid dimensions change
         if (W != tex_W_ || H != tex_H_)
         {
-            texture_.create(static_cast<unsigned>(W), static_cast<unsigned>(H));
+            texture_.resize({ static_cast<unsigned>(W), static_cast<unsigned>(H) });
             pixels_.resize(static_cast<size_t>(W) * H * 4);
             tex_W_ = W;
             tex_H_ = H;
@@ -124,8 +127,8 @@ public:
 
         sprite_.setTexture(texture_, /* resetRect= */ true);
         const float s = world_scale * snap.cell_size;
-        sprite_.setScale(s, s);
-        sprite_.setPosition(0.f, 0.f);
+        sprite_.setScale({ s, s });
+        sprite_.setPosition({ 0.f, 0.f });
 
         window.draw(sprite_);
     }
@@ -137,7 +140,7 @@ public:
 
 private:
     // ── Pixel fill ────────────────────────────────────────────────────────────
-    void fill_pixels(const GridSnapshot& snap) const
+    void fill_pixels(const GridSnapshot& snap)
     {
         const int    W = snap.W, H = snap.H;
         const float  br = brightness.load(std::memory_order_relaxed);

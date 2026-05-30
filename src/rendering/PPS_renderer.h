@@ -5,6 +5,7 @@
 #include "../utils/font.h"
 #include "simulation/context/sim_snapshot.h"
 #include "utils/Camera.hpp"
+#include "../particle_system/density_grid/density_grid_renderer.h"
 
 struct SimSnapshot;
 
@@ -26,6 +27,8 @@ class PPS_Renderer
 
     std::vector<sf::Color> m_cached_colors_;
     bool                   m_colors_dirty_ = true;
+
+    DensityGridRenderer density_grid_renderer{};
 
 public:
     PPS_Renderer(sf::RenderWindow* window);

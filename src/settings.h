@@ -19,11 +19,11 @@ struct SimulationSettings
 struct PPS_Settings
 {
     inline static constexpr unsigned initial_thread_count = 16;
-    inline static constexpr unsigned particle_count = 60'000;
+    inline static constexpr unsigned particle_count = 10'000'000;
 
     inline static int add_to_grid_freq = 3;
 
-    inline static constexpr float scale_factor = 120;
+    inline static constexpr float scale_factor = 1420;
     inline static constexpr float param_scale_factor = 200.f;
 
     inline static constexpr auto world_width = SimulationSettings::screen_width * scale_factor;

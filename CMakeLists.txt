@@ -71,6 +71,7 @@ add_executable(PrimordialParticleSystem
     # ── Entry point
     src/main.cpp
   "src/particle_system/particle_system.cpp" 
+  "src/particle_system/spatial_grid_updating.cpp" 
   "src/particle_system/state.h" 
   "src/rendering/PPS_renderer.cpp" 
 
@@ -105,7 +106,7 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/simulation/imgui/tabs/i_tab.h" 
  "src/rendering/particle_colors.h" 
  "src/particle_system/density_grid/density_grid.h" 
- "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h")
+ "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h" "src/particle_system/spatial_grid_updating.cpp")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

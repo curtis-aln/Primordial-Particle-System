@@ -10,37 +10,10 @@
 // - test if fetching the sin and cos values are actually faster, is there such thing as approximated sin and cos
 // -  add_particles_to_grid — spatial_grid.add_object called from multiple threads - see if doing this single threadedly is faster
 
-// add_object in spatial hash grid may not be thread safe when a used to add the particles to the grid.
-// see if removing multithreadding for that part makes it any faster
 
-
-// graphics is buggy even though it says 1000 fps
-
-
-
-
-README Todo:
-- demonstrate alternative update rules (with different colors)
-- finish showing survival and death gifs
-- show massive scale of simulation
-
-
-GUI TO-Fix:
-- add a randomize button to the particle rules,
-- add a reset button to the particle rules
-- Have 8 preset options for the particle rules
-
-
-// 80fps Inner rendering 10,000,000 particles
-optimisation: use the spatial grid to read all of the particles within the camera range
-this makes the if statements fall from 10 million down to zero
 
 second optimization: go from appending to the vertex array to pre calculating the amount of particles in all
 the spatial grid cells, then resizing and appending
-
-
-# Density Grid Section
-Visual Radius
 
 
 # Heatmap grid section
@@ -57,38 +30,24 @@ Derived from scatter logic:
 The bilinear splat is always weight 1 per point — you could expose a point weight/intensity multiplier so you can boost density without adding more points.
 
 
-# Density Grid section
-Construction-time (require rebuild):
-
-Cell size (m_s) — the most impactful setting. Smaller = more accurate, more memory/compute. A combo of presets (visual_radius/4, /2, 1.0, 2.0) is cleaner than a raw float slider since the grid is rebuilt on change.
-Grid dimensions — these follow from cell size, but you could display them read-only (%d × %d, %d cells) as a debug indicator so you can see the cost of your cell size choice.
-
-Per-frame tunables:
-
-Smoothing mode — you have both smooth_box() and smooth_gaussian() implemented but only smooth_gaussian() is called in build(). A radio button to switch between them is an easy win; box is faster for large particle counts.
-Gaussian sigma multiplier — the 0.5f in sigma = visual_radius * inv_s * 0.5f. A slider from ~0.2–1.0 lets you trade sharpness vs smoothness of the density estimate.
-Box filter cascade passes — hardcoded to 3 in smooth_box(). An int slider (1–5) trades accuracy for speed.
-
-Sampling mode — you have three samplers (bilerp, bicubic, sample8) but update_particle_density hardcodes bicubic. A combo letting you switch between them is useful for profiling; bicubic is noticeably more expensive than bilinear at high particle counts.
-
-Debug visualisation:
-
-Overlay selector — radio buttons for None / Density (D) / Gradient X (Gx) / Gradient Y (Gy) / Gradient magnitude (√Gx²+Gy²). 
-	You already expose density(), gradient_x(), gradient_y() accessors, so you can pipe any of them straight into your existing DensityHeatmap.
+# SIMULATION TODO
+- Simulation starts more zoomed in
 
 
+# IMGUI TODO
+- Debug Button doesnt work
+- Particles button only works sometimes
+- Draw grid checkbox doesnt work
+- add a randomize button to the particle rules,
+- Radius doesnt work and move it to the particle tab
+- change beta turning rate to -90 to 90
+- move time elapsed into statistics
+- Remove Performance section (redundant)
+- sim speed slider doesn't work
+- Text Explaining what each slider does briefly
+- Reset In particle tab settings
+- Add the rest of the Density Grid settings
+- SinSign and CosinSign should start in the correct places
+- Toggle "show titlebar" and set defualt to false
 
-
-
-
-
-
-	--------
-	- Add claude fixes to Density Grid
-	- Add the rest of the Density Grid settings
-	- SinSign and CosinSign should start in the correct places
-	- Box cascade settings should look better
-	- Toggle "show titlebar" and set defualt to false
-	- Reset In particle tab settings
-	- Text Explaining what each slider does briefly
-	- Simulation starts more zoomed in  
+# Statistical TODO

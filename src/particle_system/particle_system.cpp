@@ -1,4 +1,11 @@
+#include "../simulation/context/sim_snapshot.h"
 #include "particle_system.h"
+#include <cmath>
+#include <cstdint>
+#include <settings.h>
+#include <SFML/System/Vector2.hpp>
+#include <string.h>
+#include <utils/random.h>
 
 // Each thread gets their own container of neighbour positions to avoid race conditions
 thread_local TL_NeighbourPositions neighbour_positions_x;
@@ -87,9 +94,9 @@ void ParticlePopulation::add_particles_to_grid()
 				float& y = render_data.positions_y[i];
 
 				// Wrapping the position to stay within the world
-				if (x < 0.0f || x >= world_width)  
+				if (x < 0.0f || x >= world_width)
 					x -= world_width * std::floor(x * inv_width_);
-				if (y < 0.0f || y >= world_height)  
+				if (y < 0.0f || y >= world_height)
 					y -= world_height * std::floor(y * inv_height_);
 				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
 			}
@@ -100,7 +107,7 @@ void ParticlePopulation::add_particles_to_grid()
 
 void ParticlePopulation::update_particles()
 {
-  
+
 	if (!toggles.paused)
 	{
 		if (toggles.use_density_grid)
@@ -129,33 +136,33 @@ void ParticlePopulation::update_particles()
 
 void ParticlePopulation::solveCollisions_density()
 {
-    const uint32_t tc = thread_pool.m_thread_count;
-    const int ppt = particle_count / tc;
-    for (uint32_t t = 0; t < tc; ++t)
-    {
-        thread_pool.addTask([this, t, ppt, tc] {
-            const int start = t * ppt;
-            const int end   = (t == tc - 1) ? particle_count : start + ppt;
-            for (int i = start; i < end; ++i)
-            {
-                density_grid.update_particle_density(
-                    render_data.angles_[i],
-                    render_data.positions_x[i],
-                    render_data.positions_y[i],
-                    render_data.neighbourhood_count_[i],
-                    sin_table_, cos_table_,
-                    ANGLE_TABLE_SIZE);
-                // Toroidal wrap (same as add_particles_to_grid)
-                float& x = render_data.positions_x[i];
-                float& y = render_data.positions_y[i];
-                if (x < 0.f || x >= world_width)
-                    x -= world_width * std::floor(x * inv_width_);
-                if (y < 0.f || y >= world_height)
-                    y -= world_height * std::floor(y * inv_height_);
-            }
-        });
-    }
-    thread_pool.waitForCompletion();
+	const uint32_t tc = thread_pool.m_thread_count;
+	const int ppt = particle_count / tc;
+	for (uint32_t t = 0; t < tc; ++t)
+	{
+		thread_pool.addTask([this, t, ppt, tc] {
+			const int start = t * ppt;
+			const int end = (t == tc - 1) ? particle_count : start + ppt;
+			for (int i = start; i < end; ++i)
+			{
+				density_grid.update_particle_density(
+					render_data.angles_[i],
+					render_data.positions_x[i],
+					render_data.positions_y[i],
+					render_data.neighbourhood_count_[i],
+					sin_table_, cos_table_,
+					ANGLE_TABLE_SIZE);
+				// Toroidal wrap (same as add_particles_to_grid)
+				float& x = render_data.positions_x[i];
+				float& y = render_data.positions_y[i];
+				if (x < 0.f || x >= world_width)
+					x -= world_width * std::floor(x * inv_width_);
+				if (y < 0.f || y >= world_height)
+					y -= world_height * std::floor(y * inv_height_);
+			}
+			});
+	}
+	thread_pool.waitForCompletion();
 }
 
 
@@ -178,8 +185,8 @@ void ParticlePopulation::init_particle_vectors()
 	render_data.angles_.resize(particle_count);
 	render_data.neighbourhood_count_.resize(particle_count);
 
-	render_data.cos_angles_.resize(particle_count);  
-	render_data.sin_angles_.resize(particle_count); 
+	render_data.cos_angles_.resize(particle_count);
+	render_data.sin_angles_.resize(particle_count);
 }
 
 void ParticlePopulation::randomize_angles()

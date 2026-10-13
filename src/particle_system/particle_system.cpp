@@ -125,7 +125,6 @@ void ParticlePopulation::update_particles()
 
 		else
 		{
-			add_particles_to_grid();
 			solveCollisions();
 			update_particle_positions();
 		}

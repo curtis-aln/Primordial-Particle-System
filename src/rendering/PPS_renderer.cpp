@@ -87,7 +87,7 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera)
 	const float visible_world_width = right - left;
 
 	const float transition_thresh_begin = 800.f * PPS_Settings::particle_radius;
-	const float transition_thresh_end = 1400.f * PPS_Settings::particle_radius;
+	const float transition_thresh_end = 2000.f * PPS_Settings::particle_radius;
 	const float diff = transition_thresh_end - transition_thresh_begin;
 
 	const auto& tgl = snapshot.toggles;
@@ -183,16 +183,15 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
 void PPS_Renderer::check_rebuild_color_cashe(const std::vector<uint16_t>& neighbourhood_count)
 {
 	// Rebuild color cache when sim produced a new frame OR color scheme changed
-	if (m_colors_dirty_ || g_color_scheme_dirty)
-	{
-		m_cached_colors_.resize(PPS_Settings::particle_count);
-		for (size_t i = 0; i < PPS_Settings::particle_count; ++i)
-			m_cached_colors_[i] = interpolate_scheme(
-				static_cast<float>(neighbourhood_count[i]), g_color_scheme);
 
-		m_colors_dirty_ = false;
-		g_color_scheme_dirty = false;
-	}
+	m_cached_colors_.resize(PPS_Settings::particle_count);
+	for (size_t i = 0; i < PPS_Settings::particle_count; ++i)
+		m_cached_colors_[i] = interpolate_scheme(
+			static_cast<float>(neighbourhood_count[i]), g_color_scheme);
+
+	m_colors_dirty_ = false;
+	g_color_scheme_dirty = false;
+
 }
 
 // ── Debug overlay ─────────────────────────────────────────────────────────────

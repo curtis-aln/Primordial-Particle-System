@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <imgui.h>
 #include <particle_system/state.h>
+#include <settings.h>
 #include <simulation/context/sim_command.h>
 #include <simulation/context/sim_snapshot.h>
 
@@ -77,6 +78,7 @@ void WorldTab::draw(const SimSnapshot& snap, SimCtx& ctx)
 	section_header("STATISTICS");
 
 	fps_row("Update FPS", stats.updating_fps);
+	fps_row("Iterations Per Second", stats.iterations_per_second);
 
 	// Format large integers with comma separators for readability
 	{

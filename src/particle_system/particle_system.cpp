@@ -108,29 +108,28 @@ void ParticlePopulation::add_particles_to_grid()
 void ParticlePopulation::update_particles()
 {
 
-	if (!toggles.paused)
+	if (toggles.use_density_grid)
 	{
-		if (toggles.use_density_grid)
-		{
-			density_grid.gaussian_smoothing_ = toggles.gaussian_smoothing_;
-			density_grid.box_smoothing_ = toggles.box_smoothing_;
-			density_grid.sampling_mode_ = toggles.sampling_mode_;
-			density_grid.build(
-				render_data.positions_x.data(),
-				render_data.positions_y.data(),
-				particle_count);
+		density_grid.gaussian_smoothing_ = toggles.gaussian_smoothing_;
+		density_grid.box_smoothing_ = toggles.box_smoothing_;
+		density_grid.sampling_mode_ = toggles.sampling_mode_;
+		density_grid.build(
+			render_data.positions_x.data(),
+			render_data.positions_y.data(),
+			particle_count);
 
-			solveCollisions_density();
-		}
+		solveCollisions_density();
+	}
 
-		else
-		{
-			solveCollisions();
-			update_particle_positions();
-		}
+	else
+	{
+		solveCollisions();
+		update_particle_positions();
 	}
 
 	iterations_++;
+
+	iterations_clock_.update_frame_rate();
 }
 
 void ParticlePopulation::solveCollisions_density()
@@ -250,10 +249,9 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 	}
 
 	// ── Statistics ────────────────────────────────────────────────────────
-	frame_rate_smoothing_.update_frame_rate();
-	snapshot.stats.updating_fps = frame_rate_smoothing_.get_average_frame_rate();
 	snapshot.stats.cell_particle_count = PPS_Settings::particle_count;
 	snapshot.stats.iterations_ = iterations_;
+	snapshot.stats.iterations_per_second = iterations_clock_.get_average_frame_rate();
 
 	const float sim_fps = snapshot.stats.updating_fps;
 	snapshot.sim_tick_seconds = (sim_fps > 0.f) ? 1.f / sim_fps : 0.f;

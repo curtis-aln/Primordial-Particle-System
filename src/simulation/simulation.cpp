@@ -74,15 +74,24 @@ void Simulation::update()
 {
 	resolve_modifications();
 
-	if (particle_system_.iterations_ % add_to_grid_freq == 0)
-		particle_system_.add_particles_to_grid();
+	if (!particle_system_.toggles.paused)
+	{
+		for (int i = 0; i < sub_iterations; ++i)
+		{
+			if (particle_system_.iterations_ % add_to_grid_freq == 0)
+				particle_system_.add_particles_to_grid();
 
-	particle_system_.update_particles();
+			particle_system_.update_particles();
+		}
+	}
 
 	SimSnapshot& snap = m_sim_buffer_.get_write_buffer();
 	particle_system_.fill_snapshot(snap);
-	snap.stats.fps = fps_;
+	snap.stats.fps = rendering_fps_;
 	snap.stats.m_total_time_elapsed_ = m_total_time_elapsed_;
+
+	updating_clock_.update_frame_rate();
+	snap.stats.updating_fps = updating_clock_.get_average_frame_rate();
 
 	// Copy current toggles into snapshot so the render thread can read them
 	snap.toggles = particle_system_.toggles;
@@ -199,11 +208,11 @@ void Simulation::render()
 // ── Frame rate ────────────────────────────────────────────────────────────────
 void Simulation::manage_frame_rate()
 {
-	fps_ = static_cast<float>(clock_.get_average_frame_rate());
-	clock_.update_frame_rate();
+	rendering_fps_ = static_cast<float>(rendering_clock_.get_average_frame_rate());
+	rendering_clock_.update_frame_rate();
 
 	std::ostringstream title;
 	title << "Primordial Particle System"
-		<< " | FPS: " << std::fixed << std::setprecision(1) << fps_;
+		<< " | FPS: " << std::fixed << std::setprecision(1) << rendering_fps_;
 	window_.setTitle(title.str());
 }

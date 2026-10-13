@@ -1,87 +1,99 @@
 #pragma once
-#include "settings.h"
 #include "particle_system/particle_system.h"
-#include "utils/smooth_frame_rates.h"
-#include "utils/font.h"
+#include "settings.h"
 #include "utils/Camera.hpp"
+#include "utils/font.h"
 #include "utils/SFML_grid.h"
+#include "utils/smooth_frame_rates.h"
 
-#include "context/triple_buffer.h"
-#include "context/sim_snapshot.h"
 #include "context/sim_command.h"
+#include "context/sim_snapshot.h"
+#include "context/triple_buffer.h"
 
-#include <string>
+#include "../rendering/PPS_renderer.h"
 
 #include "../utils/stop_watch.h"
 #include "imgui/control_panel.h"
+#include <atomic>
+#include <mutex>
+#include <queue>
+#include <SFML/Graphics/Rect.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/System/Vector2.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
+#include <thread>
 
 class Simulation : PPS_Settings, SimulationSettings
 {
-    // ── SFML ──────────────────────────────────────────────────────────────────
-    sf::RenderWindow window_{};
+	// ── SFML ──────────────────────────────────────────────────────────────────
+	sf::RenderWindow window_{};
 
-    // ── Timing ────────────────────────────────────────────────────────────────
-    FrameRateSmoothing<100> clock_{};
-    StopWatch               m_delta_time_{};
-    float                   m_total_time_elapsed_ = 0.f;
+	// ── Timing ────────────────────────────────────────────────────────────────
+	FrameRateSmoothing<100> rendering_clock_{};
+	StopWatch               m_delta_time_{};
+	float                   m_total_time_elapsed_ = 0.f;
 
-    // ── Camera / view ─────────────────────────────────────────────────────────
-    Camera camera{ &window_, 1.f / scale_factor };
+	// Statistics
+	FrameRateSmoothing<100> updating_clock_{};
 
-    // ── Fonts ─────────────────────────────────────────────────────────────────
-    Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
-    Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
+	// ── Camera / view ─────────────────────────────────────────────────────────
+	Camera camera{ &window_, 1.f / scale_factor };
 
-    // ── Runtime state ─────────────────────────────────────────────────────────
-    bool  render_hash_grid_ = false;
-    bool  debug_ = false;
-    bool  rendering_ = true;
-    float fps_ = 0.f;
+	// ── Fonts ─────────────────────────────────────────────────────────────────
+	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
+	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
-    // ── Debug interaction ─────────────────────────────────────────────────────
-    float       debug_radius = 8000.f;
-    const float change_in_debug_radius = 500.f;
+	// ── Runtime state ─────────────────────────────────────────────────────────
+	bool  render_hash_grid_ = false;
+	bool  debug_ = false;
+	bool  rendering_ = true;
+	float rendering_fps_ = 0.f;
 
-    // ── Spatial-grid overlay ──────────────────────────────────────────────────
-    SFML_Grid grid{ window_,
-                    sf::FloatRect({0, 0}, {world_width, world_height}), 10 };
+	// ── Debug interaction ─────────────────────────────────────────────────────
+	float       debug_radius = 8000.f;
+	const float change_in_debug_radius = 500.f;
 
-    // ── ImGui ─────────────────────────────────────────────────────────────────
-    ControlPanel m_control_panel_;
+	// ── Spatial-grid overlay ──────────────────────────────────────────────────
+	SFML_Grid grid{ window_,
+					sf::FloatRect({ 0, 0 },{ world_width, world_height }), 10 };
 
-    // ── Particle system ───────────────────────────────────────────────────────
-    ParticlePopulation particle_system_{};
-    PPS_Renderer       pps_renderer_{ &window_ };
+	// ── ImGui ─────────────────────────────────────────────────────────────────
+	ControlPanel m_control_panel_;
 
-    // ── Triple-buffer (sim → render, lock-free) ───────────────────────────────
-    TripleBuffer<SimSnapshot> m_sim_buffer_{ PPS_Settings::particle_count };
+	// ── Particle system ───────────────────────────────────────────────────────
+	ParticlePopulation particle_system_{};
+	PPS_Renderer       pps_renderer_{ &window_ };
 
-    // ── Command queue (render → sim, mutex-protected) ─────────────────────────
-    std::mutex             m_cmd_mutex{};
-    std::queue<SimCommand> m_commands{};
+	// ── Triple-buffer (sim → render, lock-free) ───────────────────────────────
+	TripleBuffer<SimSnapshot> m_sim_buffer_{ PPS_Settings::particle_count };
 
-    // ── Threading ─────────────────────────────────────────────────────────────
-    std::thread       m_sim_thread_;
-    std::atomic<bool> running{ true };
+	// ── Command queue (render → sim, mutex-protected) ─────────────────────────
+	std::mutex             m_cmd_mutex{};
+	std::queue<SimCommand> m_commands{};
+
+	// ── Threading ─────────────────────────────────────────────────────────────
+	std::thread       m_sim_thread_;
+	std::atomic<bool> running{ true };
 
 public:
-    Simulation();
-    void init_imGUI();
-    void run();
-    void quit();
+	Simulation();
+	void init_imGUI();
+	void run();
+	void quit();
 
-    void update();
-    void resolve_modifications();
-    void handle_events();
-    void dispatch_event(const sf::Event& event, const sf::Vector2f& cam_pos);
-    void handle_keyboard_events(const sf::Keyboard::Key& event_key_code);
-    void handle_pause_toggle();
-    void handle_mouse_press(const sf::Vector2f& cam_pos);
-    void handle_mouse_release();
+	void update();
+	void resolve_modifications();
+	void handle_events();
+	void dispatch_event(const sf::Event& event, const sf::Vector2f& cam_pos);
+	void handle_keyboard_events(const sf::Keyboard::Key& event_key_code);
+	void handle_pause_toggle();
+	void handle_mouse_press(const sf::Vector2f& cam_pos);
+	void handle_mouse_release();
 
 private:
-    void render();
-    void manage_frame_rate();
-    void handle_imGUI(const SimSnapshot& snap, float dt);
-    // draw_tab removed — replaced by ControlPanel::draw()
+	void render();
+	void manage_frame_rate();
+	void handle_imGUI(const SimSnapshot& snap, float dt);
+	// draw_tab removed — replaced by ControlPanel::draw()
 };

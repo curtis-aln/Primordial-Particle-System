@@ -1,8 +1,13 @@
 #pragma once
 
-#include <iostream>
-#include <SFML/Graphics.hpp>
+#include "../settings.h"
 #include "../utils/spatial_grid/simple_spatial_grid.h"
+#include <array>
+#include <SFML/Graphics/CircleShape.hpp>
+#include <SFML/Graphics/RenderWindow.hpp>
+#include <SFML/System/Vector2.hpp>
+#include <utils/spatial_grid/fixed_span.h>
+#include <vector>
 
 template<size_t max_beacons, int grid_cells_x, int grid_cells_y>
 class Beacons

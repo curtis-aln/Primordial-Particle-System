@@ -21,8 +21,9 @@ struct PPS_Settings
 {
 	inline static constexpr unsigned initial_thread_count = 16;
 	inline static constexpr unsigned particle_count = 100'000;
+	inline static constexpr unsigned sub_iterations = 1;
 
-	inline static int add_to_grid_freq = 3;
+	inline static int add_to_grid_freq = 8;
 
 	inline static constexpr float scale_factor = 200;
 	inline static constexpr float param_scale_factor = 200.f;

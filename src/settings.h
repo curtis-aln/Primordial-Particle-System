@@ -13,7 +13,7 @@ inline float wrap_coord(float v, float size, float inv_size)
 
 struct SimulationSettings
 {
-	static constexpr bool set_Random_seed = false;
+	static constexpr bool set_Random_seed = true;
 	inline static constexpr unsigned screen_width = 1900;
 	inline static constexpr unsigned screen_height = 1000;
 	inline static constexpr auto aspect_ratio =

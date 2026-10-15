@@ -2,10 +2,15 @@
 
 #include <random>
 
+#include <cstdint>
 #include <SFML/Graphics/Color.hpp>
 #include <SFML/Graphics/Rect.hpp>
 #include <SFML/System/Vector2.hpp>
 #include <SFML/System/Vector3.hpp>
+#include <stdexcept>
+#include <string.h>
+#include <type_traits>
+#include <vector>
 
 namespace Random
 {
@@ -139,5 +144,10 @@ namespace FastRandom
 		float f;
 		std::memcpy(&f, &bits, sizeof(f));
 		return f - 1.f;
+	}
+
+	inline void set_seed(uint32_t seed)
+	{
+		fast_state = seed | 1u;
 	}
 }

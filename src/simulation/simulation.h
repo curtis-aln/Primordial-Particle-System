@@ -91,9 +91,12 @@ public:
 	void handle_mouse_press(const sf::Vector2f& cam_pos);
 	void handle_mouse_release();
 
+	static void set_seed();
+
 private:
 	void render();
 	void manage_frame_rate();
+
 	void handle_imGUI(const SimSnapshot& snap, float dt);
 	// draw_tab removed — replaced by ControlPanel::draw()
 };

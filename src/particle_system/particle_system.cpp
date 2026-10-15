@@ -2,6 +2,7 @@
 #include "particle_system.h"
 #include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <settings.h>
 #include <SFML/System/Vector2.hpp>
 #include <string.h>
@@ -14,7 +15,17 @@ thread_local TL_NeighbourPositions neighbour_positions_y;
 // Constructor
 ParticlePopulation::ParticlePopulation() :
 	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height),
-	thread_pool(initial_thread_count)
+	thread_pool(
+		initial_thread_count,
+		[](uint32_t thread_id)
+		{
+			Random::set_seed(SimulationSettings::seed);
+			FastRandom::set_seed(SimulationSettings::seed);
+
+			std::cout << "Seeded worker " << thread_id
+				<< " with seed " << SimulationSettings::seed << '\n';
+		}
+	)
 {
 	precompute_thread_ranges();
 

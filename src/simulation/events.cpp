@@ -1,5 +1,10 @@
 #include "imgui-SFML.h"
 #include "simulation.h"
+#include <imgui.h>
+#include <particle_system/state.h>
+#include <SFML/System/Vector2.hpp>
+#include <SFML/Window/Event.hpp>
+#include <SFML/Window/Keyboard.hpp>
 
 void Simulation::handle_events()
 {

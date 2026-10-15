@@ -15,7 +15,10 @@
 #include <SFML/Window/VideoMode.hpp>
 #include <sstream>
 #include <thread>
+#include <thread>
 #include <utility>
+
+#include "../utils/random.h"
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 Simulation::Simulation()
@@ -44,6 +47,7 @@ void Simulation::run()
 {
 	m_sim_thread_ = std::thread([this]
 		{
+			Simulation::set_seed();
 			while (running)
 				update();
 		});
@@ -211,4 +215,18 @@ void Simulation::manage_frame_rate()
 	title << "Primordial Particle System"
 		<< " | FPS: " << std::fixed << std::setprecision(1) << rendering_fps_;
 	window_.setTitle(title.str());
+}
+
+
+void Simulation::set_seed()
+{
+	if (SimulationSettings::set_Random_seed)
+	{
+		std::cout << "Setting Random seed to: " << seed
+			<< " | Thread ID: " << std::this_thread::get_id()
+			<< '\n';
+
+		Random::set_seed(seed);
+		FastRandom::set_seed(seed);
+	}
 }

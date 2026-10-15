@@ -15,6 +15,7 @@
 #include <SFML/System/Vector2.hpp>
 #include <simulation/context/sim_snapshot.h>
 #include <utils/Camera.hpp>
+#include <utils/spatial_grid/spatial_grid_renderer.h>
 #include <utils/utils.h>
 #include <vector>
 
@@ -42,7 +43,7 @@ inline sf::Texture generate_circle_texture(float radius)
 }
 
 // ── Constructor ───────────────────────────────────────────────────────────────
-PPS_Renderer::PPS_Renderer(sf::RenderWindow* window) : window_(window)
+PPS_Renderer::PPS_Renderer(sf::RenderWindow* window, SimpleSpatialGrid* spatial_grid) : window_(window), grid_renderer(spatial_grid)
 {
 	constexpr int vertex_count = PPS_Settings::particle_count * 6;
 	vertex_array.resize(vertex_count);
@@ -120,6 +121,11 @@ void PPS_Renderer::render(const SimSnapshot& snapshot, Camera& camera)
 
 	if (rend_map)       render_heat_map(snapshot, camera, alpha_heat_map);
 	if (rend_particles) render_particles(snapshot, camera, alpha_particles);
+
+	if (snapshot.toggles.draw_grid)
+	{
+		grid_renderer.render(*window_, camera.get_world_mouse_pos(), 1000.f);
+	}
 }
 
 

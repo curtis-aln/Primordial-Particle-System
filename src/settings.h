@@ -25,16 +25,17 @@ struct PPS_Settings
 
 	inline static int add_to_grid_freq = 8;
 
-	inline static constexpr float scale_factor = 200;
+	inline static constexpr float scale_factor = 150;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	inline static constexpr auto world_width = SimulationSettings::screen_width * scale_factor;
 	inline static constexpr auto world_height = SimulationSettings::screen_height * scale_factor;
 
-	inline static constexpr auto grid_cells_y =
+	inline static constexpr int grid_cells_y =
 		static_cast<size_t>(scale_factor);
-	inline static constexpr auto grid_cells_x =
+	inline static constexpr int grid_cells_x =
 		static_cast<size_t>((scale_factor)*SimulationSettings::aspect_ratio);
+
 	inline static constexpr int cell_capacity = 20;
 
 	// Scale-sensitive parameters

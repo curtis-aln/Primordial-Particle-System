@@ -74,6 +74,7 @@ add_executable(PrimordialParticleSystem
   "src/particle_system/spatial_grid_updating.cpp" 
   "src/particle_system/state.h" 
   "src/rendering/PPS_renderer.cpp" 
+  "src/utils/spatial_grid/spatial_grid_renderer.cpp"
 
   "src/simulation/simulation.cpp" 
   "src/simulation/events.cpp" 

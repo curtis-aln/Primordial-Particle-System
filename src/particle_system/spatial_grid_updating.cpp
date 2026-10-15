@@ -1,4 +1,8 @@
 #include "particle_system.h"
+#include <array>
+#include <cmath>
+#include <cstdint>
+#include <utils/spatial_grid/simple_spatial_grid.h>
 
 
 void ParticlePopulation::update_particle_positions()

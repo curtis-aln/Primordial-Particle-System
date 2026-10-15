@@ -63,7 +63,7 @@ class Simulation : PPS_Settings, SimulationSettings
 
 	// ── Particle system ───────────────────────────────────────────────────────
 	ParticlePopulation particle_system_{};
-	PPS_Renderer       pps_renderer_{ &window_ };
+	PPS_Renderer       pps_renderer_{ &window_, &particle_system_.spatial_grid };
 
 	// ── Triple-buffer (sim → render, lock-free) ───────────────────────────────
 	TripleBuffer<SimSnapshot> m_sim_buffer_{ PPS_Settings::particle_count };

@@ -243,6 +243,7 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 
 	for (int i = 0; i < n; ++i)
 	{
+
 		const int idx = static_cast<int>((angles[i] / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
 		ca[i] = cos_table_[idx];
 		sa[i] = sin_table_[idx];

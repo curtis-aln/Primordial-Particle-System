@@ -14,6 +14,8 @@
 #include <SFML/System/Vector2.hpp>
 #include <vector>
 
+#include "../utils/spatial_grid/spatial_grid_renderer.h"
+
 struct SimSnapshot;
 
 class PPS_Renderer
@@ -29,6 +31,8 @@ class PPS_Renderer
 
 	sf::RenderWindow* window_ = nullptr;
 
+	SpatialGridRenderer grid_renderer;
+
 	DensityHeatmap heatmap{ PPS_Settings::world_width, PPS_Settings::world_height,
 							 SimulationSettings::screen_width, SimulationSettings::screen_height };
 
@@ -40,7 +44,7 @@ class PPS_Renderer
 	DensityGridRenderer density_grid_renderer{};
 
 public:
-	PPS_Renderer(sf::RenderWindow* window);
+	PPS_Renderer(sf::RenderWindow* window, SimpleSpatialGrid* spatial_grid);
 
 	static float zoom_to_alpha(const float zoom,
 		const float zoom_min, const float zoom_max,

@@ -47,6 +47,9 @@ public:
 
 	FrameRateSmoothing<100> iterations_clock_{};
 
+	// The Spatial Grid Optimizes finding what particles are nearby
+	SimpleSpatialGrid spatial_grid;
+
 private:
 
 	// Pre-computed constants for fast lookup when calculating the direction particles must go
@@ -54,8 +57,6 @@ private:
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 
-	// The Spatial Grid Optimizes finding what particles are nearby
-	SimpleSpatialGrid spatial_grid;
 
 	DensityGrid density_grid{ world_width, world_height, visual_radius / 4.f };
 

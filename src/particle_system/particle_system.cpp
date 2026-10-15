@@ -90,14 +90,12 @@ void ParticlePopulation::add_particles_to_grid()
 		thread_pool.addTask([this, start, end] {
 			for (size_t i = start; i < end; ++i)
 			{
+				// Wrapping the position to stay within the world
 				float& x = render_data.positions_x[i];
 				float& y = render_data.positions_y[i];
 
-				// Wrapping the position to stay within the world
-				if (x < 0.0f || x >= world_width)
-					x -= world_width * std::floor(x * inv_width_);
-				if (y < 0.0f || y >= world_height)
-					y -= world_height * std::floor(y * inv_height_);
+				if (x < 0.f || x >= world_width)  x = wrap_coord(x, world_width, inv_width_);
+				if (y < 0.f || y >= world_height) y = wrap_coord(y, world_height, inv_height_);
 				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
 			}
 			});
@@ -153,10 +151,8 @@ void ParticlePopulation::solveCollisions_density()
 				// Toroidal wrap (same as add_particles_to_grid)
 				float& x = render_data.positions_x[i];
 				float& y = render_data.positions_y[i];
-				if (x < 0.f || x >= world_width)
-					x -= world_width * std::floor(x * inv_width_);
-				if (y < 0.f || y >= world_height)
-					y -= world_height * std::floor(y * inv_height_);
+				if (x < 0.f || x >= world_width)  x = wrap_coord(x, world_width, inv_width_);
+				if (y < 0.f || y >= world_height) y = wrap_coord(y, world_height, inv_height_);
 			}
 			});
 	}

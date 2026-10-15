@@ -1,6 +1,16 @@
 #pragma once
+#include <cmath>
+#include <iostream>
 #include <SFML/Graphics/Color.hpp>
 #include <string>
+
+inline float wrap_coord(float v, float size, float inv_size)
+{
+	v -= size * std::floor(v * inv_size);
+	if (v >= size) v -= size;   // rounding landed on/above size (covers == size too)
+	if (v < 0.f)   v = 0.f;     // belt-and-braces; shouldn't fire
+	return v;
+}
 
 struct SimulationSettings
 {

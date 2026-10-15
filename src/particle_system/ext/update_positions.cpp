@@ -33,10 +33,13 @@ void ParticlePopulation::update_particle_position(int i)
 {
 	// Update position
 	float& angle = render_data.angles_[i];
-	const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
 
-	angle = fmod(angle, two_pi);
+	angle = std::fmod(angle, two_pi);
 	angle += two_pi * (angle < 0.0f);
+
+	const int angle_index = static_cast<int>(
+		(angle / two_pi) * ANGLE_TABLE_SIZE
+		) & (ANGLE_TABLE_SIZE - 1);
 
 	render_data.positions_x[i] += gamma * cos_table_[angle_index];
 	render_data.positions_y[i] += gamma * sin_table_[angle_index];

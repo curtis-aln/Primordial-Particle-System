@@ -79,7 +79,7 @@ add_executable(PrimordialParticleSystem
   "src/simulation/simulation.cpp" 
   "src/simulation/events.cpp" 
 
-  "src/utils/stop_watch.h"
+  
   "src/rendering/heatmap.h" 
   "src/rendering/heatmap.cpp" 
   "src/particle_system/density_grid/density_grid.cpp"
@@ -107,7 +107,7 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/simulation/imgui/tabs/i_tab.h" 
  "src/rendering/particle_colors.h" 
  "src/particle_system/density_grid/density_grid.h" 
- "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h" "src/particle_system/spatial_grid_updating.cpp")
+ "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h" "src/particle_system/spatial_grid_updating.cpp" "src/utils/custom_clock.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

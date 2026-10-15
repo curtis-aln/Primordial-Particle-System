@@ -17,7 +17,7 @@
 #include <cstdint>
 #include <SFML/System/Vector2.hpp>
 #include <simulation/context/sim_snapshot.h>
-#include <utils/smooth_frame_rates.h>
+#include <utils/custom_clock.h>
 
 
 // pre-computing constants
@@ -45,7 +45,7 @@ public:
 	RenderData render_data{};
 	WorldToggles toggles{};
 
-	FrameRateSmoothing<100> iterations_clock_{};
+	CustomClock<100> iterations_clock_{};
 
 	// The Spatial Grid Optimizes finding what particles are nearby
 	SimpleSpatialGrid spatial_grid;
@@ -92,7 +92,6 @@ public:
 	void randomize_sim();
 
 	void set_thread_count(int threads);
-
 
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);

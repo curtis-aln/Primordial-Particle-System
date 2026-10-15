@@ -2,8 +2,8 @@
 #include "particle_system/particle_system.h"
 #include "settings.h"
 #include "utils/Camera.hpp"
+#include "utils/custom_clock.h"
 #include "utils/SFML_grid.h"
-#include "utils/smooth_frame_rates.h"
 
 #include "context/sim_command.h"
 #include "context/sim_snapshot.h"
@@ -11,7 +11,6 @@
 
 #include "../rendering/PPS_renderer.h"
 
-#include "../utils/stop_watch.h"
 #include "imgui/control_panel.h"
 #include <atomic>
 #include <mutex>
@@ -29,12 +28,11 @@ class Simulation : PPS_Settings, SimulationSettings
 	sf::RenderWindow window_{};
 
 	// ── Timing ────────────────────────────────────────────────────────────────
-	FrameRateSmoothing<100> rendering_clock_{};
-	StopWatch               m_delta_time_{};
-	float                   m_total_time_elapsed_ = 0.f;
+	CustomClock<100> rendering_clock_{};
+	float m_total_time_elapsed_ = 0.f;
 
 	// Statistics
-	FrameRateSmoothing<100> updating_clock_{};
+	CustomClock<100> updating_clock_{};
 
 	// ── Camera / view ─────────────────────────────────────────────────────────
 	Camera camera{ &window_, 1.f / scale_factor };

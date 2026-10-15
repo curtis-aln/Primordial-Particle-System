@@ -138,7 +138,7 @@ void ParticlePopulation::update_particles()
 
 	iterations_++;
 
-	iterations_clock_.update_frame_rate();
+	iterations_clock_.tick();
 }
 
 void ParticlePopulation::solveCollisions_density()

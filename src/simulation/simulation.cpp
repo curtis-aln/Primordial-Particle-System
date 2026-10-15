@@ -90,7 +90,7 @@ void Simulation::update()
 	snap.stats.fps = rendering_fps_;
 	snap.stats.m_total_time_elapsed_ = m_total_time_elapsed_;
 
-	updating_clock_.update_frame_rate();
+	updating_clock_.tick();
 	snap.stats.updating_fps = updating_clock_.get_average_frame_rate();
 
 	// Copy current toggles into snapshot so the render thread can read them
@@ -182,7 +182,7 @@ void Simulation::render()
 	const bool         is_new_frame = m_sim_buffer_.has_new_frame();
 	const SimSnapshot& snap = m_sim_buffer_.begin_read();
 
-	const float dt = static_cast<float>(m_delta_time_.get_delta());
+	const float dt = static_cast<float>(rendering_clock_.get_delta_time());
 	m_total_time_elapsed_ += dt;
 
 	const sf::Vector2f mouse_pos = camera.get_world_mouse_pos();
@@ -209,7 +209,7 @@ void Simulation::render()
 void Simulation::manage_frame_rate()
 {
 	rendering_fps_ = static_cast<float>(rendering_clock_.get_average_frame_rate());
-	rendering_clock_.update_frame_rate();
+	rendering_clock_.tick();
 
 	std::ostringstream title;
 	title << "Primordial Particle System"

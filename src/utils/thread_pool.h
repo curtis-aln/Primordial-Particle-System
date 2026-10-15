@@ -3,6 +3,7 @@
 #include <condition_variable>
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -161,6 +162,7 @@ namespace tp
 					catch (...)
 					{
 						// Handle task exceptions here if needed
+						std::cout << "threadpool: exception in task on thread " << m_id << '\n';
 					}
 					m_queue->workDone();
 					m_task = nullptr;
@@ -212,6 +214,7 @@ namespace tp
 
 		void setThreadCount(uint32_t new_thread_count)
 		{
+			std::cout << "changing the thread count from " << m_thread_count << " to " << new_thread_count << '\n';
 			if (new_thread_count == m_thread_count) return;
 
 			m_queue.waitForCompletion();

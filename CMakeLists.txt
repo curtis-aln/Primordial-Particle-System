@@ -156,3 +156,10 @@ if(MSVC)
         $<$<CONFIG:Release>:/Z7>         # embed debug info in .obj for Release (no .pdb)
     )
 endif()
+
+add_custom_command(TARGET PrimordialParticleSystem POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/media"
+        "$<TARGET_FILE_DIR:PrimordialParticleSystem>/media"
+    COMMENT "Copying media assets..."
+)

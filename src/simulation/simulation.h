@@ -2,7 +2,6 @@
 #include "particle_system/particle_system.h"
 #include "settings.h"
 #include "utils/Camera.hpp"
-#include "utils/font.h"
 #include "utils/SFML_grid.h"
 #include "utils/smooth_frame_rates.h"
 
@@ -39,10 +38,6 @@ class Simulation : PPS_Settings, SimulationSettings
 
 	// ── Camera / view ─────────────────────────────────────────────────────────
 	Camera camera{ &window_, 1.f / scale_factor };
-
-	// ── Fonts ─────────────────────────────────────────────────────────────────
-	Font title_font = { &window_, 60, "fonts/Calibri.ttf" };
-	Font text_font = { &window_, 35, "fonts/Calibri.ttf" };
 
 	// ── Runtime state ─────────────────────────────────────────────────────────
 	bool  render_hash_grid_ = false;

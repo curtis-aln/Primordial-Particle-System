@@ -16,7 +16,6 @@
 #include <sstream>
 #include <thread>
 #include <utility>
-#include <utils/random.h>
 
 // ── Constructor ───────────────────────────────────────────────────────────────
 Simulation::Simulation()
@@ -24,9 +23,6 @@ Simulation::Simulation()
 {
 	window_.setFramerateLimit(144);
 	window_.setVerticalSyncEnabled(Vsync);
-
-	if (set_Random_seed)
-		Random::set_seed(0);
 
 	init_imGUI();
 

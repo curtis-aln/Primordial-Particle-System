@@ -187,6 +187,6 @@ inline void ParticlePopulation::update_particle(
 	render_data.neighbourhood_count_[index] = static_cast<uint16_t>(total);
 
 	const int   left = total - on_right;
-	const float sign = static_cast<float>(((on_right - left) >= 0) * 2 - 1);
+	const float sign = static_cast<float>((on_right > left) - (on_right < left));
 	angle += (alpha + beta * static_cast<float>(total) * sign) * pi_div_180;
 }

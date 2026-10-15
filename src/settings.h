@@ -1,6 +1,5 @@
 #pragma once
 #include <cmath>
-#include <iostream>
 #include <SFML/Graphics/Color.hpp>
 #include <string>
 
@@ -30,12 +29,12 @@ struct SimulationSettings
 struct PPS_Settings
 {
 	inline static constexpr unsigned initial_thread_count = 16;
-	inline static constexpr unsigned particle_count = 100'000;
+	inline static constexpr unsigned particle_count = 1'000'000;
 	inline static constexpr unsigned sub_iterations = 1;
 
 	inline static int add_to_grid_freq = 8;
 
-	inline static constexpr float scale_factor = 150;
+	inline static constexpr float scale_factor = 500;
 	inline static constexpr float param_scale_factor = 200.f;
 
 	inline static constexpr auto world_width = SimulationSettings::screen_width * scale_factor;

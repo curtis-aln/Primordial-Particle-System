@@ -2,6 +2,8 @@
 #include "../../context/sim_snapshot.h"
 #include "../../context/sim_command.h"
 
+#include "../../../particle_system/density_grid/density_grid.h"
+
 #include <imgui.h>
 #include <cstdarg>
 #include <cstdio>
@@ -85,6 +87,7 @@ struct ITab
             ImGui::PopStyleColor();
         }
     }
+
 
     // Indicator dot (●/○) + label row, no interaction.
     static void indicator_row(bool active, const char* label, const char* key = nullptr)

@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.21)
 project(PrimordialParticleSystem LANGUAGES CXX)
 
+
 # ── Language standard ─────────────────────────────────────────────────────────
 # Tell CMake to use C++23. MSVC will receive /std:c++latest automatically.
 # We set EXTENSIONS OFF to avoid compiler-specific GNU extensions.
@@ -8,8 +9,10 @@ set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+
 # Generates compile_commands.json — useful for clangd / IDE tooling
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 
 # ── Dependencies (FetchContent) ───────────────────────────────────────────────
 # FetchContent downloads and builds dependencies at configure time.
@@ -68,14 +71,20 @@ add_executable(PrimordialParticleSystem
     # ── Entry point
     src/main.cpp
   "src/particle_system/particle_system.cpp" 
+  "src/particle_system/spatial_grid_updating.cpp" 
   "src/particle_system/state.h" 
-  "src/particle_system/PPS_renderer.cpp" 
+  "src/rendering/PPS_renderer.cpp" 
+  "src/utils/spatial_grid/spatial_grid_renderer.cpp"
 
   "src/simulation/simulation.cpp" 
   "src/simulation/events.cpp" 
 
   "src/utils/stop_watch.h"
-  "src/particle_system/heatmap.h" 
+  "src/rendering/heatmap.h" 
+  "src/rendering/heatmap.cpp" 
+  "src/particle_system/density_grid/density_grid.cpp"
+  "src/particle_system/density_grid/sampling.cpp"
+  "src/particle_system/density_grid/smoothing.cpp"
 
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
@@ -84,6 +93,7 @@ add_executable(PrimordialParticleSystem
 src/simulation/imgui/tabs/world_tab.cpp
 src/simulation/imgui/tabs/help_tab.cpp
 
+  
  "src/simulation/imgui/imgui_handling.cpp" 
  "src/simulation/imgui/tabs/world_tab.h" 
  "src/simulation/imgui/tabs/particle_tab.h" 
@@ -93,7 +103,11 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/simulation/imgui/tabs/simulation_tab.cpp" 
  "src/simulation/imgui/control_panel.h" 
  "src/simulation/imgui/control_panel.cpp" 
- "src/simulation/imgui/tabs/i_tab.h" "src/particle_system/particle_colors.h")
+
+ "src/simulation/imgui/tabs/i_tab.h" 
+ "src/rendering/particle_colors.h" 
+ "src/particle_system/density_grid/density_grid.h" 
+ "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h" "src/particle_system/spatial_grid_updating.cpp")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

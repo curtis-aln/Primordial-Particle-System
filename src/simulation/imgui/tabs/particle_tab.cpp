@@ -1,5 +1,5 @@
 #include "particle_tab.h"
-#include "../../../particle_system/particle_colors.h"
+#include "../../../rendering/particle_colors.h"
 #include "../../../settings.h"
 
 #include <imgui.h>
@@ -104,6 +104,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
 {
     section_header("PHYSICS");
 
+    // Alpha Slider
     ImGui::SetNextItemWidth(-1.f);
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Alpha  (turn rate)");
@@ -112,6 +113,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
     if (ImGui::SliderFloat("##alpha", &m_alpha_, -180.f, 180.f, "%.1f deg"))
         ctx.push({ CommandType::SetAlpha, {}, m_alpha_ });
 
+    // Beta Slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Beta   (neighbour scale)");
@@ -120,6 +122,7 @@ void ParticleTab::draw_physics(SimCtx& ctx)
     if (ImGui::SliderFloat("##beta", &m_beta_, -180.f, 180.f, "%.2f deg/n"))
         ctx.push({ CommandType::SetBeta, {}, m_beta_ });
 
+    // Gamma Slider
     ImGui::Spacing();
     ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
     ImGui::TextUnformatted("Gamma  (step size)");
@@ -169,6 +172,85 @@ void ParticleTab::draw_color_scheme()
     draw_gradient_preview(ImGui::GetContentRegionAvail().x);
 }
 
+// -- Density grid section -----------------------
+void ParticleTab::draw_density_grid(SimCtx& ctx)
+{
+    section_header("DENSITY GRID");
+    toggle(ctx, "Use Density Grid", &WorldToggles::use_density_grid);
+    if (!ctx.toggles.use_density_grid)
+        return;
+
+    // Sin Sign Slider
+    ImGui::SetNextItemWidth(-1.f);
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Sin Sign");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##SinSign", &m_sin_sign, -1.f, 1.f, "%.01f deg"))
+        ctx.push({ CommandType::SetSinSign, {}, m_sin_sign });
+
+    // Cos Sign Slider
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Cos Sign");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##CosSign", &m_cos_sign, -1.f, 1.f, "%.01f deg"))
+        ctx.push({ CommandType::SetCosSign, {}, m_cos_sign });
+
+    // Guassian Slider
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("gaussian sigma");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderFloat("##GaussianSigma", &m_gaussian_sigma, 0.1f, 0.8f, "%.01f deg"))
+        ctx.push({ CommandType::SetGaussianSigma, {}, m_gaussian_sigma });
+
+    // Cascade slider
+    ImGui::Spacing();
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Box Cascade");
+    ImGui::PopStyleColor();
+    ImGui::SetNextItemWidth(-1.f);
+    if (ImGui::SliderInt("##BoxCascade", &m_box_filter_cascade_passes, 1, 5))
+    {
+        SimCommand cmd{};
+        cmd.type = CommandType::SetBoxFilterCascadePasses;
+        cmd.int_val = m_box_filter_cascade_passes;
+        ctx.push(cmd);
+    }
+
+    // smoothing options
+    toggle(ctx, "Box Cascade Smoothing", &WorldToggles::box_smoothing_);
+    toggle(ctx, "Guassian Smoothing", &WorldToggles::gaussian_smoothing_);
+
+    // Type of Sampling
+    ImGui::PushStyleColor(ImGuiCol_Text, { 0.52f, 0.52f, 0.66f, 1.f });
+    ImGui::TextUnformatted("Sampling Mode");
+    ImGui::PopStyleColor();
+
+    int mode = static_cast<int>(ctx.toggles.sampling_mode_);
+
+    if (ImGui::RadioButton("Bilinear", &mode,
+        static_cast<int>(SamplingMode::Bilinear)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Bilinear;
+    }
+
+    if (ImGui::RadioButton("Bicubic", &mode,
+        static_cast<int>(SamplingMode::Bicubic)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Bicubic;
+    }
+
+    if (ImGui::RadioButton("Sample8", &mode,
+        static_cast<int>(SamplingMode::Sample8)))
+    {
+        ctx.toggles.sampling_mode_ = SamplingMode::Sample8;
+    }
+
+}
+
 // ── Entry point ───────────────────────────────────────────────────────────────
 
 void ParticleTab::draw(const SimSnapshot& /*snap*/, SimCtx& ctx)
@@ -183,5 +265,6 @@ void ParticleTab::draw(const SimSnapshot& /*snap*/, SimCtx& ctx)
     }
 
     draw_physics(ctx);
+    draw_density_grid(ctx);
     draw_color_scheme();
 }

@@ -1,23 +1,23 @@
 ﻿#pragma once
 
-#include <SFML/Graphics.hpp>
-#include <cmath>
 #include <array>
-#include <xmmintrin.h>
+#include <cmath>
 #include <numbers>
 #include <vector>
-#include <omp.h> // For OpenMP parallelization
+#include <xmmintrin.h>
 
-#include "PPS_renderer.h"
 #include "beacons.h"
 #include "state.h"
 
 #include "../settings.h"
 
 #include "../utils/spatial_grid/simple_spatial_grid.h"
-#include "../utils/random.h"
 #include "../utils/thread_pool.h"
-#include "utils/smooth_frame_rates.h"
+#include "density_grid/density_grid.h"
+#include <cstdint>
+#include <SFML/System/Vector2.hpp>
+#include <simulation/context/sim_snapshot.h>
+#include <utils/smooth_frame_rates.h>
 
 
 // pre-computing constants
@@ -27,7 +27,7 @@ inline static constexpr float pi_div_180 = pi / 180.f;
 
 
 // a faster implementation of the round function
-inline float fast_round(float x) 
+inline float fast_round(float x)
 {
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
@@ -45,6 +45,11 @@ public:
 	RenderData render_data{};
 	WorldToggles toggles{};
 
+	FrameRateSmoothing<100> iterations_clock_{};
+
+	// The Spatial Grid Optimizes finding what particles are nearby
+	SimpleSpatialGrid spatial_grid;
+
 private:
 
 	// Pre-computed constants for fast lookup when calculating the direction particles must go
@@ -52,8 +57,8 @@ private:
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 
-	// The Spatial Grid Optimizes finding what particles are nearby
-	SimpleSpatialGrid spatial_grid;
+
+	DensityGrid density_grid{ world_width, world_height, visual_radius / 4.f };
 
 	// pre-computed values for wrapping the particles in the world
 	float inv_width_ = 0.f;
@@ -66,19 +71,19 @@ private:
 	std::vector<CellRange> collision_ranges_; // computed once, reused every frame
 	std::vector<CellRange> grid_insert_ranges_;
 
-	// Statistics
-	FrameRateSmoothing<100> frame_rate_smoothing_{};
 
 public:
+	DensitySettings& density_settings() { return density_grid; }
+
 	size_t iterations_ = 0;
 
-	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid, 
-		& render_data.positions_x, & render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
-	
-	
+	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid,
+		&render_data.positions_x, &render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
+
+
 
 	void fill_snapshot(SimSnapshot& snapshot);
-	
+
 
 
 public:
@@ -91,10 +96,12 @@ public:
 
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);
-	
+
 	void add_particles_to_grid();
 
 	void update_particles();
+
+	void solveCollisions_density();
 
 
 private:
@@ -106,6 +113,7 @@ private:
 	void update_particle_positions();
 
 	void solveCollisions();
+
 
 	void process_cell(
 		const cell_idx cell_index,
@@ -128,5 +136,5 @@ private:
 
 
 	void precompute_thread_ranges();
-	
+
 };

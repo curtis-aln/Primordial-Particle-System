@@ -10,30 +10,44 @@
 // - test if fetching the sin and cos values are actually faster, is there such thing as approximated sin and cos
 // -  add_particles_to_grid — spatial_grid.add_object called from multiple threads - see if doing this single threadedly is faster
 
-// add_object in spatial hash grid may not be thread safe when a used to add the particles to the grid.
-// see if removing multithreadding for that part makes it any faster
 
-
-// graphics is buggy even though it says 1000 fps
-
-
-
-
-README Todo:
-- demonstrate alternative update rules (with different colors)
-- finish showing survival and death gifs
-- show massive scale of simulation
-
-
-GUI TO-Fix:
-- add a randomize button to the particle rules,
-- add a reset button to the particle rules
-- Have 8 preset options for the particle rules
-
-
-// 80fps Inner rendering 10,000,000 particles
-optimisation: use the spatial grid to read all of the particles within the camera range
-this makes the if statements fall from 10 million down to zero
 
 second optimization: go from appending to the vertex array to pre calculating the amount of particles in all
 the spatial grid cells, then resizing and appending
+
+
+# Heatmap grid section
+- Trail amount
+- LUT_SIZE
+- Peak EMA smoothing (m_peak_ema) — controls how fast the brightness adapts to density changes. Slider 0–1.
+- Fixed peak override (fixed_peak param in upload()) — lets you pin the scale instead of auto-ranging. A checkbox to toggle between auto/fixed, plus an int input when fixed.
+- Sprite alpha (alpha param in draw()) — overall heatmap opacity. Already a uint8, just a 0–255 slider.
+- Downsample factor — passed at construction, so you'd need a rebuild, but an int combo (1×, 2×, 4×, 8×) is very useful for perf tuning.
+
+Gradient editor (m_stops via set_gradient()):
+This is the richest one — each GradientStop has a t position and an RGBA colour. You could expose a small table: one row per stop with a ImGui::ColorEdit4 and a ImGui::DragFloat for the position t. Add/remove stop buttons. Calls set_gradient() on any change.
+Derived from scatter logic:
+The bilinear splat is always weight 1 per point — you could expose a point weight/intensity multiplier so you can boost density without adding more points.
+
+
+# SIMULATION TODO
+- Simulation starts more zoomed in
+
+
+# IMGUI TODO
+- Debug Button doesnt work
+- Particles button only works sometimes
+- Draw grid checkbox doesnt work
+- add a randomize button to the particle rules,
+- Radius doesnt work and move it to the particle tab
+- change beta turning rate to -90 to 90
+- move time elapsed into statistics
+- Remove Performance section (redundant)
+- sim speed slider doesn't work
+- Text Explaining what each slider does briefly
+- Reset In particle tab settings
+- Add the rest of the Density Grid settings
+- SinSign and CosinSign should start in the correct places
+- Toggle "show titlebar" and set defualt to false
+
+# Statistical TODO

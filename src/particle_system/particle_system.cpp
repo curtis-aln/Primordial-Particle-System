@@ -2,7 +2,6 @@
 #include "particle_system.h"
 #include <cmath>
 #include <cstdint>
-#include <iostream>
 #include <settings.h>
 #include <SFML/System/Vector2.hpp>
 #include <string.h>
@@ -14,20 +13,10 @@ thread_local TL_NeighbourPositions neighbour_positions_y;
 
 // Constructor
 ParticlePopulation::ParticlePopulation() :
-	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height),
-	thread_pool(
-		initial_thread_count,
-		[](uint32_t thread_id)
-		{
-			Random::set_seed(SimulationSettings::seed);
-			FastRandom::set_seed(SimulationSettings::seed);
-
-			std::cout << "Seeded worker " << thread_id
-				<< " with seed " << SimulationSettings::seed << '\n';
-		}
-	)
+	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height)
 {
 	precompute_thread_ranges();
+	precompute_cell_update_ranges();
 
 	inv_width_ = 1.f / world_width;
 	inv_height_ = 1.f / world_height;
@@ -49,7 +38,6 @@ void ParticlePopulation::randomize_sim()
 
 void ParticlePopulation::set_thread_count(int threads)
 {
-	thread_pool.setThreadCount(threads);
 	precompute_thread_ranges();
 }
 
@@ -92,82 +80,19 @@ void ParticlePopulation::create_cell_at(const sf::Vector2f position, const int p
 }
 
 
-void ParticlePopulation::add_particles_to_grid()
-{
-	spatial_grid.clear();
-
-	for (const auto& [start, end] : grid_insert_ranges_)
-	{
-		thread_pool.addTask([this, start, end] {
-			for (size_t i = start; i < end; ++i)
-			{
-				// Wrapping the position to stay within the world
-				float& x = render_data.positions_x[i];
-				float& y = render_data.positions_y[i];
-
-				if (x < 0.f || x >= world_width)  x = wrap_coord(x, world_width, inv_width_);
-				if (y < 0.f || y >= world_height) y = wrap_coord(y, world_height, inv_height_);
-				spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
-			}
-			});
-	}
-	thread_pool.waitForCompletion();
-}
-
 void ParticlePopulation::update_particles()
 {
-
 	if (toggles.use_density_grid)
-	{
-		density_grid.gaussian_smoothing_ = toggles.gaussian_smoothing_;
-		density_grid.box_smoothing_ = toggles.box_smoothing_;
-		density_grid.sampling_mode_ = toggles.sampling_mode_;
-		density_grid.build(
-			render_data.positions_x.data(),
-			render_data.positions_y.data(),
-			particle_count);
-
-		solveCollisions_density();
-	}
-
+		run_density_grid();
 	else
 	{
-		solveCollisions();
+		solve_neighbourhood_detection();
 		update_particle_positions();
 	}
 
 	iterations_++;
 
 	iterations_clock_.tick();
-}
-
-void ParticlePopulation::solveCollisions_density()
-{
-	const uint32_t tc = thread_pool.m_thread_count;
-	const int ppt = particle_count / tc;
-	for (uint32_t t = 0; t < tc; ++t)
-	{
-		thread_pool.addTask([this, t, ppt, tc] {
-			const int start = t * ppt;
-			const int end = (t == tc - 1) ? particle_count : start + ppt;
-			for (int i = start; i < end; ++i)
-			{
-				density_grid.update_particle_density(
-					render_data.angles_[i],
-					render_data.positions_x[i],
-					render_data.positions_y[i],
-					render_data.neighbourhood_count_[i],
-					sin_table_, cos_table_,
-					ANGLE_TABLE_SIZE);
-				// Toroidal wrap (same as add_particles_to_grid)
-				float& x = render_data.positions_x[i];
-				float& y = render_data.positions_y[i];
-				if (x < 0.f || x >= world_width)  x = wrap_coord(x, world_width, inv_width_);
-				if (y < 0.f || y >= world_height) y = wrap_coord(y, world_height, inv_height_);
-			}
-			});
-	}
-	thread_pool.waitForCompletion();
 }
 
 
@@ -202,33 +127,6 @@ void ParticlePopulation::randomize_angles()
 	}
 }
 
-
-// If the spatial hash grid shape and size is constant, we can pre-calculate the thread information so we dont have to keep
-// calculating it every frame
-void ParticlePopulation::precompute_thread_ranges()
-{
-	const uint32_t thread_count = thread_pool.m_thread_count;
-	const uint32_t total_cells = grid_cells_x * grid_cells_y;
-	const uint32_t slice_size = total_cells / thread_count;
-
-	collision_ranges_.resize(thread_count);
-	for (uint32_t i = 0; i < thread_count; ++i)
-	{
-		collision_ranges_[i].start = i * slice_size;
-
-		// Last thread absorbs the remainder — no separate task needed
-		collision_ranges_[i].end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size;
-	}
-
-	// Same for particle grid insertion
-	const uint32_t particles_per_thread = particle_count / thread_count;
-	grid_insert_ranges_.resize(thread_count);
-	for (uint32_t i = 0; i < thread_count; ++i)
-	{
-		grid_insert_ranges_[i].start = i * particles_per_thread;
-		grid_insert_ranges_[i].end = (i == thread_count - 1) ? particle_count : (i + 1) * particles_per_thread;
-	}
-}
 
 // The snapshot information will get sent off to the renderer to render the frame, transfering data can take a long time however
 void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)

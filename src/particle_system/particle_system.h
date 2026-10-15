@@ -12,12 +12,18 @@
 #include "../settings.h"
 
 #include "../utils/spatial_grid/simple_spatial_grid.h"
-#include "../utils/thread_pool.h"
-#include "density_grid/density_grid.h"
-#include <cstdint>
+#include <functional>
+#include <functional>
+#include <functional>
 #include <SFML/System/Vector2.hpp>
 #include <simulation/context/sim_snapshot.h>
 #include <utils/custom_clock.h>
+
+#include "../utils/thread_pool.h"
+#include "density_grid/density_grid.h"
+#include <algorithm>
+#include <cstdint>
+#include <utility>
 
 
 // pre-computing constants
@@ -31,6 +37,21 @@ inline float fast_round(float x)
 {
 	return x >= 0.0f ? floorf(x + 0.5f) : ceilf(x - 0.5f);
 }
+
+// Splits `total` items evenly across `thread_count` threads and returns the
+// [begin, end) range owned by `thread_index`. Returns {0, 0} if there's nothing to do.
+inline static std::pair<int, int> compute_thread_range(int thread_index, int total, int thread_count)
+{
+	if (total == 0)
+		return { 0, 0 };
+
+	const int chunk_size = std::max(1, (total + thread_count - 1) / thread_count);
+	const int begin = std::min(thread_index * chunk_size, total);
+	const int end = std::min(begin + chunk_size, total);
+
+	return { begin, end };
+}
+
 
 // Temporary arrays for calculating particle interactions. One array needed for each thread to avoid issues with data writing.
 using TL_NeighbourPositions = std::array<float, PPS_Settings::cell_capacity * 9>;
@@ -65,7 +86,15 @@ private:
 	float inv_height_ = 0.f;
 
 	// Multi-threading adding to the spatial grid and updating neighbourhood positions
-	tp::ThreadPool thread_pool;
+	std::vector<std::function<void()>> updating_funcs_;
+	BarrierThreadPool thread_pool_{ initial_thread_count };
+
+	std::vector<std::function<void()>> collision_funcs_;
+	BarrierThreadPool collision_thread_pool_{ initial_thread_count };
+
+	std::vector<std::function<void()>> add_to_grid_funcs_;
+	BarrierThreadPool add_to_grid_thread_pool_{ initial_thread_count };
+
 
 	struct CellRange { uint32_t start, end; };
 	std::vector<CellRange> collision_ranges_; // computed once, reused every frame
@@ -98,7 +127,11 @@ public:
 
 	void add_particles_to_grid();
 
+	void add_particle_to_grid(int i);
+
 	void update_particles();
+
+	void run_density_grid();
 
 	void solveCollisions_density();
 
@@ -111,7 +144,7 @@ private:
 
 	void update_particle_positions();
 
-	void solveCollisions();
+	void solve_neighbourhood_detection();
 
 
 	void process_cell(
@@ -135,5 +168,8 @@ private:
 
 
 	void precompute_thread_ranges();
+	void precompute_cell_update_ranges();
+
+	void update_particle_position(int i);
 
 };

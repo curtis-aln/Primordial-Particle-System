@@ -1,52 +1,54 @@
-#include "particle_system.h"
+#include "../particle_system.h"
 #include <array>
-#include <cmath>
 #include <cstdint>
+#include <iostream>
 #include <utils/spatial_grid/simple_spatial_grid.h>
 
 
-void ParticlePopulation::update_particle_positions()
+
+void ParticlePopulation::solve_neighbourhood_detection()
 {
-	// updating the positions of each particles in the direction of their angle by step size `gamma`
-	const uint32_t thread_count = thread_pool.m_thread_count;
-	const int particles_per_thread = particle_count / thread_count;
-	const int last_thread_particles = particle_count - (thread_count - 1) * particles_per_thread;
-
-	for (uint32_t t = 0; t < thread_count; ++t)
-	{
-		thread_pool.addTask([this, t, particles_per_thread, last_thread_particles, thread_count] {
-			const int start = t * particles_per_thread;
-			const int end = (t == thread_count - 1) ? start + last_thread_particles : start + particles_per_thread;
-
-			for (int i = start; i < end; ++i)
-			{
-				// Update position
-				float& angle = render_data.angles_[i];
-				const int angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
-
-				angle = fmod(angle, two_pi);
-				angle += two_pi * (angle < 0.0f);
-
-				render_data.positions_x[i] += gamma * cos_table_[angle_index];
-				render_data.positions_y[i] += gamma * sin_table_[angle_index];
-			}
-			});
-	}
-
-	thread_pool.waitForCompletion();
+	collision_thread_pool_.run_and_wait();
 }
 
-
-void ParticlePopulation::solveCollisions()
+void ParticlePopulation::precompute_cell_update_ranges()
 {
-	for (const auto& [start, end] : collision_ranges_)
+	const uint32_t thread_count = initial_thread_count;
+	const uint32_t total_cells = grid_cells_x * grid_cells_y;
+	const uint32_t slice_size = total_cells / thread_count;
+
+	collision_ranges_.resize(thread_count);
+	for (uint32_t i = 0; i < thread_count; ++i)
 	{
-		thread_pool.addTask([this, start, end] {
-			for (uint32_t idx{ start }; idx < end; ++idx)
+		collision_ranges_[i].start = i * slice_size;
+
+		// Last thread absorbs the remainder — no separate task needed
+		collision_ranges_[i].end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size;
+	}
+
+	// Same for particle grid insertion
+	const uint32_t particles_per_thread = particle_count / thread_count;
+	grid_insert_ranges_.resize(thread_count);
+	for (uint32_t i = 0; i < thread_count; ++i)
+	{
+		grid_insert_ranges_[i].start = i * particles_per_thread;
+		grid_insert_ranges_[i].end = (i == thread_count - 1) ? particle_count : (i + 1) * particles_per_thread;
+	}
+
+	int thread = 0;
+	for (const auto& [begin, end] : collision_ranges_)
+	{
+		collision_funcs_.emplace_back([this, thread, begin, end] {
+			for (uint32_t idx{ begin }; idx < end; ++idx)
 				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
 			});
+
+		thread++;
 	}
-	thread_pool.waitForCompletion();
+
+	collision_thread_pool_.set_jobs(collision_funcs_);
+
+	std::cout << "Precomputed " << collision_ranges_.size() << " cell update ranges for " << total_cells << " cells." << std::endl;
 }
 
 

@@ -3,7 +3,7 @@
 // Replaces the O(n·k) spatial-hash neighbour loop with a precomputed density
 // field + gradient that every particle samples in O(1).
 //
-// USAGE — drop into particle_system.cpp  (replaces solveCollisions + process_cell):
+// USAGE — drop into particle_system.cpp  (replaces solve_neighbourhood_detection + process_cell):
 //
 //   // Once per frame, before update_particle_positions():
 //   density_grid.build(render_data.positions_x.data(),

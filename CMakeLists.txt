@@ -71,7 +71,7 @@ add_executable(PrimordialParticleSystem
     # ── Entry point
     src/main.cpp
   "src/particle_system/particle_system.cpp" 
-  "src/particle_system/spatial_grid_updating.cpp" 
+   
   "src/particle_system/state.h" 
   "src/rendering/PPS_renderer.cpp" 
   "src/utils/spatial_grid/spatial_grid_renderer.cpp"
@@ -85,6 +85,10 @@ add_executable(PrimordialParticleSystem
   "src/particle_system/density_grid/density_grid.cpp"
   "src/particle_system/density_grid/sampling.cpp"
   "src/particle_system/density_grid/smoothing.cpp"
+  "src/particle_system/ext/add_to_grid.cpp" 
+  "src/particle_system/ext/update_positions.cpp" 
+  "src/particle_system/ext/neighbourhood_detection.cpp" 
+  "src/particle_system/ext/density_updating.cpp"
 
   # ── ImPlot (header-only library — sources must be compiled as part of our target)
    ${implot_SOURCE_DIR}/implot.cpp
@@ -107,7 +111,9 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/simulation/imgui/tabs/i_tab.h" 
  "src/rendering/particle_colors.h" 
  "src/particle_system/density_grid/density_grid.h" 
- "src/particle_system/density_grid/density_grid.cpp" "src/particle_system/density_grid/density_grid_renderer.h" "src/particle_system/spatial_grid_updating.cpp" "src/utils/custom_clock.h")
+ "src/particle_system/density_grid/density_grid.cpp" 
+ "src/particle_system/density_grid/density_grid_renderer.h" 
+ "src/utils/custom_clock.h")
 
 
 # ── Include directories ───────────────────────────────────────────────────────

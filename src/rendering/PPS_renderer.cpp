@@ -1,7 +1,6 @@
 #include "particle_colors.h"
 #include "PPS_renderer.h"
 #include <algorithm>
-#include <cmath>
 #include <cstdint>
 #include <iostream>
 #include <settings.h>
@@ -204,30 +203,28 @@ void PPS_Renderer::check_rebuild_color_cashe(const std::vector<uint16_t>& neighb
 void PPS_Renderer::render_debug(const SimSnapshot& snapshot,
 	const sf::Vector2f mouse_pos, const float mouse_radius)
 {
-	const auto* positions_x = &snapshot.render.positions_x;
-	const auto* positions_y = &snapshot.render.positions_y;
-	const auto* angles = &snapshot.render.angles_;
+	const auto& xs = snapshot.render.positions_x;
+	const auto& ys = snapshot.render.positions_y;
+	const auto& cosA = snapshot.render.cos_angles_;   // or std::cos(angle) if these don't exist
+	const auto& sinA = snapshot.render.sin_angles_;
 
 	constexpr float visual_radius = PPS_Settings::visual_radius;
+	const float mouse_r_sq = mouse_radius * mouse_radius;
 
-	debug_lines_.clear();
-	debug_lines_.resize(positions_x->size() * 2);
+	debug_lines_.clear();   // keeps the primitive type; no resize
 
-	for (size_t i = 0; i < positions_x->size(); ++i)
+	for (size_t i = 0; i < xs.size(); ++i)
 	{
-		const sf::Vector2f position = { (*positions_x)[i], (*positions_y)[i] };
+		const sf::Vector2f position = { xs[i], ys[i] };
 
-		if (dist_squared(position, mouse_pos) > mouse_radius * mouse_radius)
+		if (dist_squared(position, mouse_pos) > mouse_r_sq)
 			continue;
 
-		const float angle = (*angles)[i];
 		const sf::Vector2f direction =
-			sf::Vector2f(std::sin(angle), std::cos(angle)) * PPS_Settings::particle_radius;
+			sf::Vector2f(cosA[i], sinA[i]) * PPS_Settings::particle_radius;
 
-		debug_lines_[i * 2].position = position;
-		debug_lines_[i * 2].color = sf::Color::White;
-		debug_lines_[i * 2 + 1].position = position + direction;
-		debug_lines_[i * 2 + 1].color = sf::Color::White;
+		debug_lines_.append({ position, sf::Color::White });
+		debug_lines_.append({ position + direction, sf::Color::White });
 
 		visual_radius_shape_.setPosition(position - sf::Vector2f(visual_radius, visual_radius));
 		window_->draw(visual_radius_shape_, sf::BlendAdd);

@@ -79,7 +79,9 @@ void Simulation::update()
 		for (int i = 0; i < sub_iterations; ++i)
 		{
 			if (particle_system_.iterations_ % add_to_grid_freq == 0)
-				particle_system_.add_particles_to_grid();
+				particle_system_.add_particles_to_csr_grid();
+			else
+				particle_system_.refresh_csr_positions();   // new, see below
 
 			particle_system_.update_particles();
 		}
@@ -194,7 +196,6 @@ void Simulation::render()
 	if (debug_)
 	{
 		pps_renderer_.render_debug(snap, mouse_pos, debug_radius);
-		particle_system_.beacons.render(window_);
 	}
 
 	handle_imGUI(snap, dt);

@@ -1,17 +1,15 @@
 ﻿#pragma once
 
-#include <array>
 #include <cmath>
 #include <numbers>
 #include <vector>
 #include <xmmintrin.h>
 
-#include "beacons.h"
 #include "state.h"
 
 #include "../settings.h"
 
-#include "../utils/spatial_grid/simple_spatial_grid.h"
+#include "../utils/css_spatial_grid/css_spatial_grid.h"
 #include <functional>
 #include <functional>
 #include <functional>
@@ -52,11 +50,20 @@ inline static std::pair<int, int> compute_thread_range(int thread_index, int tot
 	return { begin, end };
 }
 
+// Read-only view of the CSR grid for one query phase.
+struct GridView
+{
+	const uint32_t* cell_start;   // size cells+1; cell c = slots [cell_start[c], cell_start[c+1])
+	const float* x;            // sorted_x, indexed by slot
+	const float* y;            // sorted_y, indexed by slot
+	const obj_idx* ids;          // slot -> original particle id
+};
 
-// Temporary arrays for calculating particle interactions. One array needed for each thread to avoid issues with data writing.
-using TL_NeighbourPositions = std::array<float, PPS_Settings::cell_capacity * 9>;
-extern thread_local TL_NeighbourPositions neighbour_positions_x;
-extern thread_local TL_NeighbourPositions neighbour_positions_y;
+// The particle whose neighbourhood is being measured.
+struct Observer { float x, y, sin_heading, cos_heading; };
+
+// Result of scanning a neighbourhood.
+struct NeighbourTally { int total = 0; int on_right = 0; };
 
 
 class ParticlePopulation : PPS_Settings
@@ -69,7 +76,7 @@ public:
 	CustomClock<100> iterations_clock_{};
 
 	// The Spatial Grid Optimizes finding what particles are nearby
-	SimpleSpatialGrid spatial_grid;
+	CSRSpatialGrid spatial_grid;
 
 private:
 
@@ -106,11 +113,6 @@ public:
 
 	size_t iterations_ = 0;
 
-	Beacons<max_beacon_count, grid_cells_x, grid_cells_y> beacons{ &spatial_grid,
-		&render_data.positions_x, &render_data.positions_y, spatial_grid.cell_width, world_width, world_height };
-
-
-
 	void fill_snapshot(SimSnapshot& snapshot);
 
 
@@ -125,15 +127,30 @@ public:
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);
 
+	void refresh_csr_positions();
+
 	void add_particles_to_grid();
 
 	void add_particle_to_grid(int i);
+
+	void add_particles_to_csr_grid();
 
 	void update_particles();
 
 	void run_density_grid();
 
 	void solveCollisions_density();
+
+	void           process_cell(cell_idx cell);
+	void validate_csr_tally(const uint32_t samples);
+	GridView       make_grid_view() const;
+	bool           is_border_cell(int cell_x, int cell_y) const;
+	Observer       make_observer(float x, float y, float heading) const;
+	NeighbourTally tally_interior_neighbourhood(const GridView& grid, cell_idx cell, const Observer& self) const;
+	NeighbourTally tally_border_neighbourhood(const GridView& grid, int cell_x, int cell_y, const Observer& self) const;
+	void           scan_slots(const GridView& grid, uint32_t first_slot, uint32_t end_slot, const Observer& self, NeighbourTally& tally) const;
+	void           scan_slots_wrapped(const GridView& grid, uint32_t first_slot, uint32_t end_slot, const Observer& self, NeighbourTally& tally) const;
+	void           steer(float& heading, const NeighbourTally& tally) const;
 
 
 private:
@@ -145,27 +162,6 @@ private:
 	void update_particle_positions();
 
 	void solve_neighbourhood_detection();
-
-
-	void process_cell(
-		const cell_idx cell_index,
-		std::array<float, cell_capacity * 9>& n_positions_x,
-		std::array<float, cell_capacity * 9>& n_positions_y);
-
-
-	inline void add_neighbour_cells_particles(
-		std::array<float, cell_capacity * 9>& n_positions_x,
-		std::array<float, cell_capacity * 9>& n_positions_y,
-		int& neighbours_size,
-		int32_t neighbour_index_x, int32_t neighbour_index_y,
-		bool check_x = true,
-		bool check_y = true);
-
-	inline void update_particle(const obj_idx index, const bool at_border_x, const bool at_border_y,
-		const std::array<float, cell_capacity * 9>& n_positions_x,
-		const std::array<float, cell_capacity * 9>& n_positions_y,
-		const int neighbours_size);
-
 
 	void precompute_thread_ranges();
 	void precompute_cell_update_ranges();

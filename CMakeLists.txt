@@ -96,6 +96,7 @@ add_executable(PrimordialParticleSystem
 
 src/simulation/imgui/tabs/world_tab.cpp
 src/simulation/imgui/tabs/help_tab.cpp
+src/utils/css_spatial_grid/css_spatial_grid.h
 
   
  "src/simulation/imgui/imgui_handling.cpp" 
@@ -113,7 +114,10 @@ src/simulation/imgui/tabs/help_tab.cpp
  "src/particle_system/density_grid/density_grid.h" 
  "src/particle_system/density_grid/density_grid.cpp" 
  "src/particle_system/density_grid/density_grid_renderer.h" 
- "src/utils/custom_clock.h")
+ "src/utils/custom_clock.h" 
+ "src/utils/css_spatial_grid/css_spatial_grid_renderer.cpp"
+
+)
 
 
 # ── Include directories ───────────────────────────────────────────────────────

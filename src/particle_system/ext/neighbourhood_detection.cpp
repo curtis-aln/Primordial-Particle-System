@@ -1,13 +1,16 @@
 #include "../particle_system.h"
-#include <array>
 #include <cstdint>
+#include <cstdio>
 #include <iostream>
-#include <utils/spatial_grid/simple_spatial_grid.h>
+#include <settings.h>
+#include <utils/css_spatial_grid/css_spatial_grid.h>
 
 
 
 void ParticlePopulation::solve_neighbourhood_detection()
 {
+	//for (uint32_t idx{ 0 }; idx < spatial_grid.get_total_cells(); ++idx)
+	//	process_cell(idx);
 	collision_thread_pool_.run_and_wait();
 }
 
@@ -40,7 +43,7 @@ void ParticlePopulation::precompute_cell_update_ranges()
 	{
 		collision_funcs_.emplace_back([this, thread, begin, end] {
 			for (uint32_t idx{ begin }; idx < end; ++idx)
-				process_cell(idx, neighbour_positions_x, neighbour_positions_y);
+				process_cell(idx);
 			});
 
 		thread++;
@@ -51,144 +54,192 @@ void ParticlePopulation::precompute_cell_update_ranges()
 	std::cout << "Precomputed " << collision_ranges_.size() << " cell update ranges for " << total_cells << " cells." << std::endl;
 }
 
-
-void ParticlePopulation::process_cell(
-	const cell_idx cell_index,
-	std::array<float, cell_capacity * 9>& n_positions_x,
-	std::array<float, cell_capacity * 9>& n_positions_y)
+namespace
 {
-	// for a given cell this function will access its particle contents. and for each one of them it will update them based off the information from the
-	// neighbouring 9 cells.
-	int neighbours_size = 0;
+	constexpr float radius_sq = PPS_Settings::visual_radius * PPS_Settings::visual_radius;
 
-	const int cell_index_x = cell_index % grid_cells_x;
-	const int cell_index_y = cell_index / grid_cells_x;
-	const bool at_border_x = cell_index_x == 0 || cell_index_x == grid_cells_x - 1;
-	const bool at_border_y = cell_index_y == 0 || cell_index_y == grid_cells_y - 1;
-
-	// each possible neighbour in the 3x3 area
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y - 1, true, true);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x, cell_index_y - 1, false, true);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y - 1, true, true);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y, true, false);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x, cell_index_y, false, false);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y, true, false);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x - 1, cell_index_y + 1, true, true);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x, cell_index_y + 1, false, true);
-	add_neighbour_cells_particles(n_positions_x, n_positions_y, neighbours_size, cell_index_x + 1, cell_index_y + 1, true, true);
-
-	// updating the particles
-	const auto* contents = &spatial_grid.grid[cell_index * spatial_grid.cell_max_capacity];
-	const uint8_t cell_size = spatial_grid.cell_capacities[cell_index];
-
-	for (uint8_t idx = 0; idx < cell_size; ++idx)
+	// Counts one neighbour if it is inside the vision radius (and is not the observer itself, d_sq == 0).
+	// dx, dy = vector from observer to neighbour.
+	inline void tally_if_visible(const float dx, const float dy, const Observer& self, NeighbourTally& tally)
 	{
-		update_particle(contents[idx], at_border_x, at_border_y, n_positions_x, n_positions_y, neighbours_size);
-	}
-
-}
-
-
-inline void ParticlePopulation::add_neighbour_cells_particles(
-	std::array<float, cell_capacity * 9>& n_positions_x,
-	std::array<float, cell_capacity * 9>& n_positions_y,
-	int& neighbours_size,
-	int32_t neighbour_index_x, int32_t neighbour_index_y,
-	bool check_x,
-	bool check_y)
-{
-	// Fast modulo for positive and negative numbers
-	if (check_x)
-	{
-		neighbour_index_x = neighbour_index_x >= 0 ?
-			(neighbour_index_x < grid_cells_x ? neighbour_index_x : neighbour_index_x - grid_cells_x) :
-			(neighbour_index_x + grid_cells_x);
-	}
-
-	if (check_y)
-	{
-		neighbour_index_y = neighbour_index_y >= 0 ?
-			(neighbour_index_y < grid_cells_y ? neighbour_index_y : neighbour_index_y - grid_cells_y) :
-			(neighbour_index_y + grid_cells_y);
-	}
-
-	// fetching data for copying
-	const uint32_t neighbour_index = neighbour_index_y * grid_cells_x + neighbour_index_x;
-
-	const auto* contents = &spatial_grid.grid[neighbour_index * spatial_grid.cell_max_capacity];
-
-	const auto size = spatial_grid.cell_capacities[neighbour_index];
-
-	// adding the neighbour data to the array
-	for (uint8_t idx = 0; idx < size; ++idx)
-	{
-		const obj_idx object_index = contents[idx];
-		n_positions_x[neighbours_size] = render_data.positions_x[object_index];
-		n_positions_y[neighbours_size] = render_data.positions_y[object_index];
-		++neighbours_size;
+		const float dist_sq = dx * dx + dy * dy;
+		if (dist_sq > 0.f & dist_sq < radius_sq)   // bitwise & avoids a branch
+		{
+			// Cross product with the heading vector: negative = neighbour is on the observer's right.
+			tally.on_right += (dx * self.sin_heading - dy * self.cos_heading) < 0.f;
+			++tally.total;
+		}
 	}
 }
 
-
-inline void ParticlePopulation::update_particle(
-	const obj_idx index, const bool at_border_x, const bool at_border_y,
-	const std::array<float, cell_capacity * 9>& n_positions_x,
-	const std::array<float, cell_capacity * 9>& n_positions_y,
-	const int neighbours_size)
+GridView ParticlePopulation::make_grid_view() const
 {
-	const float x = render_data.positions_x[index];
-	const float y = render_data.positions_y[index];
-	float& angle = render_data.angles_[index];
+	return {
+		spatial_grid.grid_cell_offsets.data(),
+		spatial_grid.sorted_x.data(),
+		spatial_grid.sorted_y.data(),
+		spatial_grid.grid.data()
+	};
+}
 
-	const int   angle_index = static_cast<int>((angle / two_pi) * ANGLE_TABLE_SIZE)
-		& (ANGLE_TABLE_SIZE - 1);
-	const float sin_a = sin_table_[angle_index];
-	const float cos_a = cos_table_[angle_index];
+// Border cells have neighbours that wrap around the world, so they need the slow path.
+bool ParticlePopulation::is_border_cell(const int cell_x, const int cell_y) const
+{
+	return cell_x == 0 || cell_x == grid_cells_x - 1
+		|| cell_y == 0 || cell_y == grid_cells_y - 1;
+}
 
-	static constexpr float r_sq = visual_radius * visual_radius;
+// Looks up sin/cos of the heading from the lookup tables.
+Observer ParticlePopulation::make_observer(const float x, const float y, const float heading) const
+{
+	const int table_index = static_cast<int>((heading / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+	return { x, y, sin_table_[table_index], cos_table_[table_index] };
+}
 
-	int total = 0;
-	int on_right = 0;
+__forceinline void ParticlePopulation::scan_slots(const GridView& grid, const uint32_t first_slot, const uint32_t end_slot,
+	const Observer& self, NeighbourTally& tally) const
+{
+	const float* __restrict gx = grid.x;
+	const float* __restrict gy = grid.y;
+	int total = 0, on_right = 0;                       // locals stay in registers
 
-	// ── Fast path (vast majority of cells) ────────────────────────────────
-	if (!at_border_x && !at_border_y) [[likely]]
+	for (uint32_t slot = first_slot; slot < end_slot; ++slot)
 	{
-		for (int i = 0; i < neighbours_size; ++i)
-		{
-			const float dx = n_positions_x[i] - x;
-			const float dy = n_positions_y[i] - y;
-			const float d_sq = dx * dx + dy * dy;
-
-			if (d_sq > 0.f & d_sq < r_sq)   // bitwise & avoids branch
-			{
-				on_right += (dx * sin_a - dy * cos_a) < 0.f;
-				++total;
-			}
-		}
+		const float dx = gx[slot] - self.x;
+		const float dy = gy[slot] - self.y;
+		const float d_sq = dx * dx + dy * dy;
+		const bool visible = (d_sq > 0.f) & (d_sq < radius_sq);
+		total += visible;
+		on_right += visible & ((dx * self.sin_heading - dy * self.cos_heading) < 0.f);
 	}
-	// ── Slow path (border cells only) ─────────────────────────────────────
-	else
+	tally.total += total;
+	tally.on_right += on_right;
+}
+
+// Same, with toroidal wrapping of dx/dy (border cells only, so keep it simple)
+__forceinline void ParticlePopulation::scan_slots_wrapped(const GridView& grid, const uint32_t first_slot, const uint32_t end_slot,
+	const Observer& self, NeighbourTally& tally) const
+{
+	const float* __restrict gx = grid.x;
+	const float* __restrict gy = grid.y;
+	int total = 0, on_right = 0;
+
+	for (uint32_t slot = first_slot; slot < end_slot; ++slot)
 	{
-		for (int i = 0; i < neighbours_size; ++i)
-		{
-			float dx = n_positions_x[i] - x;
-			float dy = n_positions_y[i] - y;
-			if (at_border_x) dx -= world_width * fast_round(dx * inv_width_);
-			if (at_border_y) dy -= world_height * fast_round(dy * inv_height_);
-			const float d_sq = dx * dx + dy * dy;
-
-			if (d_sq > 0.f & d_sq < r_sq)
-			{
-				on_right += (dx * sin_a - dy * cos_a) < 0.f;
-				++total;
-			}
-		}
+		float dx = gx[slot] - self.x;
+		float dy = gy[slot] - self.y;
+		dx -= world_width * fast_round(dx * inv_width_);
+		dy -= world_height * fast_round(dy * inv_height_);
+		const float d_sq = dx * dx + dy * dy;
+		const bool visible = (d_sq > 0.f) & (d_sq < radius_sq);
+		total += visible;
+		on_right += visible & ((dx * self.sin_heading - dy * self.cos_heading) < 0.f);
 	}
+	tally.total += total;
+	tally.on_right += on_right;
+}
+// Interior cell: the 3x3 neighbourhood is three contiguous slot ranges, one per row of cells.
+NeighbourTally ParticlePopulation::tally_interior_neighbourhood(const GridView& grid, const cell_idx cell, const Observer& self) const
+{
+	const int row_stride = grid_cells_x;
+	NeighbourTally tally;
+	scan_slots(grid, grid.cell_start[cell - row_stride - 1], grid.cell_start[cell - row_stride + 2], self, tally);  // row above
+	scan_slots(grid, grid.cell_start[cell - 1], grid.cell_start[cell + 2], self, tally);  // same row
+	scan_slots(grid, grid.cell_start[cell + row_stride - 1], grid.cell_start[cell + row_stride + 2], self, tally);  // row below
+	return tally;
+}
 
-	// on_right + left == on_right + (total - on_right) == total
-	render_data.neighbourhood_count_[index] = static_cast<uint16_t>(total);
+// Border cell: visit each of the 9 neighbour cells with wrapped cell coordinates and wrapped distances.
+NeighbourTally ParticlePopulation::tally_border_neighbourhood(const GridView& grid, const int cell_x, const int cell_y, const Observer& self) const
+{
+	NeighbourTally tally;
+	for (int offset_y = -1; offset_y <= 1; ++offset_y)
+		for (int offset_x = -1; offset_x <= 1; ++offset_x)
+		{
+			const int neighbour_x = (cell_x + offset_x + grid_cells_x) % grid_cells_x;
+			const int neighbour_y = (cell_y + offset_y + grid_cells_y) % grid_cells_y;
+			const int neighbour_cell = neighbour_y * grid_cells_x + neighbour_x;
+			scan_slots_wrapped(grid, grid.cell_start[neighbour_cell], grid.cell_start[neighbour_cell + 1], self, tally);
+		}
+	return tally;
+}
 
-	const int   left = total - on_right;
-	const float sign = static_cast<float>((on_right > left) - (on_right < left));
-	angle += (alpha + beta * static_cast<float>(total) * sign) * pi_div_180;
+// Turns the heading based on how many neighbours are on each side.
+void ParticlePopulation::steer(float& heading, const NeighbourTally& tally) const
+{
+	const int   left_count = tally.total - tally.on_right;
+	const float turn_direction = static_cast<float>((tally.on_right > left_count) - (tally.on_right < left_count)); // +1, 0 or -1
+	heading += (alpha + beta * static_cast<float>(tally.total) * turn_direction) * pi_div_180;
+}
+
+// Updates every particle in one cell from its 3x3 neighbourhood.
+void ParticlePopulation::process_cell(const cell_idx cell)
+{
+	const GridView grid = make_grid_view();
+	const uint32_t first_slot = grid.cell_start[cell];
+	const uint32_t end_slot = grid.cell_start[cell + 1];
+	if (first_slot == end_slot) return;              // most cells are empty
+
+	const int  cell_x = cell % grid_cells_x;
+	const int  cell_y = cell / grid_cells_x;
+	const bool is_border = is_border_cell(cell_x, cell_y);
+
+	for (uint32_t slot = first_slot; slot < end_slot; ++slot)
+	{
+		const obj_idx particle_id = grid.ids[slot];
+		float& heading = render_data.angles_[particle_id];
+		const Observer self = make_observer(grid.x[slot], grid.y[slot], heading);
+
+		NeighbourTally tally;
+		if (!is_border) [[likely]]
+			tally = tally_interior_neighbourhood(grid, cell, self);
+		else
+			tally = tally_border_neighbourhood(grid, cell_x, cell_y, self);
+
+		render_data.neighbourhood_count_[particle_id] = static_cast<uint16_t>(tally.total);
+		steer(heading, tally);
+	}
+}
+
+
+// debug only, same .cpp as process_cell (needs tally_if_visible from the anonymous namespace)
+void ParticlePopulation::validate_csr_tally(const uint32_t samples)
+{
+	const GridView grid = make_grid_view();
+	const float* xs = render_data.positions_x.data();
+	const float* ys = render_data.positions_y.data();
+	const uint32_t n = static_cast<uint32_t>(particle_count);
+	uint32_t bad_snapshot = 0, bad_tally = 0;
+
+	for (uint32_t s = 0; s < samples; ++s)
+	{
+		const uint32_t slot = static_cast<uint32_t>(uint64_t(s) * n / samples);
+		const obj_idx  id = grid.ids[slot];
+
+		// 1. does slot order match the live particle?
+		if (grid.x[slot] != xs[id] || grid.y[slot] != ys[id]) ++bad_snapshot;
+
+		// 2. brute-force reference: scan ALL particles with toroidal wrap
+		const Observer self = make_observer(xs[id], ys[id], render_data.angles_[id]);
+		NeighbourTally ref;
+		for (uint32_t j = 0; j < n; ++j)
+		{
+			float dx = xs[j] - self.x, dy = ys[j] - self.y;
+			dx -= world_width * fast_round(dx * inv_width_);
+			dy -= world_height * fast_round(dy * inv_height_);
+			tally_if_visible(dx, dy, self, ref);
+		}
+
+		// 3. CSR result for the same particle
+		const cell_idx cell = spatial_grid.hash(self.x, self.y);
+		const int      cell_x = cell % grid_cells_x, cell_y = cell / grid_cells_x;
+		const NeighbourTally got = is_border_cell(cell_x, cell_y)
+			? tally_border_neighbourhood(grid, cell_x, cell_y, self)
+			: tally_interior_neighbourhood(grid, cell, self);
+
+		if (got.total != ref.total || got.on_right != ref.on_right) ++bad_tally;
+	}
+	printf("grid dims: sim %dx%d, csr %ux%u | bad_snapshot=%u bad_tally=%u / %u\n",
+		grid_cells_x, grid_cells_y, spatial_grid.CellsX, spatial_grid.CellsY,
+		bad_snapshot, bad_tally, samples);
 }

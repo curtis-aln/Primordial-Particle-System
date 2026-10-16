@@ -4,6 +4,7 @@
 #include <SFML/Graphics/Text.hpp>
 #include <SFML/Graphics/VertexBuffer.hpp>
 #include <SFML/System/Vector2.hpp>
+#include <string>
 
 // Forward declarations — avoids pulling in all of SFML/Graphics.hpp
 namespace sf { class RenderWindow; }
@@ -12,7 +13,7 @@ struct SimpleSpatialGrid;
 // ─── Settings ────────────────────────────────────────────────────────────────
 namespace GridRendererSettings
 {
-	inline constexpr int        char_size = 12;
+	inline constexpr int        char_size = 36;
 	inline constexpr sf::Color  grid_line_color = { 75, 75, 75 };
 	inline constexpr sf::Color  text_color_active = sf::Color::White;
 	inline constexpr sf::Color  text_color_dim = { 80, 80, 80 };

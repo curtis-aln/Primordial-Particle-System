@@ -7,13 +7,9 @@
 #include <string.h>
 #include <utils/random.h>
 
-// Each thread gets their own container of neighbour positions to avoid race conditions
-thread_local TL_NeighbourPositions neighbour_positions_x;
-thread_local TL_NeighbourPositions neighbour_positions_y;
-
 // Constructor
 ParticlePopulation::ParticlePopulation() :
-	spatial_grid(grid_cells_x, grid_cells_y, cell_capacity, world_width, world_height)
+	spatial_grid(grid_cells_x, grid_cells_y, world_width, world_height)
 {
 	precompute_thread_ranges();
 	precompute_cell_update_ranges();
@@ -77,6 +73,12 @@ void ParticlePopulation::create_cell_at(const sf::Vector2f position, const int p
 		render_data.positions_x[index] = position.x;
 		render_data.positions_y[index] = position.y;
 	}
+}
+
+void ParticlePopulation::refresh_csr_positions()
+{
+	spatial_grid.refresh_positions(render_data.positions_x.data(),
+		render_data.positions_y.data());
 }
 
 

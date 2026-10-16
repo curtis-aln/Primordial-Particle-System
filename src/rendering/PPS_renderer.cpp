@@ -14,7 +14,7 @@
 #include <SFML/System/Vector2.hpp>
 #include <simulation/context/sim_snapshot.h>
 #include <utils/Camera.hpp>
-#include <utils/spatial_grid/spatial_grid_renderer.h>
+#include <utils/css_spatial_grid/css_spatial_grid.h>
 #include <utils/utils.h>
 #include <vector>
 
@@ -42,7 +42,8 @@ inline sf::Texture generate_circle_texture(float radius)
 }
 
 // ── Constructor ───────────────────────────────────────────────────────────────
-PPS_Renderer::PPS_Renderer(sf::RenderWindow* window, SimpleSpatialGrid* spatial_grid) : window_(window), grid_renderer(spatial_grid)
+PPS_Renderer::PPS_Renderer(sf::RenderWindow* window, CSRSpatialGrid* spatial_grid)
+	: window_(window), grid_renderer(spatial_grid)
 {
 	constexpr int vertex_count = PPS_Settings::particle_count * 6;
 	vertex_array.resize(vertex_count);
@@ -179,6 +180,16 @@ void PPS_Renderer::render_particles(const SimSnapshot& snapshot,
 		vertex_array.append({ .position = { px_v - r, py_v - r }, .color = col, .texCoords = { 0.f, 0.f } });
 		vertex_array.append({ .position = { px_v + r, py_v + r }, .color = col, .texCoords = { u1,  v1 } });
 		vertex_array.append({ .position = { px_v - r, py_v + r }, .color = col, .texCoords = { 0.f, v1 } });
+
+		if (!snapshot.toggles.debug_mode)
+			continue;
+
+		// Drawing a small circle in the center of each particle
+		const float debug_radius = 0.2f * PPS_Settings::particle_radius;
+		sf::CircleShape debug_circle(debug_radius);
+		debug_circle.setFillColor(sf::Color::White);
+		debug_circle.setPosition({ px_v - debug_radius, py_v - debug_radius });
+		window_->draw(debug_circle);
 	}
 
 	states.texture = &texture;

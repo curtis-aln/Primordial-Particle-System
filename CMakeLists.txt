@@ -161,6 +161,7 @@ if(MSVC)
         /EHa                 # enable SEH exceptions (needed for some SFML/Windows interop)
         /FS                  # force synchronous PDB writes (required for parallel builds)
         /W3                  # warning level 3 (reasonable default)
+        /arch:AVX2           #defines __AVX2__, enables the SIMD path
         $<$<CONFIG:Debug>:/Zi>           # full debug info in Debug builds
         $<$<CONFIG:RelWithDebInfo>:/Zi>  # also in RelWithDebInfo
         $<$<CONFIG:Release>:/Z7>         # embed debug info in .obj for Release (no .pdb)

@@ -73,15 +73,16 @@ public:
 	RenderData render_data{};
 	WorldToggles toggles{};
 
+	// Iterations per second can be different to frames per second as we sometimes run several iterations per frame to speed up the simulation
 	CustomClock<100> iterations_clock_{};
 
 	// The Spatial Grid Optimizes finding what particles are nearby
 	CSRSpatialGrid spatial_grid;
 
 private:
-
 	// Pre-computed constants for fast lookup when calculating the direction particles must go
 	static constexpr int ANGLE_TABLE_SIZE = 1024;
+	static constexpr float angle_to_index = ANGLE_TABLE_SIZE / two_pi;
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
 
@@ -103,11 +104,6 @@ private:
 	BarrierThreadPool add_to_grid_thread_pool_{ initial_thread_count };
 
 
-	struct CellRange { uint32_t start, end; };
-	std::vector<CellRange> collision_ranges_; // computed once, reused every frame
-	std::vector<CellRange> grid_insert_ranges_;
-
-
 public:
 	DensitySettings& density_settings() { return density_grid; }
 
@@ -116,31 +112,32 @@ public:
 	void fill_snapshot(SimSnapshot& snapshot);
 
 
-
 public:
 	explicit ParticlePopulation();
 
-	void randomize_sim();
+	// User Set functions
+	void update_particles();
 
+	void randomize_sim();
 	void set_thread_count(int threads);
 
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);
 
+	void add_particles_to_csr_grid();
+
 	void refresh_csr_positions();
 
-	void add_particles_to_grid();
+private:
+
 
 	void add_particle_to_grid(int i);
 
-	void add_particles_to_csr_grid();
-
-	void update_particles();
-
+	// Density grid functions
 	void run_density_grid();
-
 	void solveCollisions_density();
 
+	// CSR resolution functions
 	void           process_cell(cell_idx cell);
 	void validate_csr_tally(const uint32_t samples);
 	GridView       make_grid_view() const;
@@ -153,18 +150,18 @@ public:
 	void           steer(float& heading, const NeighbourTally& tally) const;
 
 
-private:
+	// init functions
 	void init_sin_cos_tables();
 	void init_particle_vectors();
+	void precompute_thread_ranges();
+	void precompute_cell_update_ranges();
 
 	void randomize_angles();
 
+	// Updating 
 	void update_particle_positions();
 
 	void solve_neighbourhood_detection();
-
-	void precompute_thread_ranges();
-	void precompute_cell_update_ranges();
 
 	void update_particle_position(int i);
 

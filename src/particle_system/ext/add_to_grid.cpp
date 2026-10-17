@@ -2,11 +2,6 @@
 #include <cstdint>
 #include <settings.h>
 
-void ParticlePopulation::add_particles_to_grid()
-{
-	add_to_grid_thread_pool_.run_and_wait();
-}
-
 void ParticlePopulation::add_particle_to_grid(int i)
 {
 	// Wrapping the position to stay within the world

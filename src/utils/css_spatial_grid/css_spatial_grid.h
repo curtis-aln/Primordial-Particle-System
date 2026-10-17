@@ -46,7 +46,9 @@ public:
 	void begin_build(uint32_t n)
 	{
 		std::fill(grid_cell_offsets.begin(), grid_cell_offsets.end(), 0u);
-		grid.resize(n); sorted_x.resize(n); sorted_y.resize(n);   // no-ops after the first frame
+
+		//padding the sorted arrays so the last vector can over read
+		grid.resize(n); sorted_x.resize(n + 8, 0.f); sorted_y.resize(n + 8, 0.f);
 	}
 
 	// phase 1 (your add_cell_slot, renamed): counts live at off[c+1]

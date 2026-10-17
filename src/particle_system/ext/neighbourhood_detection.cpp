@@ -6,54 +6,6 @@
 #include <utils/css_spatial_grid/css_spatial_grid.h>
 
 
-
-void ParticlePopulation::solve_neighbourhood_detection()
-{
-	//for (uint32_t idx{ 0 }; idx < spatial_grid.get_total_cells(); ++idx)
-	//	process_cell(idx);
-	collision_thread_pool_.run_and_wait();
-}
-
-void ParticlePopulation::precompute_cell_update_ranges()
-{
-	const uint32_t thread_count = initial_thread_count;
-	const uint32_t total_cells = grid_cells_x * grid_cells_y;
-	const uint32_t slice_size = total_cells / thread_count;
-
-	collision_ranges_.resize(thread_count);
-	for (uint32_t i = 0; i < thread_count; ++i)
-	{
-		collision_ranges_[i].start = i * slice_size;
-
-		// Last thread absorbs the remainder — no separate task needed
-		collision_ranges_[i].end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size;
-	}
-
-	// Same for particle grid insertion
-	const uint32_t particles_per_thread = particle_count / thread_count;
-	grid_insert_ranges_.resize(thread_count);
-	for (uint32_t i = 0; i < thread_count; ++i)
-	{
-		grid_insert_ranges_[i].start = i * particles_per_thread;
-		grid_insert_ranges_[i].end = (i == thread_count - 1) ? particle_count : (i + 1) * particles_per_thread;
-	}
-
-	int thread = 0;
-	for (const auto& [begin, end] : collision_ranges_)
-	{
-		collision_funcs_.emplace_back([this, thread, begin, end] {
-			for (uint32_t idx{ begin }; idx < end; ++idx)
-				process_cell(idx);
-			});
-
-		thread++;
-	}
-
-	collision_thread_pool_.set_jobs(collision_funcs_);
-
-	std::cout << "Precomputed " << collision_ranges_.size() << " cell update ranges for " << total_cells << " cells." << std::endl;
-}
-
 namespace
 {
 	constexpr float radius_sq = PPS_Settings::visual_radius * PPS_Settings::visual_radius;
@@ -71,6 +23,35 @@ namespace
 		}
 	}
 }
+
+
+void ParticlePopulation::solve_neighbourhood_detection()
+{
+	collision_thread_pool_.run_and_wait();
+}
+
+void ParticlePopulation::precompute_cell_update_ranges()
+{
+	const uint32_t thread_count = initial_thread_count;
+	const uint32_t total_cells = grid_cells_x * grid_cells_y;
+	const uint32_t slice_size = total_cells / thread_count;
+
+	for (uint32_t i = 0; i < thread_count; ++i)
+	{
+		unsigned begin = i * slice_size;
+		float end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size; // Last thread absorbs the remainder
+
+		collision_funcs_.emplace_back([this, i, begin, end] {
+			for (uint32_t idx{ begin }; idx < end; ++idx)
+				process_cell(idx);
+			});
+	}
+
+	collision_thread_pool_.set_jobs(collision_funcs_);
+
+	std::cout << "Precomputed " << thread_count << " cell update ranges for " << total_cells << " cells." << std::endl;
+}
+
 
 GridView ParticlePopulation::make_grid_view() const
 {
@@ -92,7 +73,7 @@ bool ParticlePopulation::is_border_cell(const int cell_x, const int cell_y) cons
 // Looks up sin/cos of the heading from the lookup tables.
 Observer ParticlePopulation::make_observer(const float x, const float y, const float heading) const
 {
-	const int table_index = static_cast<int>((heading / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
+	const int table_index = static_cast<int>(heading * angle_to_index) & (ANGLE_TABLE_SIZE - 1);
 	return { x, y, sin_table_[table_index], cos_table_[table_index] };
 }
 
@@ -138,17 +119,67 @@ __forceinline void ParticlePopulation::scan_slots_wrapped(const GridView& grid, 
 	tally.total += total;
 	tally.on_right += on_right;
 }
-// Interior cell: the 3x3 neighbourhood is three contiguous slot ranges, one per row of cells.
-NeighbourTally ParticlePopulation::tally_interior_neighbourhood(const GridView& grid, const cell_idx cell, const Observer& self) const
-{
-	const int row_stride = grid_cells_x;
-	NeighbourTally tally;
-	scan_slots(grid, grid.cell_start[cell - row_stride - 1], grid.cell_start[cell - row_stride + 2], self, tally);  // row above
-	scan_slots(grid, grid.cell_start[cell - 1], grid.cell_start[cell + 2], self, tally);  // same row
-	scan_slots(grid, grid.cell_start[cell + row_stride - 1], grid.cell_start[cell + row_stride + 2], self, tally);  // row below
-	return tally;
+
+
+#include <immintrin.h>
+#include <emmintrin.h>
+
+#if defined(__AVX2__)
+namespace {
+	inline int hsum_epi32(__m256i v)
+	{
+		__m128i s = _mm_add_epi32(_mm256_castsi256_si128(v), _mm256_extracti128_si256(v, 1));
+		s = _mm_add_epi32(s, _mm_shuffle_epi32(s, _MM_SHUFFLE(1, 0, 3, 2)));
+		s = _mm_add_epi32(s, _mm_shuffle_epi32(s, _MM_SHUFFLE(2, 3, 0, 1)));
+		return _mm_cvtsi128_si32(s);
+	}
+
+	struct SimdObserver { __m256 x, y, sn, cs; };
+	struct SimdTally { __m256i total = _mm256_setzero_si256(), on_right = _mm256_setzero_si256(); };
+
+	__forceinline void scan_range_avx2(const GridView& g, uint32_t first, uint32_t end,
+		const SimdObserver& o, SimdTally& acc)
+	{
+		const __m256  r2 = _mm256_set1_ps(radius_sq);
+		const __m256  zero = _mm256_setzero_ps();
+		const __m256i iota = _mm256_setr_epi32(0, 1, 2, 3, 4, 5, 6, 7);
+
+		for (uint32_t s = first; s < end; s += 8)
+		{
+			const __m256 dx = _mm256_sub_ps(_mm256_loadu_ps(g.x + s), o.x);
+			const __m256 dy = _mm256_sub_ps(_mm256_loadu_ps(g.y + s), o.y);
+			const __m256 d2 = _mm256_add_ps(_mm256_mul_ps(dx, dx), _mm256_mul_ps(dy, dy));
+
+			__m256 vis = _mm256_and_ps(_mm256_cmp_ps(d2, zero, _CMP_GT_OQ),
+				_mm256_cmp_ps(d2, r2, _CMP_LT_OQ));
+			// mask lanes beyond end_slot (tail)
+			vis = _mm256_and_ps(vis, _mm256_castsi256_ps(
+				_mm256_cmpgt_epi32(_mm256_set1_epi32(int(end - s)), iota)));
+
+			const __m256 cross = _mm256_sub_ps(_mm256_mul_ps(dx, o.sn), _mm256_mul_ps(dy, o.cs));
+			const __m256 right = _mm256_and_ps(vis, _mm256_cmp_ps(cross, zero, _CMP_LT_OQ));
+
+			acc.total = _mm256_sub_epi32(acc.total, _mm256_castps_si256(vis));    // mask = -1 -> +1
+			acc.on_right = _mm256_sub_epi32(acc.on_right, _mm256_castps_si256(right));
+		}
+	}
 }
 
+NeighbourTally ParticlePopulation::tally_interior_neighbourhood(const GridView& grid, const cell_idx cell, const Observer& self) const
+{
+	const uint32_t* cs = grid.cell_start + cell;
+	const int rs = grid_cells_x;
+	const SimdObserver o{ _mm256_set1_ps(self.x), _mm256_set1_ps(self.y),
+						  _mm256_set1_ps(self.sin_heading), _mm256_set1_ps(self.cos_heading) };
+	SimdTally acc;
+	scan_range_avx2(grid, cs[-rs - 1], cs[-rs + 2], o, acc);
+	scan_range_avx2(grid, cs[-1], cs[2], o, acc);
+	scan_range_avx2(grid, cs[rs - 1], cs[rs + 2], o, acc);
+	return { hsum_epi32(acc.total), hsum_epi32(acc.on_right) };
+}
+#else
+// ...existing scalar tally_interior_neighbourhood...
+#endif
 // Border cell: visit each of the 9 neighbour cells with wrapped cell coordinates and wrapped distances.
 NeighbourTally ParticlePopulation::tally_border_neighbourhood(const GridView& grid, const int cell_x, const int cell_y, const Observer& self) const
 {

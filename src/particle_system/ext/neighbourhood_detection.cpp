@@ -225,7 +225,5 @@ void ParticlePopulation::process_cell(const cell_idx cell)
 		out.angles_[s] = heading;
 		out.positions_x[s] = grid.x[s] + gamma * c;
 		out.positions_y[s] = grid.y[s] + gamma * sn;
-		out.cos_angles_[s] = c;
-		out.sin_angles_[s] = sn;
 	}
 }

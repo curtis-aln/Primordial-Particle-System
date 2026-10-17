@@ -31,10 +31,13 @@ struct PPS_Settings
 {
 	inline static constexpr unsigned initial_thread_count = 16;
 	inline static constexpr unsigned particle_count = 1'000'000;
-	inline static constexpr unsigned sub_iterations = 4;
+	inline static constexpr unsigned sub_iterations = 5;
 
 	inline static int add_to_grid_freq = 8;
 
+	// 100k particles, 150sf 24SI
+	// 1 million particles, 500sf 4SI
+	// 10 million particles, 1500sf, 1si
 	inline static constexpr float scale_factor = 500;
 	inline static constexpr float param_scale_factor = 200.f;
 

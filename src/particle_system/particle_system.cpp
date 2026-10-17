@@ -112,8 +112,6 @@ void ParticlePopulation::init_particle_vectors()
 		b.positions_y.resize(particle_count + 8, 0.f);
 		b.angles_.resize(particle_count);
 		b.neighbourhood_count_.resize(particle_count);
-		b.cos_angles_.resize(particle_count);
-		b.sin_angles_.resize(particle_count);
 	}
 }
 
@@ -128,8 +126,15 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 	std::memcpy(snapshot.render.positions_y.data(), src.positions_y.data(), n * sizeof(float));
 	std::memcpy(snapshot.render.neighbourhood_count_.data(), src.neighbourhood_count_.data(), n * sizeof(uint16_t));
 	std::memcpy(snapshot.render.angles_.data(), src.angles_.data(), n * sizeof(float));
-	std::memcpy(snapshot.render.cos_angles_.data(), src.cos_angles_.data(), n * sizeof(float));
-	std::memcpy(snapshot.render.sin_angles_.data(), src.sin_angles_.data(), n * sizeof(float));
+
+	const float* a = src.angles_.data();
+	float* ca = snapshot.render.cos_angles_.data(); float* sa = snapshot.render.sin_angles_.data();
+	for (int i = 0; i < n; ++i)
+	{
+		const int idx = static_cast<int>(a[i] * angle_to_index) & (ANGLE_TABLE_SIZE - 1);
+		ca[i] = cos_table_[idx]; sa[i] = sin_table_[idx];
+	}
+
 
 	snapshot.stats.cell_particle_count = PPS_Settings::particle_count;
 	snapshot.stats.iterations_ = iterations_;

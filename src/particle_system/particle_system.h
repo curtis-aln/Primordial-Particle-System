@@ -103,6 +103,8 @@ private:
 	std::vector<std::function<void()>> add_to_grid_funcs_;
 	BarrierThreadPool add_to_grid_thread_pool_{ initial_thread_count };
 
+	std::atomic<uint32_t> next_row_chunk_{ 0 };
+
 
 public:
 	DensitySettings& density_settings() { return density_grid; }

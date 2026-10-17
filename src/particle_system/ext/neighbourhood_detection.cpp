@@ -1,7 +1,7 @@
 #include "../particle_system.h"
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
-#include <iostream>
 #include <settings.h>
 #include <utils/css_spatial_grid/css_spatial_grid.h>
 
@@ -25,31 +25,29 @@ namespace
 }
 
 
-void ParticlePopulation::solve_neighbourhood_detection()
-{
-	collision_thread_pool_.run_and_wait();
-}
-
 void ParticlePopulation::precompute_cell_update_ranges()
 {
-	const uint32_t thread_count = initial_thread_count;
-	const uint32_t total_cells = grid_cells_x * grid_cells_y;
-	const uint32_t slice_size = total_cells / thread_count;
-
-	for (uint32_t i = 0; i < thread_count; ++i)
-	{
-		unsigned begin = i * slice_size;
-		float end = (i == thread_count - 1) ? total_cells : (i + 1) * slice_size; // Last thread absorbs the remainder
-
-		collision_funcs_.emplace_back([this, i, begin, end] {
-			for (uint32_t idx{ begin }; idx < end; ++idx)
-				process_cell(idx);
+	collision_funcs_.clear();
+	for (uint32_t t = 0; t < initial_thread_count; ++t)
+		collision_funcs_.emplace_back([this] {
+		constexpr uint32_t rows_per_chunk = 4;
+		const uint32_t rows = grid_cells_y;
+		const uint32_t chunks = (rows + rows_per_chunk - 1) / rows_per_chunk;
+		for (uint32_t c; (c = next_row_chunk_.fetch_add(1, std::memory_order_relaxed)) < chunks; )
+		{
+			const uint32_t begin = c * rows_per_chunk * grid_cells_x;
+			const uint32_t end = std::min((c + 1) * rows_per_chunk, rows) * grid_cells_x;
+			for (uint32_t cell = begin; cell < end; ++cell)
+				process_cell(cell);
+		}
 			});
-	}
-
 	collision_thread_pool_.set_jobs(collision_funcs_);
+}
 
-	std::cout << "Precomputed " << thread_count << " cell update ranges for " << total_cells << " cells." << std::endl;
+void ParticlePopulation::solve_neighbourhood_detection()
+{
+	next_row_chunk_.store(0, std::memory_order_relaxed);
+	collision_thread_pool_.run_and_wait();
 }
 
 

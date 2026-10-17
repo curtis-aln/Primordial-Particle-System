@@ -36,6 +36,10 @@ struct CSRSpatialGrid
 	alignas(64) std::vector<uint32_t>  grid_cell_offsets{};
 	uint32_t population_size_ = 0;
 
+
+	alignas(64) std::vector<uint32_t> slot_of{};
+
+
 public:
 	// Returns the number of objects in a given cell via subtracting the offsets of the next cell from the current cell.
 	uint32_t get_cell_size(const cell_idx c) const
@@ -45,6 +49,8 @@ public:
 
 	void begin_build(uint32_t n)
 	{
+		slot_of.resize(n);
+
 		std::fill(grid_cell_offsets.begin(), grid_cell_offsets.end(), 0u);
 
 		//padding the sorted arrays so the last vector can over read
@@ -69,6 +75,8 @@ public:
 		grid[dst] = id;
 		sorted_x[dst] = x;
 		sorted_y[dst] = y;
+
+		slot_of[id] = dst;
 	}
 
 	void build(const float* x, const float* y, uint32_t n)

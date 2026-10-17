@@ -80,9 +80,6 @@ void Simulation::update()
 		{
 			if (particle_system_.iterations_ % add_to_grid_freq == 0)
 				particle_system_.add_particles_to_csr_grid();
-			else
-				particle_system_.refresh_csr_positions();   // new, see below
-
 			particle_system_.update_particles();
 		}
 	}

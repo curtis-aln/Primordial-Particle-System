@@ -142,19 +142,8 @@ void ParticlePopulation::fill_snapshot(SimSnapshot& snapshot)
 	std::memcpy(snapshot.render.angles_.data(), render_data.angles_.data(), n * sizeof(float));
 
 	// ── Precompute cos/sin using the same angle LUT the sim uses ──────────
-	// This runs once per sim tick (e.g. 5fps), NOT once per render frame.
-	// Table lookup avoids std::cos/sin entirely — just an int cast + array read.
-	float* ca = snapshot.render.cos_angles_.data();
-	float* sa = snapshot.render.sin_angles_.data();
-	const float* angles = render_data.angles_.data();
-
-	for (int i = 0; i < n; ++i)
-	{
-
-		const int idx = static_cast<int>((angles[i] / two_pi) * ANGLE_TABLE_SIZE) & (ANGLE_TABLE_SIZE - 1);
-		ca[i] = cos_table_[idx];
-		sa[i] = sin_table_[idx];
-	}
+	std::memcpy(snapshot.render.cos_angles_.data(), render_data.cos_angles_.data(), n * sizeof(float));
+	std::memcpy(snapshot.render.sin_angles_.data(), render_data.sin_angles_.data(), n * sizeof(float));
 
 	// ── Statistics ────────────────────────────────────────────────────────
 	snapshot.stats.cell_particle_count = PPS_Settings::particle_count;

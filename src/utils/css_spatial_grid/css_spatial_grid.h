@@ -24,20 +24,14 @@ struct CSRSpatialGrid
 	float inv_cell_w = 0, inv_cell_h = 0;
 
 	alignas(64) std::vector<uint32_t> cell_cursor{};   // size cells, scatter scratch
-	alignas(64) std::vector<float>    sorted_x{}, sorted_y{};
+	// flat 1D: [cell * capacity + slot]
 
-	/// Particle ids sorted by cell. Cell c occupies [grid_cell_offsets[c], grid_cell_offsets[c+1]).
-	alignas(64) std::vector<obj_idx>  grid{};             // flat 1D: [cell * capacity + slot]
-
-	/// Each cell has a dynamic capacity, with no global max capacity
-	/// grid_cell_offsets contains the offset of each cell in the grid array, so we can find the start of each cell's data.
-	/// To correctly fill this index, fill it cell by cell instead of particle by particle.	
-	/// Size cells+1. Last entry = total particle count (sentinel).
+/// Each cell has a dynamic capacity, with no global max capacity
+/// grid_cell_offsets contains the offset of each cell in the grid array, so we can find the start of each cell's data.
+/// To correctly fill this index, fill it cell by cell instead of particle by particle.	
+/// Size cells+1. Last entry = total particle count (sentinel).
 	alignas(64) std::vector<uint32_t>  grid_cell_offsets{};
 	uint32_t population_size_ = 0;
-
-
-	alignas(64) std::vector<uint32_t> slot_of{};
 
 
 public:
@@ -47,15 +41,8 @@ public:
 		return grid_cell_offsets[c + 1] - grid_cell_offsets[c];
 	}
 
-	void begin_build(uint32_t n)
-	{
-		slot_of.resize(n);
-
-		std::fill(grid_cell_offsets.begin(), grid_cell_offsets.end(), 0u);
-
-		//padding the sorted arrays so the last vector can over read
-		grid.resize(n); sorted_x.resize(n + 8, 0.f); sorted_y.resize(n + 8, 0.f);
-	}
+	void begin_build(uint32_t) { std::fill(grid_cell_offsets.begin(), grid_cell_offsets.end(), 0u); }
+	uint32_t claim_slot(float x, float y) { return cell_cursor[hash(x, y)]++; }
 
 	// phase 1 (your add_cell_slot, renamed): counts live at off[c+1]
 	void count_object(float x, float y) { ++grid_cell_offsets[hash(x, y) + 1]; }
@@ -68,29 +55,6 @@ public:
 		std::copy_n(grid_cell_offsets.begin(), cell_cursor.size(), cell_cursor.begin());
 	}
 
-	// phase 3: claim a slot and write the particle into it
-	void place_object(float x, float y, obj_idx id)
-	{
-		const uint32_t dst = cell_cursor[hash(x, y)]++;
-		grid[dst] = id;
-		sorted_x[dst] = x;
-		sorted_y[dst] = y;
-
-		slot_of[id] = dst;
-	}
-
-	void build(const float* x, const float* y, uint32_t n)
-	{
-		begin_build(n);
-
-		for (uint32_t i = 0; i < n; ++i)
-			count_object(x[i], y[i]);
-
-		finalize_cell_offsets();
-
-		for (uint32_t i = 0; i < n; ++i)
-			place_object(x[i], y[i], i);
-	}
 
 public:
 	explicit CSRSpatialGrid(uint32_t cells_x, uint32_t cells_y,
@@ -137,16 +101,6 @@ public:
 
 	}
 
-	void refresh_positions(const float* __restrict xs, const float* __restrict ys)
-	{
-		const uint32_t n = static_cast<uint32_t>(grid.size());
-		for (uint32_t slot = 0; slot < n; ++slot)
-		{
-			const obj_idx id = grid[slot];
-			sorted_x[slot] = xs[id];
-			sorted_y[slot] = ys[id];
-		}
-	}
 
 	// This converts a world-space rect into a clamped grid cell range with zero allocation
 	void get_cell_range(float wx0, float wy0, float wx1, float wy1,

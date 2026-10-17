@@ -6,10 +6,10 @@ void ParticlePopulation::run_density_grid()
 	density_grid.gaussian_smoothing_ = toggles.gaussian_smoothing_;
 	density_grid.box_smoothing_ = toggles.box_smoothing_;
 	density_grid.sampling_mode_ = toggles.sampling_mode_;
-	density_grid.build(
-		render_data.positions_x.data(),
-		render_data.positions_y.data(),
-		particle_count);
+	//density_grid.build(
+	//	render_data.positions_x.data(),
+	//	render_data.positions_y.data(),
+	//	particle_count);
 
 	solveCollisions_density();
 }

@@ -1,7 +1,6 @@
 #include "../particle_system.h"
 #include <algorithm>
 #include <cstdint>
-#include <cstdio>
 #include <settings.h>
 #include <utils/css_spatial_grid/css_spatial_grid.h>
 
@@ -53,12 +52,8 @@ void ParticlePopulation::solve_neighbourhood_detection()
 
 GridView ParticlePopulation::make_grid_view() const
 {
-	return {
-		spatial_grid.grid_cell_offsets.data(),
-		spatial_grid.sorted_x.data(),
-		spatial_grid.sorted_y.data(),
-		spatial_grid.grid.data()
-	};
+	return { spatial_grid.grid_cell_offsets.data(),
+			 bufs_[cur_].positions_x.data(), bufs_[cur_].positions_y.data() };
 }
 
 // Border cells have neighbours that wrap around the world, so they need the slow path.
@@ -121,6 +116,8 @@ __forceinline void ParticlePopulation::scan_slots_wrapped(const GridView& grid, 
 
 #include <immintrin.h>
 #include <emmintrin.h>
+#include <cmath>
+#include <particle_system/state.h>
 
 #if defined(__AVX2__)
 namespace {
@@ -205,70 +202,30 @@ void ParticlePopulation::steer(float& heading, const NeighbourTally& tally) cons
 void ParticlePopulation::process_cell(const cell_idx cell)
 {
 	const GridView grid = make_grid_view();
-	const uint32_t first_slot = grid.cell_start[cell];
-	const uint32_t end_slot = grid.cell_start[cell + 1];
-	if (first_slot == end_slot) return;              // most cells are empty
+	const uint32_t first = grid.cell_start[cell], end = grid.cell_start[cell + 1];
+	if (first == end) return;
 
-	const int  cell_x = cell % grid_cells_x;
-	const int  cell_y = cell / grid_cells_x;
+	const RenderData& in = bufs_[cur_];
+	RenderData& out = bufs_[cur_ ^ 1];
+	const int  cell_x = cell % grid_cells_x, cell_y = cell / grid_cells_x;
 	const bool is_border = is_border_cell(cell_x, cell_y);
 
-	for (uint32_t slot = first_slot; slot < end_slot; ++slot)
+	for (uint32_t s = first; s < end; ++s)
 	{
-		const obj_idx particle_id = grid.ids[slot];
-		float& heading = render_data.angles_[particle_id];
-		const Observer self = make_observer(grid.x[slot], grid.y[slot], heading);
-
-		NeighbourTally tally;
-		if (!is_border) [[likely]]
-			tally = tally_interior_neighbourhood(grid, cell, self);
-		else
-			tally = tally_border_neighbourhood(grid, cell_x, cell_y, self);
-
-		render_data.neighbourhood_count_[particle_id] = static_cast<uint16_t>(tally.total);
+		float heading = in.angles_[s];
+		const Observer self = make_observer(grid.x[s], grid.y[s], heading);
+		const NeighbourTally tally = !is_border ? tally_interior_neighbourhood(grid, cell, self)
+			: tally_border_neighbourhood(grid, cell_x, cell_y, self);
+		out.neighbourhood_count_[s] = static_cast<uint16_t>(tally.total);
 		steer(heading, tally);
+
+		heading -= two_pi * std::floor(heading * inv_two_pi_);
+		const int idx = static_cast<int>(heading * angle_to_index) & (ANGLE_TABLE_SIZE - 1);
+		const float c = cos_table_[idx], sn = sin_table_[idx];
+		out.angles_[s] = heading;
+		out.positions_x[s] = grid.x[s] + gamma * c;
+		out.positions_y[s] = grid.y[s] + gamma * sn;
+		out.cos_angles_[s] = c;
+		out.sin_angles_[s] = sn;
 	}
-}
-
-
-// debug only, same .cpp as process_cell (needs tally_if_visible from the anonymous namespace)
-void ParticlePopulation::validate_csr_tally(const uint32_t samples)
-{
-	const GridView grid = make_grid_view();
-	const float* xs = render_data.positions_x.data();
-	const float* ys = render_data.positions_y.data();
-	const uint32_t n = static_cast<uint32_t>(particle_count);
-	uint32_t bad_snapshot = 0, bad_tally = 0;
-
-	for (uint32_t s = 0; s < samples; ++s)
-	{
-		const uint32_t slot = static_cast<uint32_t>(uint64_t(s) * n / samples);
-		const obj_idx  id = grid.ids[slot];
-
-		// 1. does slot order match the live particle?
-		if (grid.x[slot] != xs[id] || grid.y[slot] != ys[id]) ++bad_snapshot;
-
-		// 2. brute-force reference: scan ALL particles with toroidal wrap
-		const Observer self = make_observer(xs[id], ys[id], render_data.angles_[id]);
-		NeighbourTally ref;
-		for (uint32_t j = 0; j < n; ++j)
-		{
-			float dx = xs[j] - self.x, dy = ys[j] - self.y;
-			dx -= world_width * fast_round(dx * inv_width_);
-			dy -= world_height * fast_round(dy * inv_height_);
-			tally_if_visible(dx, dy, self, ref);
-		}
-
-		// 3. CSR result for the same particle
-		const cell_idx cell = spatial_grid.hash(self.x, self.y);
-		const int      cell_x = cell % grid_cells_x, cell_y = cell / grid_cells_x;
-		const NeighbourTally got = is_border_cell(cell_x, cell_y)
-			? tally_border_neighbourhood(grid, cell_x, cell_y, self)
-			: tally_interior_neighbourhood(grid, cell, self);
-
-		if (got.total != ref.total || got.on_right != ref.on_right) ++bad_tally;
-	}
-	printf("grid dims: sim %dx%d, csr %ux%u | bad_snapshot=%u bad_tally=%u / %u\n",
-		grid_cells_x, grid_cells_y, spatial_grid.CellsX, spatial_grid.CellsY,
-		bad_snapshot, bad_tally, samples);
 }

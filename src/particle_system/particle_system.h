@@ -20,6 +20,7 @@
 #include "../utils/thread_pool.h"
 #include "density_grid/density_grid.h"
 #include <algorithm>
+#include <atomic>
 #include <cstdint>
 #include <utility>
 
@@ -56,7 +57,6 @@ struct GridView
 	const uint32_t* cell_start;   // size cells+1; cell c = slots [cell_start[c], cell_start[c+1])
 	const float* x;            // sorted_x, indexed by slot
 	const float* y;            // sorted_y, indexed by slot
-	const obj_idx* ids;          // slot -> original particle id
 };
 
 // The particle whose neighbourhood is being measured.
@@ -70,7 +70,6 @@ class ParticlePopulation : PPS_Settings
 {
 public:
 	// Aligned memory allocation for better vectorization
-	RenderData render_data{};
 	WorldToggles toggles{};
 
 	// Iterations per second can be different to frames per second as we sometimes run several iterations per frame to speed up the simulation
@@ -82,9 +81,14 @@ public:
 private:
 	// Pre-computed constants for fast lookup when calculating the direction particles must go
 	static constexpr int ANGLE_TABLE_SIZE = 1024;
-	static constexpr float angle_to_index = ANGLE_TABLE_SIZE / two_pi;
 	alignas(64) float sin_table_[ANGLE_TABLE_SIZE];
 	alignas(64) float cos_table_[ANGLE_TABLE_SIZE];
+
+	RenderData bufs_[2];          // replaces render_data; positions_x/y + angles_ are double-buffered
+	int  cur_ = 0;
+	bool force_rebuild_ = true;   // set in init_grid_positioning / create_cell_at / randomize_*
+	static constexpr float inv_two_pi_ = 1.f / two_pi;
+	static constexpr float angle_to_index = ANGLE_TABLE_SIZE / two_pi;
 
 
 	DensityGrid density_grid{ world_width, world_height, visual_radius / 4.f };
@@ -94,14 +98,8 @@ private:
 	float inv_height_ = 0.f;
 
 	// Multi-threading adding to the spatial grid and updating neighbourhood positions
-	std::vector<std::function<void()>> updating_funcs_;
-	BarrierThreadPool thread_pool_{ initial_thread_count };
-
 	std::vector<std::function<void()>> collision_funcs_;
 	BarrierThreadPool collision_thread_pool_{ initial_thread_count };
-
-	std::vector<std::function<void()>> add_to_grid_funcs_;
-	BarrierThreadPool add_to_grid_thread_pool_{ initial_thread_count };
 
 	std::atomic<uint32_t> next_row_chunk_{ 0 };
 
@@ -112,6 +110,10 @@ public:
 	size_t iterations_ = 0;
 
 	void fill_snapshot(SimSnapshot& snapshot);
+
+	void rebuild_sorted();
+
+	bool needs_rebuild() const;
 
 
 public:
@@ -126,10 +128,6 @@ public:
 	void init_grid_positioning();
 	void create_cell_at(const sf::Vector2f position, const int particle_count);
 
-	void add_particles_to_csr_grid();
-
-	void refresh_csr_positions();
-
 private:
 
 
@@ -141,7 +139,6 @@ private:
 
 	// CSR resolution functions
 	void           process_cell(cell_idx cell);
-	void validate_csr_tally(const uint32_t samples);
 	GridView       make_grid_view() const;
 	bool           is_border_cell(int cell_x, int cell_y) const;
 	Observer       make_observer(float x, float y, float heading) const;
@@ -155,7 +152,6 @@ private:
 	// init functions
 	void init_sin_cos_tables();
 	void init_particle_vectors();
-	void precompute_thread_ranges();
 	void precompute_cell_update_ranges();
 
 	void randomize_angles();

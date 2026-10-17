@@ -1,42 +1,37 @@
 #include "../particle_system.h"
 #include <cstdint>
+#include <particle_system/state.h>
 #include <settings.h>
 
-void ParticlePopulation::add_particle_to_grid(int i)
+
+void ParticlePopulation::rebuild_sorted()
 {
-	// Wrapping the position to stay within the world
-	float& x = render_data.positions_x[i];
-	float& y = render_data.positions_y[i];
+	RenderData& in = bufs_[cur_];
+	RenderData& out = bufs_[cur_ ^ 1];
+	float* __restrict xs = in.positions_x.data();
+	float* __restrict ys = in.positions_y.data();
+	const float* __restrict as = in.angles_.data();
+	float* __restrict ox = out.positions_x.data();
+	float* __restrict oy = out.positions_y.data();
+	float* __restrict oa = out.angles_.data();
+	const uint32_t n = particle_count;
 
-	if (x < 0.f || x >= world_width)  x = wrap_coord(x, world_width, inv_width_);
-	if (y < 0.f || y >= world_height) y = wrap_coord(y, world_height, inv_height_);
-	spatial_grid.add_object(x, y, i); // still needs to be verified thread-safe
-}
-
-
-void ParticlePopulation::add_particles_to_csr_grid()
-{
-	float* __restrict xs = render_data.positions_x.data();
-	float* __restrict ys = render_data.positions_y.data();
-	const uint32_t n = static_cast<uint32_t>(particle_count);
-
-	spatial_grid.begin_build(n);            // zeroes offsets, sizes grid/sorted_x/sorted_y (replaces clear())
-
-	// Pass 1: bound positions (in place), then count
+	spatial_grid.begin_build(n);
 	for (uint32_t i = 0; i < n; ++i)
 	{
-		float x = xs[i];
-		float y = ys[i];
-
+		float x = xs[i], y = ys[i];
 		if (x < 0.f || x >= world_width) { x = wrap_coord(x, world_width, inv_width_);  xs[i] = x; }
 		if (y < 0.f || y >= world_height) { y = wrap_coord(y, world_height, inv_height_); ys[i] = y; }
-
 		spatial_grid.count_object(x, y);
 	}
-
-	spatial_grid.finalize_cell_offsets();   // prefix sum + copies offsets into cell_cursor
-
-	// Pass 2: positions are already bounded, so just scatter
+	spatial_grid.finalize_cell_offsets();
 	for (uint32_t i = 0; i < n; ++i)
-		spatial_grid.place_object(xs[i], ys[i], i);
+	{
+		const uint32_t d = spatial_grid.claim_slot(xs[i], ys[i]);
+		ox[d] = xs[i]; oy[d] = ys[i]; oa[d] = as[i];
+	}
+	cur_ ^= 1;
+	force_rebuild_ = false;
 }
+
+bool ParticlePopulation::needs_rebuild() const { return force_rebuild_ || iterations_ % add_to_grid_freq == 0; }

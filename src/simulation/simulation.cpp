@@ -78,8 +78,8 @@ void Simulation::update()
 	{
 		for (int i = 0; i < sub_iterations; ++i)
 		{
-			if (particle_system_.iterations_ % add_to_grid_freq == 0)
-				particle_system_.add_particles_to_csr_grid();
+			if (particle_system_.needs_rebuild())
+				particle_system_.rebuild_sorted();
 			particle_system_.update_particles();
 		}
 	}

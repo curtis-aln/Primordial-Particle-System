@@ -86,7 +86,7 @@ add_executable(PrimordialParticleSystem
   "src/particle_system/density_grid/sampling.cpp"
   "src/particle_system/density_grid/smoothing.cpp"
   "src/particle_system/ext/add_to_grid.cpp" 
-  "src/particle_system/ext/update_positions.cpp" 
+   
   "src/particle_system/ext/neighbourhood_detection.cpp" 
   "src/particle_system/ext/density_updating.cpp"
 
